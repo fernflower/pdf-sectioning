@@ -1,9 +1,13 @@
 import pycurl
+import sys
+from PyQt4 import QtGui, QtCore
 from json import dumps, loads
 from httplib2 import Http
 from StringIO import StringIO
 from lxml import etree
 from lxml.builder import ElementMaker
+from bookviewerwidget import BookViewerWidget
+from documentprocessor import DocumentProcessor, LoaderError
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
 E = ElementMaker(namespace=XHTML_NAMESPACE,
@@ -66,17 +70,35 @@ class SectionTool(object):
 
 
 def main():
+    def parse_args():
+        def get_value(param_name, args):
+            try:
+                idx = args.index(param_name)
+                args.pop(idx)
+                return args[idx]
+            except ValueError:
+                # no such param
+                return None
+        if len(sys.argv) < 2:
+            raise LoaderError("Pdf-file name should come as 1st param")
+        filename = sys.argv[1]
+        maxwidth = get_value("--width", sys.argv)
+        maxheight = get_value("--height", sys.argv)
+        save_dir = get_value("--savedir", sys.argv) or '.'
+        return (filename, maxwidth, maxheight, save_dir)
+
+    filename, width, height, save_dir = parse_args()
     st = SectionTool("config")
     toc = st.get_cms_course_toc('course:279feb39-aa65-4f2a-b42d-6da8a180ea44')
     for elem in toc:
         print elem["name"]
 
+    # show window
+    app = QtGui.QApplication(sys.argv)
+    ui_mw = BookViewerWidget(DocumentProcessor(filename))
+    ui_mw.show()
+    sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
