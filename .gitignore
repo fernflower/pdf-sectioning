@@ -1,0 +1,6 @@
+*.xml
+page*
+pages/
+*.pdf
+.ropeproject
+*.pyc
