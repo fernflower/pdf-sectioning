@@ -3,17 +3,28 @@
 import sys
 from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
+from imagelabel import QImageLabel
 from documentprocessor import DocumentProcessor, LoaderError
+
+MAX_SCALE = 5
+MIN_SCALE = 1
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
-    totalPagesText = "total"
+    totalPagesText = "total %d out of %d"
 
-    def __init__(self, doc_processor=None):
+    def __init__(self, cms_course_toc, doc_processor=None):
         super(BookViewerWidget, self).__init__()
-        self.dp = doc_processor
         self.setupUi(self)
+        self.dp = doc_processor
+        # first page has number 1
+        self.paragraphs = {}
+        self.course_toc = cms_course_toc
+        self.pageNum = 1
+        self.scale = 1
+        self._set_widgets_data_on_doc_load()
         self.init_actions()
+        self.init_widgets()
 
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
@@ -25,12 +36,39 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                              QtCore.SIGNAL("valueChanged(int)"),
                              self.go_to_page)
 
-    def _set_widgets_data_on_start(self):
+    def init_widgets(self):
+        # add image label
+        self.imageLabel = QImageLabel(self, self)
+        self.imageLabel.setScaledContents(True)
+        self.scrollArea.setWidget(self.imageLabel)
+        self.scrollArea.setGeometry(self.scrollArea.x(),
+                                    self.scrollArea.y(),
+                                    self.frameSize().width(),
+                                    self.frameSize().height())
+        # show toc elems
+        model = QtGui.QStandardItemModel()
+        for elem in self.course_toc:
+            item = QtGui.QStandardItem(elem["name"])
+            item.setSelectable(True)
+            model.appendRow(item)
+        self.listView.setModel(model)
+
+    def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
         if self.dp:
             self.spinBox.setRange(1, self.dp.totalPages)
             self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
                                          (1, self.dp.totalPages))
+
+    @property
+    def is_toc_selected(self):
+        return self.get_selected_toc_elem() is not None
+
+    def get_selected_toc_elem(self):
+        selected = self.listView.selectedIndexes()
+        if selected:
+            return self.course_toc[selected[0].row()]
+
     def open_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'OpenFile', '.')
         if not filename:
@@ -52,6 +90,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             return
         raise NotImplementedError()
 
+    def get_image(self):
+        if not self.dp:
+            return None
+        res = self.dp.curr_page(self.scale)
+        return res
+
     def save(self):
         raise NotImplementedError()
 
@@ -59,9 +103,24 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def go_to_page(self, pagenum):
         if not self.dp:
             return
+        # hide selections on this page
+        if str(self.pageNum) in self.paragraphs.keys():
+            map(lambda m:m.hide(), self.paragraphs[str(self.pageNum)])
+        if str(pagenum) in self.paragraphs.keys():
+            map(lambda m:m.show(), self.paragraphs[str(pagenum)])
         if self.dp.go_to_page(pagenum - 1):
             self.pageNum = pagenum
             self.update()
+
+    def zoom(self, delta):
+        print self.get_selected_toc_elem()
+        new_scale = old_scale = self.scale
+        if delta > 0:
+            new_scale = self.scale + 0.5
+        elif delta < 0:
+            new_scale = self.scale - 0.5
+        if new_scale >= MIN_SCALE and new_scale <= MAX_SCALE:
+            self.scale = new_scale
 
     def next_page(self):
         self.spinBox.setValue(self.pageNum + 1)
@@ -78,3 +137,30 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                      (nextNum, self.dp.totalPages))
         self.nextPage_button.setEnabled(not nextNum == self.dp.totalPages)
         self.prevPage_button.setEnabled(not nextNum == 1)
+
+    def add_paragraph_mark(self, mark):
+        try:
+            self.paragraphs[self.pageNum].append(mark)
+        except KeyError:
+            self.paragraphs[self.pageNum] = [mark]
+
+    def update_paragraphs(self, paragraph_marks):
+        for cas_id, markslist in paragraph_marks.items():
+            for mark in markslist:
+                try:
+                    if mark not in self.paragraphs[str(mark.page)]:
+                        self.paragraphs[str(mark.page)].append(mark)
+                except KeyError:
+                    self.paragraphs[str(mark.page)] = [mark]
+
+    def normalize_rect(self, rect):
+        return QtCore.QRectF(rect.x() / self.scale,
+                      rect.y() / self.scale,
+                      rect.width() / self.scale,
+                      rect.height() / self.scale)
+
+    def transform_to_pdf_coords(self, rect):
+        img = self.dp.curr_page()
+        if img is None:
+            return QtCore.QRectF(0, 0, 0, 0)
+        return self.normalize_rect(rect)

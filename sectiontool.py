@@ -95,7 +95,8 @@ def main():
 
     # show window
     app = QtGui.QApplication(sys.argv)
-    ui_mw = BookViewerWidget(DocumentProcessor(filename))
+    dp = DocumentProcessor(filename)
+    ui_mw = BookViewerWidget(toc, dp)
     ui_mw.show()
     sys.exit(app.exec_())
 

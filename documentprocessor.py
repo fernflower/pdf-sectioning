@@ -26,7 +26,6 @@ class DocumentProcessor(object):
         try:
             self.tlogger.start("load page")
             self.doc = Poppler.Document.load(filename)
-            self.gen_toc_xml()
             self.tlogger.end()
         except:
             # TODO AWFUL exception handling!!!!
