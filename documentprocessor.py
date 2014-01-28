@@ -102,28 +102,34 @@ class DocumentProcessor(object):
             return ""
         return unicode(self.doc.page(self.curr_page_num).text(selection))
 
+    # returns a dict of {cas-id : paragraph marks data} (the same used in
+    # bookviewer as self.paragraphs)
     def load_native_xml(self, filename):
         tree = etree.parse(filename)
         PAGES_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-page"
-        RECTS_XPATH = "is:ebook-zones/is:ebook-zone"
-        BLOCKS_XPATH = "is:ebook-rect"
-        pages = tree.xpath(PAGES_XPATH, namespaces = { "is" : XHTML_NAMESPACE})
-        selections = {}
-        for i, page in enumerate(pages):
-            selections[i] = []
-            zones = page.xpath(RECTS_XPATH, namespaces = { "is" : XHTML_NAMESPACE})
-            for zone in zones:
-                rects = []
-                link = str(zone.get("link"))
-                for block in zone.xpath(BLOCKS_XPATH, namespaces = { "is" : XHTML_NAMESPACE}):
-                    coord_str = str(block.get("r"))
-                    coords = map(lambda x: float(x.strip()), coord_str.split(","))
-                    if len(coords) != 4:
-                        raise LoaderError(u"Invalid coordinates: %s" % coord_str)
-                    rect = QtCore.QRect(coords[0], coords[1], coords[2], coords[3])
-                    rects.append(rect)
-                selections[i].append(dict(rects=rects, link=link))
-        return selections
+        PARAGRAPHS_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-para"
+        paragraphs = tree.xpath(PARAGRAPHS_XPATH,
+                           namespaces = { "is" : XHTML_NAMESPACE})
+        out_paragraphs = {}
+        for i, paragraph in enumerate(paragraphs):
+            cas_id = paragraph.get("id")
+            name = paragraph.get("name")
+            start_y = paragraph.get("start-y")
+            start_page = paragraph.get("start-page")
+            end_y = paragraph.get("end-y")
+            end_page = paragraph.get("end-page")
+            start = {"cas-id": cas_id,
+                     "name" : name,
+                     "y": start_y,
+                     "page": start_page,
+                     "type": "start"}
+            end = {"cas-id": cas_id,
+                   "name" : name,
+                   "y": end_y,
+                   "page": end_page,
+                   "type": "end"}
+            out_paragraphs[cas_id] = [start, end]
+        return out_paragraphs
 
     # Paragraphs - a dict {cas-id : dict with all paragraph data}
     def gen_native_xml(self, paragraphs):
@@ -135,9 +141,9 @@ class DocumentProcessor(object):
             PAGE = E("ebook-para", id=str(cas_id),
                      **{ "start-page": str(marks[0]["page"]),
                          "start-y": str(marks[0]["y"]),
+                         "name": marks[0]["name"],
                          "end-page": str(marks[1]["page"]),
-                         "end-y": str(marks[1]["y"])
-                     })
+                         "end-y": str(marks[1]["y"]) })
             PAGES.append(PAGE)
         root = E.object(E.text(PAGES), display_name=self.filename)
         result = etree.tostring(root, pretty_print=True, encoding="utf-8")

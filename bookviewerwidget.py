@@ -5,6 +5,7 @@ from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from imagelabel import QImageLabel
 from documentprocessor import DocumentProcessor, LoaderError
+from imagelabel import make_paragraph_mark
 
 MAX_SCALE = 5
 MIN_SCALE = 1
@@ -73,13 +74,14 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'OpenFile', '.')
         if not filename:
             return
-        print "filename is %s" % unicode(filename)
-        # check if any file open at the moment
+        #TODO dialog with warning if any file open at the moment
         self.dp = DocumentProcessor(unicode(filename))
         self._set_widgets_data_on_start()
         self.update()
 
     def load_markup(self):
+        # TODO dialog with warning that all data that has not been saved will
+        # be lost
         if not self.dp:
             return
         filename = QtGui.QFileDialog.getOpenFileName(self,
@@ -88,7 +90,29 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                                      "Xml files (*.xml)")
         if not filename:
             return
-        raise NotImplementedError()
+        for page, marks in self.paragraphs.items():
+            map(lambda m: m.destroy(), marks)
+        self.paragraphs = {}
+        # convert from QString
+        filename = str(filename)
+        paragraphs = self.dp.load_native_xml(filename)
+        # generate start\end marks from paragraphs' data
+        for cas_id, marks in paragraphs.items():
+            for m in marks:
+                str_page = m["page"]
+                mark = make_paragraph_mark(parent=self.imageLabel,
+                                           cas_id=cas_id,
+                                           name=m["name"],
+                                           pos=QtCore.QPoint(0, float(m["y"])),
+                                           page=int(str_page),
+                                           type=m["type"])
+                mark.adjust(self.scale)
+                if mark.page != self.pageNum:
+                    mark.hide()
+                try:
+                    self.paragraphs[str_page].append(mark)
+                except KeyError:
+                    self.paragraphs[str_page] = [mark]
 
     def get_image(self):
         if not self.dp:
@@ -101,9 +125,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         pdf_paragraphs = {}
         for key, markslist in self.paragraphs.items():
             for m in markslist:
-                para_key = m.toc_elem["cas-id"]
+                para_key = m.id
                 mark = {"page" : m.page,
-                        "name" : m.toc_elem["name"],
+                        "name" : m.name,
                         "y": self.transform_to_pdf_coords(m.geometry()).y()}
                 try:
                     pdf_paragraphs[para_key].append(mark)
@@ -169,16 +193,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         for cas_id, markslist in paragraph_marks.items():
             for mark in markslist:
                 self.add_paragraph_mark(mark)
-                #mark.pdf_coords = self.transform_to_pdf_coords(mark.geometry())
-
-    def normalize_rect(self, rect):
-        return QtCore.QRectF(rect.x() / self.scale,
-                      rect.y() / self.scale,
-                      rect.width() / self.scale,
-                      rect.height() / self.scale)
 
     def transform_to_pdf_coords(self, rect):
         img = self.dp.curr_page()
         if img is None:
             return QtCore.QRectF(0, 0, 0, 0)
-        return self.normalize_rect(rect)
+        return QtCore.QRectF(
+                      rect.x() / self.scale,
+                      rect.y() / self.scale,
+                      rect.width() / self.scale,
+                      rect.height() / self.scale)

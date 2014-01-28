@@ -7,15 +7,16 @@ tlogger = TimeLogger()
 
 
 class QParagraphMark(QtCore.QObject):
-    def __init__(self, pos, parent, toc_elem, page, type):
+    def __init__(self, pos, parent, cas_id, name, page, type):
         super(QParagraphMark, self).__init__(parent)
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Line, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(0, pos.y()),
                                            QtCore.QSize(parent.width(), 5)))
         self.mark.show()
-        self.toc_elem = toc_elem
+        self.name = name
+        self.id = cas_id
         self.label = QtGui.QLabel(
-            "%s of paragraph %s" % (type, self.toc_elem["name"]), parent)
+            "%s of paragraph %s" % (type, self.name), parent)
         self._adjust_to_mark()
         self.label.show()
         self.page = page
@@ -30,6 +31,13 @@ class QParagraphMark(QtCore.QObject):
 
     def geometry(self):
         return self.mark.geometry()
+
+    def destroy(self):
+        self.hide()
+        #self.mark.setParent(None)
+        #self.label.setParent(None)
+        self.mark.deleteLater()
+        self.label.deleteLater()
 
     def _adjust_to_mark(self):
         self.label.adjustSize()
@@ -53,12 +61,28 @@ class QParagraphMark(QtCore.QObject):
 
 
 class QStartParagraph(QParagraphMark):
-    def __init__(self, pos, parent, toc_elem, page):
-        super(QStartParagraph, self).__init__(pos, parent, toc_elem, page, "start")
+    def __init__(self, pos, parent, cas_id, name, page):
+        super(QStartParagraph, self).__init__(pos,
+                                              parent,
+                                              cas_id,
+                                              name,
+                                              page,
+                                              "start")
 
 class QEndParagraph(QParagraphMark):
-    def __init__(self, pos, parent, toc_elem, page):
-        super(QEndParagraph, self).__init__(pos, parent, toc_elem, page, "end")
+    def __init__(self, pos, parent, cas_id, name, page):
+        super(QEndParagraph, self).__init__(pos,
+                                            parent,
+                                            cas_id,
+                                            name,
+                                            page,
+                                            "end")
+
+MARKS_DICT = {"start": QStartParagraph,
+              "end": QEndParagraph}
+
+def make_paragraph_mark(pos, parent, cas_id, name, page, type):
+    return MARKS_DICT[type](pos, parent, cas_id, name, page)
 
 
 # this class manages all keys/mouse clicks and calls actions from page_viewer
@@ -96,15 +120,13 @@ class QImageLabel(QtGui.QLabel):
             key = toc_elem["cas-id"]
             if key in self.paragraph_marks.keys():
                 if len(self.paragraph_marks[key]) == 1:
-                    self.paragraph_marks[key].append(QEndParagraph(event.pos(),
-                                                                   self,
-                                                                   toc_elem,
-                                                                   page))
+                    self.paragraph_marks[key].append(
+                        QEndParagraph(event.pos(), self, toc_elem["cas-id"],
+                                      toc_elem["name"], page))
             else:
-                self.paragraph_marks[key] = [QStartParagraph(event.pos(),
-                                                             self,
-                                                             toc_elem,
-                                                             page)]
+                self.paragraph_marks[key] = \
+                    [QStartParagraph(event.pos(), self, toc_elem["cas-id"],
+                                     toc_elem["name"], page)]
         self.update()
 
     def update(self):

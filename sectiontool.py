@@ -50,7 +50,6 @@ class SectionTool(object):
             ids_to_resolve = [ "lesson:" + lesson_id \
                                  for lesson_id in lesson_ids]
             headers = {"Content-type" : "application/json; charset=UTF-8"}
-            # TODO move to config
             body = dumps(ids_to_resolve)
             http_obj = Http()
             http_obj.add_credentials(self.config_data['username'],
