@@ -36,8 +36,8 @@ class QParagraphMark(QtCore.QObject):
         self.hide()
         #self.mark.setParent(None)
         #self.label.setParent(None)
-        self.mark.deleteLater()
-        self.label.deleteLater()
+        #self.mark.deleteLater()
+        #self.label.deleteLater()
 
     def _adjust_to_mark(self):
         self.label.adjustSize()

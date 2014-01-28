@@ -70,6 +70,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if selected:
             return self.course_toc[selected[0].row()]
 
+    # False - work has not been started yet, True - already marked, None -
+    # missing end paragraph
+    def is_paragraph_marked(self, cas_id):
+        try:
+            values = self.imageLabel.paragraph_marks[cas_id]
+            if len(values) != 2:
+                return None
+        except KeyError:
+            return False
+
     def open_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'OpenFile', '.')
         if not filename:
