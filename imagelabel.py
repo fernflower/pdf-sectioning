@@ -47,6 +47,11 @@ class QParagraphMark(QtCore.QObject):
                               rect.height())
         self._adjust_to_mark()
 
+    # get start-y coordinate
+    def y(self):
+        return self.mark.pos().y()
+
+
 class QStartParagraph(QParagraphMark):
     def __init__(self, pos, parent, toc_elem, page):
         super(QStartParagraph, self).__init__(pos, parent, toc_elem, page, "start")

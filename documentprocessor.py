@@ -125,30 +125,21 @@ class DocumentProcessor(object):
                 selections[i].append(dict(rects=rects, link=link))
         return selections
 
-    def gen_native_xml(self, selections, pngs):
-        # have to figure out how to set up PyQt4 in venv first
-        # keys are page nums
-        #TODO should use normal xml-processor (like one in frogstar but with lxml)
+    # Paragraphs - a dict {cas-id : dict with all paragraph data}
+    def gen_native_xml(self, paragraphs):
         PAGES = E("ebook-pages", src=self.filename)
-        root = E.object(E.text(PAGES), display_name=self.filename)
-        for i, key in enumerate(selections.keys(), start=0):
-            PAGE = E("ebook-page", n=str(key), preview=pngs[i])
-            TEXTBOXES = E("ebook-text-boxes")
-            ZONES = E("ebook-zones")
-            PAGE.append(TEXTBOXES)
-            PAGE.append(ZONES)
+        ICON_SET = E("ebook-icon-set")
+        PAGES.append(ICON_SET)
+        # add paragraphs info
+        for cas_id, marks in paragraphs.items():
+            PAGE = E("ebook-para", id=str(cas_id),
+                     **{ "start-page": str(marks[0]["page"]),
+                         "start-y": str(marks[0]["y"]),
+                         "end-page": str(marks[1]["page"]),
+                         "end-y": str(marks[1]["y"])
+                     })
             PAGES.append(PAGE)
-            for (coords, text) in self.textBlocksPerPage[i]:
-                EBOOKTEXT = E("ebook-text", r="%s, %s, %s, %s" % coords)
-                EBOOKTEXT.text = text
-                TEXTBOXES.append(EBOOKTEXT)
-            for (link, rects) in selections[key]:
-                ZONE = E("ebook-zone", link=link)
-                ZONES.append(ZONE)
-                for rect in rects:
-                    coords_str = "%f, %f, %f, %f" % \
-                            (rect.x(), rect.y(), rect.width(), rect.height())
-                    ZONE.append(E("ebook-rect", r=coords_str))
+        root = E.object(E.text(PAGES), display_name=self.filename)
         result = etree.tostring(root, pretty_print=True, encoding="utf-8")
         return result
 
@@ -189,13 +180,11 @@ class DocumentProcessor(object):
             png.save(name, "png")
         return filenames
 
-    def save_all(self, path_to_dir, selections):
-        # gen previews
-        pngs = self.gen_previews(path_to_dir)
+    def save_all(self, path_to_dir, paragraphs):
         # save native xml
         filename = path_to_dir + "/" + self.result_file_name
         fname = open(filename, 'w')
-        fname.write(self.gen_native_xml(selections, pngs))
+        fname.write(self.gen_native_xml(paragraphs))
         fname.close()
 
     def _processTextBlocks(self):

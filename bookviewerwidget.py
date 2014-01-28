@@ -97,7 +97,24 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         return res
 
     def save(self):
-        raise NotImplementedError()
+        # normalize to get pdf-coordinates (save with scale=1.0)
+        pdf_paragraphs = {}
+        for key, markslist in self.paragraphs.items():
+            for m in markslist:
+                para_key = m.toc_elem["cas-id"]
+                mark = {"page" : m.page,
+                        "name" : m.toc_elem["name"],
+                        "y": self.transform_to_pdf_coords(m.geometry()).y()}
+                try:
+                    pdf_paragraphs[para_key].append(mark)
+                except KeyError:
+                    pdf_paragraphs[para_key] = [mark]
+        if not self.dp:
+            return
+        dir_name = QtGui.QFileDialog.getExistingDirectory(self,
+                                                          'Select Directory')
+        if dir_name:
+            self.dp.save_all(str(dir_name), pdf_paragraphs)
 
     # here 1st page has number 1
     def go_to_page(self, pagenum):
