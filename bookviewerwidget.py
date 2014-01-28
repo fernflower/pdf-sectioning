@@ -113,7 +113,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.update()
 
     def zoom(self, delta):
-        print self.get_selected_toc_elem()
         new_scale = old_scale = self.scale
         if delta > 0:
             new_scale = self.scale + 0.5
@@ -121,6 +120,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             new_scale = self.scale - 0.5
         if new_scale >= MIN_SCALE and new_scale <= MAX_SCALE:
             self.scale = new_scale
+            for page_key, markslist in self.paragraphs.items():
+                for m in markslist:
+                    m.adjust(new_scale / old_scale)
 
     def next_page(self):
         self.spinBox.setValue(self.pageNum + 1)
@@ -138,20 +140,19 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.nextPage_button.setEnabled(not nextNum == self.dp.totalPages)
         self.prevPage_button.setEnabled(not nextNum == 1)
 
+    # add paragraph mark (without duplicates)
     def add_paragraph_mark(self, mark):
         try:
-            self.paragraphs[self.pageNum].append(mark)
+            if mark not in self.paragraphs[str(mark.page)]:
+                self.paragraphs[str(mark.page)].append(mark)
         except KeyError:
-            self.paragraphs[self.pageNum] = [mark]
+            self.paragraphs[str(mark.page)] = [mark]
 
     def update_paragraphs(self, paragraph_marks):
         for cas_id, markslist in paragraph_marks.items():
             for mark in markslist:
-                try:
-                    if mark not in self.paragraphs[str(mark.page)]:
-                        self.paragraphs[str(mark.page)].append(mark)
-                except KeyError:
-                    self.paragraphs[str(mark.page)] = [mark]
+                self.add_paragraph_mark(mark)
+                #mark.pdf_coords = self.transform_to_pdf_coords(mark.geometry())
 
     def normalize_rect(self, rect):
         return QtCore.QRectF(rect.x() / self.scale,

@@ -11,17 +11,12 @@ class QParagraphMark(QtCore.QObject):
         super(QParagraphMark, self).__init__(parent)
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Line, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(0, pos.y()),
-                                           QtCore.QSize(parent.width(),
-                                                        2)))
+                                           QtCore.QSize(parent.width(), 5)))
         self.mark.show()
         self.toc_elem = toc_elem
         self.label = QtGui.QLabel(
             "%s of paragraph %s" % (type, self.toc_elem["name"]), parent)
-        self.label.adjustSize()
-        self.label.setGeometry(self.mark.x(),
-                               self.mark.y(),
-                               self.label.width(),
-                               self.label.height())
+        self._adjust_to_mark()
         self.label.show()
         self.page = page
 
@@ -33,6 +28,24 @@ class QParagraphMark(QtCore.QObject):
         self.mark.show()
         self.label.show()
 
+    def geometry(self):
+        return self.mark.geometry()
+
+    def _adjust_to_mark(self):
+        self.label.adjustSize()
+        self.label.setGeometry(self.mark.x(),
+                               self.mark.y(),
+                               self.label.width(),
+                               self.label.height())
+
+
+    def adjust(self, scale):
+        rect = self.geometry()
+        self.mark.setGeometry(rect.x() * scale,
+                              rect.y() * scale,
+                              rect.width() * scale,
+                              rect.height())
+        self._adjust_to_mark()
 
 class QStartParagraph(QParagraphMark):
     def __init__(self, pos, parent, toc_elem, page):
