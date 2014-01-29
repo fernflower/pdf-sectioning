@@ -119,6 +119,9 @@ class QImageLabel(QtGui.QLabel):
         self.setFixedSize(pixmap.size())
 
     def mousePressEvent(self, event):
+        # disable right mouse click as it shows context menu
+        if event.buttons() == QtCore.Qt.RightButton:
+            return super(QImageLabel, self).mousePressEvent(event)
         if self.page_viewer.is_toc_selected:
             toc_elem = self.page_viewer.get_selected_toc_elem()
             page = self.page_viewer.pageNum

@@ -52,7 +52,17 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._fill_listview(self.course_toc)
         self.imageLabel.setFocus(True)
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.listView.selectionModel().selectionChanged.connect(self.on_selection_change)
+        self.listView.selectionModel().selectionChanged.connect(
+            self.on_selection_change)
+        # context menu
+        self.cmenu = QtGui.QMenu()
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.actionDelete_selection = \
+            self.cmenu.addAction("Delete paragraph mark")
+        self.actionDelete_selection.triggered.connect(
+            self._delete_mark)
+        self.connect(self, QtCore.SIGNAL("customContextMenuRequested(QPoint)"),
+                     self.show_context_menu)
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
@@ -67,6 +77,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             start_mark = self.imageLabel.paragraph_marks[current.cas_id][0]
             # navigate to page where start mark is
             self.go_to_page(start_mark.page)
+
+    def show_context_menu(self, point):
+        self.cmenu.exec_(self.mapToGlobal(point))
+
+    # delete currently selected mark
+    def _delete_mark(self):
+        print "aaaaaaa"
 
     def _fill_listview(self, items):
         # show toc elems
