@@ -50,6 +50,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                     self.frameSize().height())
         # show toc elems
         self._fill_listview(self.course_toc)
+        self.imageLabel.setFocus(True)
+        self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
@@ -68,6 +70,15 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             item = QTocElem(elem["name"], elem["cas-id"], i)
             model.appendRow(item)
         self.listView.setModel(model)
+
+    # should be here to navigate regardless of focused widget (imagelabel or
+    # listview)
+    def keyPressEvent(self, event):
+        if event.key() in [QtCore.Qt.Key_Left, QtCore.Qt.Key_PageDown]:
+            self.prev_page()
+        elif event.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_PageUp]:
+            self.next_page()
+        self.update()
 
     @property
     def is_toc_selected(self):
@@ -182,10 +193,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             return
         # hide selections on this page
         if str(self.pageNum) in self.paragraphs.keys():
-            map(lambda m:m.hide(), self.paragraphs[str(self.pageNum)])
+            map(lambda m: m.hide(), self.paragraphs[str(self.pageNum)])
         # show selections on page we are switching to
         if str(pagenum) in self.paragraphs.keys():
-            map(lambda m:m.show(), self.paragraphs[str(pagenum)])
+            map(lambda m: m.show(), self.paragraphs[str(pagenum)])
         if self.dp.go_to_page(pagenum - 1):
             self.pageNum = pagenum
             self.update()

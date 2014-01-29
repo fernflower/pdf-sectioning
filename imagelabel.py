@@ -99,6 +99,7 @@ class QImageLabel(QtGui.QLabel):
         self.coordinates = None
         self.resize = False
         super(QImageLabel, self).__init__(parent)
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
     @property
     def cursor_pos(self):
@@ -142,6 +143,10 @@ class QImageLabel(QtGui.QLabel):
                                      page)]
                 toc_elem.mark_not_finished()
         self.update()
+
+    # should be here to navigate when focused
+    def keyPressEvent(self, event):
+        self.page_viewer.keyPressEvent(event)
 
     def update(self):
         super(QImageLabel, self).update()
