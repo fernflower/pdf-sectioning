@@ -6,6 +6,8 @@ from docwidget import Ui_MainWindow
 from imagelabel import QImageLabel
 from documentprocessor import DocumentProcessor, LoaderError
 from imagelabel import make_paragraph_mark
+from tocelem import QTocElem
+
 
 MAX_SCALE = 5
 MIN_SCALE = 1
@@ -47,12 +49,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                     self.frameSize().width(),
                                     self.frameSize().height())
         # show toc elems
-        model = QtGui.QStandardItemModel()
-        for elem in self.course_toc:
-            item = QtGui.QStandardItem(elem["name"])
-            item.setSelectable(True)
-            model.appendRow(item)
-        self.listView.setModel(model)
+        self._fill_listview(self.course_toc)
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
@@ -61,24 +58,37 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
                                          (1, self.dp.totalPages))
 
+    def _fill_listview(self, items):
+        # show toc elems
+        old_model = self.listView.model()
+        if old_model:
+            old_model.clear()
+        model = QtGui.QStandardItemModel()
+        for i, elem in enumerate(items):
+            item = QTocElem(elem["name"], elem["cas-id"], i)
+            model.appendRow(item)
+        self.listView.setModel(model)
+
     @property
     def is_toc_selected(self):
         return self.get_selected_toc_elem() is not None
 
     def get_selected_toc_elem(self):
-        selected = self.listView.selectedIndexes()
-        if selected:
-            return self.course_toc[selected[0].row()]
+        model = self.listView.model()
+        selected_idx = self.listView.currentIndex()
+        if selected_idx:
+            return model.itemFromIndex(selected_idx)
 
-    # False - work has not been started yet, True - already marked, None -
-    # missing end paragraph
-    def is_paragraph_marked(self, cas_id):
-        try:
-            values = self.imageLabel.paragraph_marks[cas_id]
-            if len(values) != 2:
-                return None
-        except KeyError:
-            return False
+    # finds toc elem ordernum by cas_id and returns corresponding QTocElem
+    def get_toc_elem(self, cas_id):
+        def find():
+            for i, elem in enumerate(self.course_toc):
+                if elem["cas-id"] == cas_id:
+                    return i
+            return -1
+        order_num = find()
+        if order_num != -1:
+            return self.listView.model().item(order_num)
 
     def open_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'OpenFile', '.')
@@ -100,14 +110,18 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                                      "Xml files (*.xml)")
         if not filename:
             return
+        # destroy preevious data
         for page, marks in self.paragraphs.items():
             map(lambda m: m.destroy(), marks)
         self.paragraphs = {}
         # convert from QString
         filename = str(filename)
         paragraphs = self.dp.load_native_xml(filename)
+        # clear listView and fill again with appropriate for given course-id
+        # data fetched from cas
+        self._fill_listview(self.course_toc)
         # generate start\end marks from paragraphs' data
-        for cas_id, marks in paragraphs.items():
+        for i, (cas_id, marks) in enumerate(paragraphs.items()):
             for m in marks:
                 str_page = m["page"]
                 mark = make_paragraph_mark(parent=self.imageLabel,
@@ -115,8 +129,14 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                            name=m["name"],
                                            pos=QtCore.QPoint(0, float(m["y"])),
                                            page=int(str_page),
+                                           toc_num=i,
                                            type=m["type"])
                 mark.adjust(self.scale)
+                # mark loaded paragraphs gray
+                # TODO think how to eliminate calling this func twice
+                elem = self.get_toc_elem(cas_id)
+                if elem:
+                    elem.mark_finished()
                 if mark.page != self.pageNum:
                     mark.hide()
                 try:
@@ -143,10 +163,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                     pdf_paragraphs[para_key].append(mark)
                 except KeyError:
                     pdf_paragraphs[para_key] = [mark]
-        if not self.dp:
+        # check that all marked paragraphs have both marks
+        if not self.imageLabel.verify_mark_pairs():
+            QtGui.QMessageBox.warning(self, "Warning",
+                                      "The result won't be saved " + \
+                                      "as some paragraphs don't have END marks")
             return
         dir_name = QtGui.QFileDialog.getExistingDirectory(self,
                                                           'Select Directory')
+        if not self.dp:
+            return
         if dir_name:
             self.dp.save_all(str(dir_name), pdf_paragraphs)
 
@@ -157,6 +183,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # hide selections on this page
         if str(self.pageNum) in self.paragraphs.keys():
             map(lambda m:m.hide(), self.paragraphs[str(self.pageNum)])
+        # show selections on page we are switching to
         if str(pagenum) in self.paragraphs.keys():
             map(lambda m:m.show(), self.paragraphs[str(pagenum)])
         if self.dp.go_to_page(pagenum - 1):

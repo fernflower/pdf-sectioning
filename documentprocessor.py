@@ -138,6 +138,9 @@ class DocumentProcessor(object):
         PAGES.append(ICON_SET)
         # add paragraphs info
         for cas_id, marks in paragraphs.items():
+            # make sure that no paragraphs are saved without end mark
+            assert len(marks) == 2, \
+                "Some paragraphs don't have end marks, can't save that way!"
             PAGE = E("ebook-para", id=str(cas_id),
                      **{ "start-page": str(marks[0]["page"]),
                          "start-y": str(marks[0]["y"]),

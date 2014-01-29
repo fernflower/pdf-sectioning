@@ -7,7 +7,7 @@ tlogger = TimeLogger()
 
 
 class QParagraphMark(QtCore.QObject):
-    def __init__(self, pos, parent, cas_id, name, page, type):
+    def __init__(self, pos, parent, cas_id, name, toc_num, page, type):
         super(QParagraphMark, self).__init__(parent)
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Line, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(0, pos.y()),
@@ -20,6 +20,7 @@ class QParagraphMark(QtCore.QObject):
         self._adjust_to_mark()
         self.label.show()
         self.page = page
+        self.toc_num = toc_num
 
     def hide(self):
         self.mark.hide()
@@ -32,6 +33,7 @@ class QParagraphMark(QtCore.QObject):
     def geometry(self):
         return self.mark.geometry()
 
+    #TODO find out how to destroy widgets
     def destroy(self):
         self.hide()
         #self.mark.setParent(None)
@@ -61,28 +63,30 @@ class QParagraphMark(QtCore.QObject):
 
 
 class QStartParagraph(QParagraphMark):
-    def __init__(self, pos, parent, cas_id, name, page):
+    def __init__(self, pos, parent, cas_id, name, toc_num, page):
         super(QStartParagraph, self).__init__(pos,
                                               parent,
                                               cas_id,
                                               name,
+                                              toc_num,
                                               page,
                                               "start")
 
 class QEndParagraph(QParagraphMark):
-    def __init__(self, pos, parent, cas_id, name, page):
+    def __init__(self, pos, parent, cas_id, name, toc_num, page):
         super(QEndParagraph, self).__init__(pos,
                                             parent,
                                             cas_id,
                                             name,
+                                            toc_num,
                                             page,
                                             "end")
 
 MARKS_DICT = {"start": QStartParagraph,
               "end": QEndParagraph}
 
-def make_paragraph_mark(pos, parent, cas_id, name, page, type):
-    return MARKS_DICT[type](pos, parent, cas_id, name, page)
+def make_paragraph_mark(pos, parent, cas_id, name, toc_num, page, type):
+    return MARKS_DICT[type](pos, parent, cas_id, name, toc_num, page)
 
 
 # this class manages all keys/mouse clicks and calls actions from page_viewer
@@ -117,19 +121,34 @@ class QImageLabel(QtGui.QLabel):
         if self.page_viewer.is_toc_selected:
             toc_elem = self.page_viewer.get_selected_toc_elem()
             page = self.page_viewer.pageNum
-            key = toc_elem["cas-id"]
+            key = toc_elem.cas_id
             if key in self.paragraph_marks.keys():
                 if len(self.paragraph_marks[key]) == 1:
                     self.paragraph_marks[key].append(
-                        QEndParagraph(event.pos(), self, toc_elem["cas-id"],
-                                      toc_elem["name"], page))
+                        QEndParagraph(event.pos(),
+                                      self,
+                                      toc_elem.cas_id,
+                                      toc_elem.name,
+                                      toc_elem.order_num,
+                                      page))
+                    toc_elem.mark_finished()
             else:
                 self.paragraph_marks[key] = \
-                    [QStartParagraph(event.pos(), self, toc_elem["cas-id"],
-                                     toc_elem["name"], page)]
+                    [QStartParagraph(event.pos(),
+                                     self,
+                                     toc_elem.cas_id,
+                                     toc_elem.name,
+                                     toc_elem.order_num,
+                                     page)]
+                toc_elem.mark_not_finished()
         self.update()
 
     def update(self):
         super(QImageLabel, self).update()
         # synchronize paragraph_marks data
         self.page_viewer.update_paragraphs(self.paragraph_marks)
+
+    # returns True if all marked paragraphs have both start and end marks. Useful when
+    # saving result
+    def verify_mark_pairs(self):
+        return all(map(lambda x:len(x) != 1, self.paragraph_marks.values()))
