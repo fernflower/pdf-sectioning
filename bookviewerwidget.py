@@ -248,9 +248,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.paragraphs[str(mark.page)] = [mark]
 
     def update_paragraphs(self, paragraph_marks):
-        for cas_id, markslist in paragraph_marks.items():
-            for mark in markslist:
-                self.add_paragraph_mark(mark)
+        for cas_id, (start, end) in paragraph_marks.items():
+            if start is not None:
+                self.add_paragraph_mark(start)
+                if end is not None:
+                    self.add_paragraph_mark(end)
 
     def transform_to_pdf_coords(self, rect):
         img = self.dp.curr_page()

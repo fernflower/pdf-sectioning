@@ -123,25 +123,27 @@ class QImageLabel(QtGui.QLabel):
             toc_elem = self.page_viewer.get_selected_toc_elem()
             page = self.page_viewer.pageNum
             key = toc_elem.cas_id
+            (start, end) = (None, None)
             if key in self.paragraph_marks.keys():
-                if len(self.paragraph_marks[key]) == 1:
-                    self.paragraph_marks[key].append(
-                        QEndParagraph(event.pos(),
-                                      self,
-                                      toc_elem.cas_id,
-                                      toc_elem.name,
-                                      toc_elem.order_num,
-                                      page))
+                (start, end) = self.paragraph_marks[key]
+                if end is None:
+                    end = QEndParagraph(event.pos(),
+                                        self,
+                                        toc_elem.cas_id,
+                                        toc_elem.name,
+                                        toc_elem.order_num,
+                                        page)
                     toc_elem.mark_finished()
             else:
-                self.paragraph_marks[key] = \
-                    [QStartParagraph(event.pos(),
-                                     self,
-                                     toc_elem.cas_id,
-                                     toc_elem.name,
-                                     toc_elem.order_num,
-                                     page)]
+                start = QStartParagraph(event.pos(),
+                                        self,
+                                        toc_elem.cas_id,
+                                        toc_elem.name,
+                                        toc_elem.order_num,
+                                        page)
                 toc_elem.mark_not_finished()
+            # add to paragraph_marks at last
+            self.paragraph_marks[key] = (start, end)
         self.update()
 
     # should be here to navigate when focused
@@ -156,7 +158,8 @@ class QImageLabel(QtGui.QLabel):
     # returns True if all marked paragraphs have both start and end marks. Useful when
     # saving result
     def verify_mark_pairs(self):
-        return all(map(lambda x:len(x) != 1, self.paragraph_marks.values()))
+        return all(map(lambda (x, y): y is not None,
+                       self.paragraph_marks.values()))
 
     # here data is received from bookviewer as dict { page: list of marks }
     # (useful when loading markup)
@@ -165,6 +168,8 @@ class QImageLabel(QtGui.QLabel):
         for pagenum, marks in book_viewer_paragraphs.items():
             for mark in marks:
                 try:
-                    self.paragraph_marks[mark.cas_id].append(mark)
+                    (start, no_end) = self.paragraph_marks[mark.cas_id]
+                    self.paragraph_marks[mark.cas_id] = (start, mark)
                 except KeyError:
-                    self.paragraph_marks[mark.cas_id] = [mark]
+                    self.paragraph_marks[mark.cas_id] = (mark, None)
+        print self.paragraph_marks
