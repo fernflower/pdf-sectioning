@@ -52,6 +52,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._fill_listview(self.course_toc)
         self.imageLabel.setFocus(True)
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.listView.selectionModel().selectionChanged.connect(self.on_selection_change)
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
@@ -60,12 +61,20 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
                                          (1, self.dp.totalPages))
 
+    def on_selection_change(self):
+        current = self.get_selected_toc_elem()
+        if not current.is_not_started():
+            start_mark = self.imageLabel.paragraph_marks[current.cas_id][0]
+            # navigate to page where start mark is
+            self.go_to_page(start_mark.page)
+
     def _fill_listview(self, items):
         # show toc elems
-        old_model = self.listView.model()
-        if old_model:
-            old_model.clear()
-        model = QtGui.QStandardItemModel()
+        model = self.listView.model()
+        if model:
+            model.clear()
+        else:
+            model = QtGui.QStandardItemModel()
         for i, elem in enumerate(items):
             item = QTocElem(elem["name"], elem["cas-id"], i)
             model.appendRow(item)
@@ -121,7 +130,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                                      "Xml files (*.xml)")
         if not filename:
             return
-        # destroy preevious data
+        # destroy previous data
         for page, marks in self.paragraphs.items():
             map(lambda m: m.destroy(), marks)
         self.paragraphs = {}
@@ -154,6 +163,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                     self.paragraphs[str_page].append(mark)
                 except KeyError:
                     self.paragraphs[str_page] = [mark]
+        self.imageLabel.reload_markup(self.paragraphs)
 
     def get_image(self):
         if not self.dp:
@@ -166,7 +176,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         pdf_paragraphs = {}
         for key, markslist in self.paragraphs.items():
             for m in markslist:
-                para_key = m.id
+                para_key = m.cas_id
                 mark = {"page" : m.page,
                         "name" : m.name,
                         "y": self.transform_to_pdf_coords(m.geometry()).y()}

@@ -14,7 +14,7 @@ class QParagraphMark(QtCore.QObject):
                                            QtCore.QSize(parent.width(), 5)))
         self.mark.show()
         self.name = name
-        self.id = cas_id
+        self.cas_id = cas_id
         self.label = QtGui.QLabel(
             "%s of paragraph %s" % (type, self.name), parent)
         self._adjust_to_mark()
@@ -36,10 +36,10 @@ class QParagraphMark(QtCore.QObject):
     #TODO find out how to destroy widgets
     def destroy(self):
         self.hide()
-        #self.mark.setParent(None)
-        #self.label.setParent(None)
-        #self.mark.deleteLater()
-        #self.label.deleteLater()
+        self.mark.setParent(None)
+        self.label.setParent(None)
+        self.mark.deleteLater()
+        self.label.deleteLater()
 
     def _adjust_to_mark(self):
         self.label.adjustSize()
@@ -157,3 +157,14 @@ class QImageLabel(QtGui.QLabel):
     # saving result
     def verify_mark_pairs(self):
         return all(map(lambda x:len(x) != 1, self.paragraph_marks.values()))
+
+    # here data is received from bookviewer as dict { page: list of marks }
+    # (useful when loading markup)
+    def reload_markup(self, book_viewer_paragraphs):
+        self.paragraph_marks = {}
+        for pagenum, marks in book_viewer_paragraphs.items():
+            for mark in marks:
+                try:
+                    self.paragraph_marks[mark.cas_id].append(mark)
+                except KeyError:
+                    self.paragraph_marks[mark.cas_id] = [mark]

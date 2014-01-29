@@ -34,3 +34,12 @@ class QTocElem(QtGui.QStandardItem):
     def mark_not_finished(self):
         self.state = QTocElem.STATE_NOT_FINISHED
         self.update()
+
+    def is_finished(self):
+        return self.state == QTocElem.STATE_FINISHED
+
+    def is_not_finished(self):
+        return self.state == QTocElem.STATE_NOT_FINISHED
+
+    def is_not_started(self):
+        return self.state == QTocElem.STATE_NOT_STARTED
