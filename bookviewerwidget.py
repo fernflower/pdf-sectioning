@@ -84,6 +84,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     # delete currently selected mark
     def _delete_mark(self):
         print "aaaaaaa"
+        print self.imageLabel.find_selected()
 
     def _fill_listview(self, items):
         # show toc elems

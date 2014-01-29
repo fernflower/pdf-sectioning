@@ -6,12 +6,12 @@ from timelogger import TimeLogger
 tlogger = TimeLogger()
 
 
-class QParagraphMark(QtCore.QObject):
+class QParagraphMark(QtGui.QWidget):
     def __init__(self, pos, parent, cas_id, name, toc_num, page, type):
         super(QParagraphMark, self).__init__(parent)
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Line, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(0, pos.y()),
-                                           QtCore.QSize(parent.width(), 5)))
+                                           QtCore.QSize(parent.width(), 15)))
         self.mark.show()
         self.name = name
         self.cas_id = cas_id
@@ -60,6 +60,18 @@ class QParagraphMark(QtCore.QObject):
     # get start-y coordinate
     def y(self):
         return self.mark.pos().y()
+
+    def mousePressEvent(self, event):
+        print "ffuuuuu"
+
+    def contains(self, cursor):
+        print "point (%s, %s), geometry (%s, %s, %s, %s)" % (cursor.x(),
+                                                             cursor.y(),
+                                                             self.geometry().x(),
+                                                             self.geometry().y(),
+                                                             self.geometry().width(),
+                                                             self.geometry().height())
+        return self.geometry().contains(cursor)
 
 
 class QStartParagraph(QParagraphMark):
@@ -176,3 +188,13 @@ class QImageLabel(QtGui.QLabel):
                 except KeyError:
                     self.paragraph_marks[mark.cas_id] = (mark, None)
         print self.paragraph_marks
+
+    def find_selected(self):
+        cursor = self.mapFromGlobal(QtGui.QCursor.pos())
+        for (start, end) in self.paragraph_marks.values():
+            if start is not None:
+                if start.contains(cursor):
+                    return start
+                if end is not None:
+                    if end.contains(cursor):
+                        return end
