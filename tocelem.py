@@ -24,6 +24,8 @@ class QTocElem(QtGui.QStandardItem):
             self.setBackground(QtGui.QBrush())
         elif self.state == QTocElem.STATE_NOT_STARTED:
             self.setSelectable(True)
+            self.setForeground(QtCore.Qt.black)
+            self.setBackground(QtGui.QBrush())
         elif self.state == QTocElem.STATE_NOT_FINISHED:
             self.setBackground(QtCore.Qt.cyan)
 
@@ -33,6 +35,10 @@ class QTocElem(QtGui.QStandardItem):
 
     def mark_not_finished(self):
         self.state = QTocElem.STATE_NOT_FINISHED
+        self.update()
+
+    def mark_not_started(self):
+        self.state = QTocElem.STATE_NOT_STARTED
         self.update()
 
     def is_finished(self):

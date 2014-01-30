@@ -7,11 +7,15 @@ tlogger = TimeLogger()
 
 
 class QParagraphMark(QtGui.QWidget):
+    WIDTH = 5
+    SELECT_DELTA = 12
+
     def __init__(self, pos, parent, cas_id, name, toc_num, page, type):
         super(QParagraphMark, self).__init__(parent)
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Line, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(0, pos.y()),
-                                           QtCore.QSize(parent.width(), 15)))
+                                           QtCore.QSize(parent.width(),
+                                                        QParagraphMark.WIDTH)))
         self.mark.show()
         self.name = name
         self.cas_id = cas_id
@@ -21,6 +25,7 @@ class QParagraphMark(QtGui.QWidget):
         self.label.show()
         self.page = page
         self.toc_num = toc_num
+        self.type = type
 
     def hide(self):
         self.mark.hide()
@@ -73,6 +78,9 @@ class QParagraphMark(QtGui.QWidget):
                                                              self.geometry().height())
         return self.geometry().contains(cursor)
 
+    def intersects(self, rect):
+        return self.geometry().intersects(rect)
+
 
 class QStartParagraph(QParagraphMark):
     def __init__(self, pos, parent, cas_id, name, toc_num, page):
@@ -117,6 +125,10 @@ class QImageLabel(QtGui.QLabel):
     def cursor_pos(self):
         return self.mapFromGlobal(QtGui.QCursor.pos())
 
+    # return corresponding toc_elem for start\end paragraph mark
+    def get_toc_elem(self, mark):
+        return self.page_viewer.get_toc_elem(mark.cas_id)
+
     def wheelEvent(self, event):
         self.page_viewer.zoom(event.delta())
         self.update()
@@ -139,26 +151,17 @@ class QImageLabel(QtGui.QLabel):
             page = self.page_viewer.pageNum
             key = toc_elem.cas_id
             (start, end) = (None, None)
-            if key in self.paragraph_marks.keys():
-                (start, end) = self.paragraph_marks[key]
-                if end is None:
-                    end = QEndParagraph(event.pos(),
-                                        self,
-                                        toc_elem.cas_id,
-                                        toc_elem.name,
-                                        toc_elem.order_num,
-                                        page)
-                    toc_elem.mark_finished()
-            else:
-                start = QStartParagraph(event.pos(),
-                                        self,
-                                        toc_elem.cas_id,
-                                        toc_elem.name,
-                                        toc_elem.order_num,
-                                        page)
-                toc_elem.mark_not_finished()
-            # add to paragraph_marks at last
-            self.paragraph_marks[key] = (start, end)
+            mark_type = self.get_available_marks(key)
+            if not mark_type:
+                return
+            mark = make_paragraph_mark(event.pos(),
+                                       self,
+                                       toc_elem.cas_id,
+                                       toc_elem.name,
+                                       toc_elem.order_num,
+                                       page,
+                                       mark_type[0])
+            self.add_mark(mark)
         self.update()
 
     # should be here to navigate when focused
@@ -189,12 +192,83 @@ class QImageLabel(QtGui.QLabel):
                     self.paragraph_marks[mark.cas_id] = (mark, None)
         print self.paragraph_marks
 
-    def find_selected(self):
-        cursor = self.mapFromGlobal(QtGui.QCursor.pos())
-        for (start, end) in self.paragraph_marks.values():
-            if start is not None:
-                if start.contains(cursor):
-                    return start
-                if end is not None:
-                    if end.contains(cursor):
-                        return end
+    def get_available_marks(self, cas_id):
+        both = ["start", "end"]
+        end_only = ["end"]
+        start_only = ["start"]
+        try:
+            (start, end) = self.paragraph_marks[cas_id]
+            if not start and not end:
+                return both
+            if not start:
+                return start_only
+            if not end:
+                return end_only
+            return None
+        except KeyError:
+            return both
+
+    # add mark to a correct place (start comes first, end - second)
+    def add_mark(self, mark):
+        toc_elem = self.get_toc_elem(mark)
+        try:
+            (start, end) = self.paragraph_marks[mark.cas_id]
+            if start and end:
+               # already have paragraph start and paragraph end
+                return
+            if not start and isinstance(mark, QStartParagraph):
+                start = mark
+            elif not end and isinstance(mark, QEndParagraph):
+                end = mark
+            self.paragraph_marks[mark.cas_id] = (start, end)
+            # set correct states
+            if not end or not start:
+                toc_elem.mark_not_finished()
+            else:
+                toc_elem.mark_finished()
+        except KeyError:
+            self.paragraph_marks[mark.cas_id] = (mark, None)
+            toc_elem.mark_not_finished()
+
+    # delete mark from a tuple. if all marks have been deleted, remove that key
+    # from paragraps_marks
+    def delete_mark(self, mark):
+        toc_elem = self.get_toc_elem(mark)
+        if mark.cas_id in self.paragraph_marks.keys():
+            (start, end) = self.paragraph_marks[mark.cas_id]
+            if start == mark:
+                self.paragraph_marks[mark.cas_id] = (None, end)
+            elif end == mark:
+                self.paragraph_marks[mark.cas_id] = (start, None)
+            toc_elem.mark_not_finished()
+        if self.paragraph_marks[mark.cas_id] == (None, None):
+            del self.paragraph_marks[mark.cas_id]
+            toc_elem.mark_not_started()
+
+    def find_selected(self, point):
+        def contains(mark, point):
+            if mark is not None and mark.contains(point):
+                print "EXACT match for %s" % mark.name
+                return mark
+
+        def intersects(mark, rect):
+            if mark is not None and mark.intersects(rect):
+                print "NON-EXACT match for %s" % mark.name
+                return mark
+
+        # in order to be a bit more user-friendly, first search precisely at
+        # point clicked, then add some delta and search withing +-delta area
+        point = self.mapFromGlobal(point)
+        page_marks = self.page_viewer.get_current_page_marks()
+        exact_match = next(
+            (mark for mark in page_marks if contains(mark, point)), None)
+        if exact_match:
+            return exact_match
+        else:
+            ne_rect = QtCore.QRect(
+                QtCore.QPoint(point.x() - QParagraphMark.SELECT_DELTA,
+                              point.y() - QParagraphMark.SELECT_DELTA),
+                QtCore.QPoint(point.x() + QParagraphMark.SELECT_DELTA,
+                              point.y() + QParagraphMark.SELECT_DELTA))
+            return next(
+            (mark for mark in page_marks if intersects(mark, ne_rect)), None)

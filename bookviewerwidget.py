@@ -20,6 +20,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         super(BookViewerWidget, self).__init__()
         self.setupUi(self)
         self.dp = doc_processor
+        self.last_right_click = None
         # first page has number 1
         self.paragraphs = {}
         self.course_toc = cms_course_toc
@@ -74,17 +75,26 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def on_selection_change(self):
         current = self.get_selected_toc_elem()
         if not current.is_not_started():
-            start_mark = self.imageLabel.paragraph_marks[current.cas_id][0]
+            (start_mark, end_mark) = \
+                self.imageLabel.paragraph_marks[current.cas_id]
+            page_goto = next(
+                (mark.page for mark in [start_mark, end_mark] if mark), None)
             # navigate to page where start mark is
-            self.go_to_page(start_mark.page)
+            if page_goto:
+                self.go_to_page(page_goto)
 
     def show_context_menu(self, point):
-        self.cmenu.exec_(self.mapToGlobal(point))
+        self.last_right_click = self.mapToGlobal(point)
+        self.cmenu.exec_(self.last_right_click)
 
-    # delete currently selected mark
+    # delete currently selected mark. Mark is always on current page. Destroy
+    # widget here as well, after removing from all parallel data structures
     def _delete_mark(self):
-        print "aaaaaaa"
-        print self.imageLabel.find_selected()
+        selected = self.imageLabel.find_selected(self.last_right_click)
+        if selected:
+            self.paragraphs[str(self.pageNum)].remove(selected)
+            self.imageLabel.delete_mark(selected)
+            selected.destroy()
 
     def _fill_listview(self, items):
         # show toc elems
@@ -237,9 +247,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             new_scale = self.scale - 0.5
         if new_scale >= MIN_SCALE and new_scale <= MAX_SCALE:
             self.scale = new_scale
+            coeff = new_scale / old_scale
             for page_key, markslist in self.paragraphs.items():
                 for m in markslist:
-                    m.adjust(new_scale / old_scale)
+                    m.adjust(coeff)
 
     def next_page(self):
         self.spinBox.setValue(self.pageNum + 1)
@@ -256,6 +267,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                      (nextNum, self.dp.totalPages))
         self.nextPage_button.setEnabled(not nextNum == self.dp.totalPages)
         self.prevPage_button.setEnabled(not nextNum == 1)
+
+    def get_current_page_marks(self):
+        try:
+            return self.paragraphs[str(self.pageNum)]
+        except KeyError:
+            return None
 
     # add paragraph mark (without duplicates)
     def add_paragraph_mark(self, mark):
