@@ -5,7 +5,7 @@ from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from imagelabel import QImageLabel
 from documentprocessor import DocumentProcessor, LoaderError
-from imagelabel import make_paragraph_mark
+from paragraphmark import make_paragraph_mark
 from tocelem import QTocElem
 
 
