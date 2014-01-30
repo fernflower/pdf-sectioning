@@ -22,6 +22,7 @@ class QParagraphMark(QtGui.QWidget):
         self.page = page
         self.toc_num = toc_num
         self.type = type
+        self.is_selected = False
 
     def hide(self):
         self.mark.hide()
@@ -62,21 +63,26 @@ class QParagraphMark(QtGui.QWidget):
     def y(self):
         return self.mark.pos().y()
 
-    def mousePressEvent(self, event):
-        print "ffuuuuu"
+    def paint_me(self, painter):
+        if self.is_selected:
+            painter.fillRect(self.geometry(), QtGui.QColor(0, 0, 0, 32))
+            self.brush = QtGui.QBrush(QtCore.Qt.red)
+            pal = QtGui.QPalette()
+            pal.setBrush(QtGui.QPalette.Base, self.brush);
+            self.mark.setPalette(pal);
+        else:
+            painter.fillRect(self.geometry(), QtGui.QColor(180, 180, 180, 32))
+        self.update()
+
+    def update(self):
+        self.mark.update()
+        self.label.update()
 
     def contains(self, cursor):
-        print "point (%s, %s), geometry (%s, %s, %s, %s)" % (cursor.x(),
-                                                             cursor.y(),
-                                                             self.geometry().x(),
-                                                             self.geometry().y(),
-                                                             self.geometry().width(),
-                                                             self.geometry().height())
         return self.geometry().contains(cursor)
 
     def intersects(self, rect):
         return self.geometry().intersects(rect)
-
 
 class QStartParagraph(QParagraphMark):
     def __init__(self, pos, parent, cas_id, name, toc_num, page):

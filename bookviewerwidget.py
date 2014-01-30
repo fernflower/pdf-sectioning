@@ -81,7 +81,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 (mark.page for mark in [start_mark, end_mark] if mark), None)
             # navigate to page where start mark is
             if page_goto:
-                self.go_to_page(page_goto)
+                # only have to change spinbox value: the connected signal will
+                # do all work automatically
+                self.spinBox.setValue(page_goto)
 
     def show_context_menu(self, point):
         self.last_right_click = self.mapToGlobal(point)
@@ -92,6 +94,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def _delete_mark(self):
         selected = self.imageLabel.find_selected(self.last_right_click)
         if selected:
+            selected.is_selected = True
             self.paragraphs[str(self.pageNum)].remove(selected)
             self.imageLabel.delete_mark(selected)
             selected.destroy()
@@ -272,7 +275,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         try:
             return self.paragraphs[str(self.pageNum)]
         except KeyError:
-            return None
+            return []
 
     # add paragraph mark (without duplicates)
     def add_paragraph_mark(self, mark):

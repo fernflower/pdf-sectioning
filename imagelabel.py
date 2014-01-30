@@ -34,9 +34,12 @@ class QImageLabel(QtGui.QLabel):
     # override paint event
     def paintEvent(self, event):
         super(QImageLabel, self).paintEvent(event)
-        painter = QtGui.QPainter(self)
         img = self.page_viewer.get_image()
         pixmap = QtGui.QPixmap.fromImage(img)
+        painter = QtGui.QPainter(self)
+        for mark in self.page_viewer.get_current_page_marks():
+            mark.paint_me(painter)
+            mark.update()
         self.setPixmap(pixmap)
         self.setFixedSize(pixmap.size())
 
