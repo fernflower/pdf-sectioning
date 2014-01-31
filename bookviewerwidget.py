@@ -30,6 +30,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.init_actions()
         self.init_widgets()
 
+    def selected_marks(self):
+        return [m for m in self.get_current_page_marks() if m.is_selected]
+
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(self.save)

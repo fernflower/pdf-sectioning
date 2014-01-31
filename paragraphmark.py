@@ -52,6 +52,9 @@ class QParagraphMark(QtGui.QWidget):
         self.is_selected = not self.is_selected
         self.update()
 
+    def set_selected(self, value):
+        self.is_selected = value
+
     #TODO find out how to destroy widgets
     def destroy(self):
         self.hide()
@@ -75,6 +78,9 @@ class QParagraphMark(QtGui.QWidget):
                               rect.width() * scale,
                               rect.height())
         self._adjust_to_mark()
+
+    def select(self, value):
+        self.is_selected = value
 
     # get start-y coordinate
     def y(self):

@@ -14,6 +14,7 @@ class QImageLabel(QtGui.QLabel):
     def __init__(self, parent, page_viewer):
         self.page_viewer = page_viewer
         self.paragraph_marks = {}
+        self.is_any_mark_selected = False
         super(QImageLabel, self).__init__(parent)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
@@ -46,10 +47,19 @@ class QImageLabel(QtGui.QLabel):
         if event.buttons() == QtCore.Qt.RightButton:
             return super(QImageLabel, self).mousePressEvent(event)
         if event.buttons() == QtCore.Qt.LeftButton:
-            # if clicked on already existing mark -> select it
+            # if clicked on already existing mark -> select it, deselecting
+            # anything that has been selected earlier
+            # if clicked with shift -> add to existing selection
+            modifiers = QtGui.QApplication.keyboardModifiers()
             selected = self.find_selected(self.mapToGlobal(event.pos()))
             if selected:
+                self.is_any_mark_selected = True
                 selected.toggle_selected()
+                if modifiers != QtCore.Qt.ShiftModifier:
+                    self.is_any_mark_selected = selected.is_selected
+                    map(lambda m: m.set_selected(False),
+                        filter(lambda x:x!=selected,
+                               self.page_viewer.get_current_page_marks()))
             # else create new one if can
             elif self.page_viewer.is_toc_selected:
                 toc_elem = self.page_viewer.get_selected_toc_elem()
