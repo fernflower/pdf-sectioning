@@ -64,7 +64,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionDelete_selection = \
             self.cmenu.addAction("Delete paragraph mark")
         self.actionDelete_selection.triggered.connect(
-            self._delete_mark)
+            self.delete_marks)
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(QPoint)"),
                      self.show_context_menu)
 
@@ -94,12 +94,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     # delete currently selected mark. Mark is always on current page. Destroy
     # widget here as well, after removing from all parallel data structures
-    def _delete_mark(self):
-        selected = self.imageLabel.find_selected(self.last_right_click)
-        if selected:
-            self.paragraphs[str(self.pageNum)].remove(selected)
-            self.imageLabel.delete_mark(selected)
-            selected.destroy()
+    def delete_marks(self):
+        selected = self.selected_marks() or \
+            [self.imageLabel.find_selected(self.last_right_click)]
+        for m in selected:
+            self.paragraphs[str(self.pageNum)].remove(m)
+            self.imageLabel.delete_mark(m)
+            m.destroy()
 
     def _fill_listview(self, items):
         # show toc elems
@@ -120,6 +121,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.prev_page()
         elif event.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_PageUp]:
             self.next_page()
+        elif event.key() == QtCore.Qt.Key_Delete:
+            self.delete_marks()
         self.update()
 
     @property
