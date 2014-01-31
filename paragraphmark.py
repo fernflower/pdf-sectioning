@@ -2,13 +2,17 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
 
+
 class QParagraphMark(QtGui.QWidget):
     WIDTH = 5
     SELECT_DELTA = 12
+    SELECT_COLOUR = QtGui.QColor(0, 0, 0, 32)
+    DESELECT_COLOUR = QtGui.QColor(180, 180, 180, 32)
 
     def __init__(self, pos, parent, cas_id, name, toc_num, page, type):
         super(QParagraphMark, self).__init__(parent)
-        self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Line, parent)
+        self.is_selected = False
+        self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(0, pos.y()),
                                            QtCore.QSize(parent.width(),
                                                         QParagraphMark.WIDTH)))
@@ -22,7 +26,8 @@ class QParagraphMark(QtGui.QWidget):
         self.page = page
         self.toc_num = toc_num
         self.type = type
-        self.is_selected = False
+        # repaint newly created as unselected
+        self.update()
 
     def hide(self):
         self.mark.hide()
@@ -34,6 +39,18 @@ class QParagraphMark(QtGui.QWidget):
 
     def geometry(self):
         return self.mark.geometry()
+
+    def paint_me(self, painter):
+        if self.is_selected:
+            painter.fillRect(self.mark.geometry(), QParagraphMark.SELECT_COLOUR)
+            painter.fillRect(self.label.geometry(), QParagraphMark.SELECT_COLOUR)
+        else:
+            painter.fillRect(self.mark.geometry(), QParagraphMark.DESELECT_COLOUR)
+            painter.fillRect(self.label.geometry(), QParagraphMark.DESELECT_COLOUR)
+
+    def toggle_selected(self):
+        self.is_selected = not self.is_selected
+        self.update()
 
     #TODO find out how to destroy widgets
     def destroy(self):
@@ -63,16 +80,6 @@ class QParagraphMark(QtGui.QWidget):
     def y(self):
         return self.mark.pos().y()
 
-    def paint_me(self, painter):
-        if self.is_selected:
-            painter.fillRect(self.geometry(), QtGui.QColor(0, 0, 0, 32))
-            self.brush = QtGui.QBrush(QtCore.Qt.red)
-            pal = QtGui.QPalette()
-            pal.setBrush(QtGui.QPalette.Base, self.brush);
-            self.mark.setPalette(pal);
-        else:
-            painter.fillRect(self.geometry(), QtGui.QColor(180, 180, 180, 32))
-        self.update()
 
     def update(self):
         self.mark.update()

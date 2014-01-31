@@ -14,8 +14,6 @@ class QImageLabel(QtGui.QLabel):
     def __init__(self, parent, page_viewer):
         self.page_viewer = page_viewer
         self.paragraph_marks = {}
-        self.coordinates = None
-        self.resize = False
         super(QImageLabel, self).__init__(parent)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
@@ -47,22 +45,28 @@ class QImageLabel(QtGui.QLabel):
         # disable right mouse click as it shows context menu
         if event.buttons() == QtCore.Qt.RightButton:
             return super(QImageLabel, self).mousePressEvent(event)
-        if self.page_viewer.is_toc_selected:
-            toc_elem = self.page_viewer.get_selected_toc_elem()
-            page = self.page_viewer.pageNum
-            key = toc_elem.cas_id
-            (start, end) = (None, None)
-            mark_type = self.get_available_marks(key)
-            if not mark_type:
-                return
-            mark = make_paragraph_mark(event.pos(),
-                                       self,
-                                       toc_elem.cas_id,
-                                       toc_elem.name,
-                                       toc_elem.order_num,
-                                       page,
-                                       mark_type[0])
-            self.add_mark(mark)
+        if event.buttons() == QtCore.Qt.LeftButton:
+            # if clicked on already existing mark -> select it
+            selected = self.find_selected(self.mapToGlobal(event.pos()))
+            if selected:
+                selected.toggle_selected()
+            # else create new one if can
+            elif self.page_viewer.is_toc_selected:
+                toc_elem = self.page_viewer.get_selected_toc_elem()
+                page = self.page_viewer.pageNum
+                key = toc_elem.cas_id
+                (start, end) = (None, None)
+                mark_type = self.get_available_marks(key)
+                if not mark_type:
+                    return
+                mark = make_paragraph_mark(event.pos(),
+                                        self,
+                                        toc_elem.cas_id,
+                                        toc_elem.name,
+                                        toc_elem.order_num,
+                                        page,
+                                        mark_type[0])
+                self.add_mark(mark)
         self.update()
 
     # should be here to navigate when focused
@@ -146,6 +150,7 @@ class QImageLabel(QtGui.QLabel):
             del self.paragraph_marks[mark.cas_id]
             toc_elem.mark_not_started()
 
+    # here point comes in GLOBAL coordinates
     def find_selected(self, point):
         def contains(mark, point):
             if mark is not None and mark.contains(point):

@@ -94,7 +94,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def _delete_mark(self):
         selected = self.imageLabel.find_selected(self.last_right_click)
         if selected:
-            selected.is_selected = True
             self.paragraphs[str(self.pageNum)].remove(selected)
             self.imageLabel.delete_mark(selected)
             selected.destroy()
