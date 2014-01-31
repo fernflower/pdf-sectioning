@@ -97,6 +97,14 @@ class QParagraphMark(QtGui.QWidget):
     def intersects(self, rect):
         return self.geometry().intersects(rect)
 
+    def move(self, delta):
+        g = self.mark.geometry()
+        self.mark.setGeometry(g.x(),
+                              g.y() + delta.y(),
+                              g.width(),
+                              g.height())
+        self._adjust_to_mark()
+
 class QStartParagraph(QParagraphMark):
     def __init__(self, pos, parent, cas_id, name, toc_num, page):
         super(QStartParagraph, self).__init__(pos,

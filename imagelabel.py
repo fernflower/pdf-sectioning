@@ -15,6 +15,9 @@ class QImageLabel(QtGui.QLabel):
         self.page_viewer = page_viewer
         self.paragraph_marks = {}
         self.is_any_mark_selected = False
+        # for move event, to calculate delta
+        # TODO there might be another way, perhaps tp retrieve delta from move event
+        self.coordinates = None
         super(QImageLabel, self).__init__(parent)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
@@ -47,6 +50,7 @@ class QImageLabel(QtGui.QLabel):
         if event.buttons() == QtCore.Qt.RightButton:
             return super(QImageLabel, self).mousePressEvent(event)
         if event.buttons() == QtCore.Qt.LeftButton:
+            self.coordinates = event.pos()
             # if clicked on already existing mark -> select it, deselecting
             # anything that has been selected earlier
             # if clicked with shift -> add to existing selection
@@ -78,6 +82,15 @@ class QImageLabel(QtGui.QLabel):
                                         mark_type[0])
                 self.add_mark(mark)
         self.update()
+
+    def mouseMoveEvent(self, event):
+        delta = QtCore.QPoint(event.pos().x() - self.coordinates.x(),
+                              event.pos().y() - self.coordinates.y())
+        cursor = self.mapToGlobal(event.pos())
+        selected = self.page_viewer.selected_marks()
+        for m in selected:
+            m.move(delta)
+        self.coordinates = event.pos()
 
     # should be here to navigate when focused
     def keyPressEvent(self, event):
