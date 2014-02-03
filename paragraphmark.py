@@ -3,31 +3,27 @@
 from PyQt4 import QtGui, QtCore
 
 
-class QParagraphMark(QtGui.QWidget):
+class QMark(QtGui.QWidget):
     WIDTH = 5
     SELECT_DELTA = 12
     SELECT_COLOUR = QtGui.QColor(0, 0, 0, 32)
     DESELECT_COLOUR = QtGui.QColor(180, 180, 180, 32)
 
-    def __init__(self, pos, parent, cas_id, name, toc_num, page, type):
-        super(QParagraphMark, self).__init__(parent)
+    def __init__(self, pos, parent, name, delete_func):
+        super(QMark, self).__init__(parent)
         self.is_selected = False
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, parent)
-        self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(0, pos.y()),
+        self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
                                            QtCore.QSize(parent.width(),
-                                                        QParagraphMark.WIDTH)))
+                                                        QMark.WIDTH)))
         self.mark.show()
         self.name = name
-        self.cas_id = cas_id
-        self.label = QtGui.QLabel(
-            "%s of paragraph %s" % (type, self.name), parent)
+        self.label = QtGui.QLabel(self.name, parent)
         self._adjust_to_mark()
         self.label.show()
-        self.page = page
-        self.toc_num = toc_num
-        self.type = type
         # repaint newly created as unselected
         self.update()
+        self.delete_func = delete_func
 
     def hide(self):
         self.mark.hide()
@@ -40,13 +36,17 @@ class QParagraphMark(QtGui.QWidget):
     def geometry(self):
         return self.mark.geometry()
 
+    def set_geometry(self, rect):
+        self.mark.setGeometry(rect)
+        self._adjust_to_mark()
+
     def paint_me(self, painter):
         if self.is_selected:
-            painter.fillRect(self.mark.geometry(), QParagraphMark.SELECT_COLOUR)
-            painter.fillRect(self.label.geometry(), QParagraphMark.SELECT_COLOUR)
+            painter.fillRect(self.mark.geometry(), QMark.SELECT_COLOUR)
+            painter.fillRect(self.label.geometry(), QMark.SELECT_COLOUR)
         else:
-            painter.fillRect(self.mark.geometry(), QParagraphMark.DESELECT_COLOUR)
-            painter.fillRect(self.label.geometry(), QParagraphMark.DESELECT_COLOUR)
+            painter.fillRect(self.mark.geometry(), QMark.DESELECT_COLOUR)
+            painter.fillRect(self.label.geometry(), QMark.DESELECT_COLOUR)
 
     def toggle_selected(self):
         self.is_selected = not self.is_selected
@@ -55,7 +55,6 @@ class QParagraphMark(QtGui.QWidget):
     def set_selected(self, value):
         self.is_selected = value
 
-    #TODO find out how to destroy widgets
     def destroy(self):
         self.hide()
         self.mark.setParent(None)
@@ -105,30 +104,68 @@ class QParagraphMark(QtGui.QWidget):
                               g.height())
         self._adjust_to_mark()
 
+    def delete(self):
+        self.delete_func(self)
+
+class QParagraphMark(QMark):
+    def __init__(self,
+                 pos, parent, cas_id, name, toc_num, page, delete_func, type):
+        super(QParagraphMark, self).__init__(QtCore.QPoint(0, pos.y()),
+                                             parent,
+                                             name, delete_func)
+        self.cas_id = cas_id
+        self.page = page
+        self.toc_num = toc_num
+        self.type = type
+        self.label.setText("%s of paragraph %s" % (self.type, self.name))
+
+
+class QRulerMark(QMark):
+    ORIENT_HORIZONTAL = "horizontal"
+    ORIENT_VERTICAL = "vertical"
+    def __init__(self, pos, parent, name, delete_func, orientation):
+        if orientation == QRulerMark.ORIENT_HORIZONTAL:
+            pos = QtCore.QPoint(0, pos.y())
+            super(QRulerMark, self).__init__(pos, parent, name, delete_func)
+        else:
+            pos = QtCore.QPoint(pos.x(), 0)
+            super(QRulerMark, self).__init__(pos, parent, name, delete_func)
+            vert_rect = QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
+                                    QtCore.QSize(QMark.WIDTH,
+                                                parent.height()))
+            self.set_geometry(vert_rect)
+        self.type = orientation
+
+
 class QStartParagraph(QParagraphMark):
-    def __init__(self, pos, parent, cas_id, name, toc_num, page):
+    def __init__(self, pos, parent, cas_id, name, toc_num, page, delete_func):
         super(QStartParagraph, self).__init__(pos,
                                               parent,
                                               cas_id,
                                               name,
                                               toc_num,
                                               page,
+                                              delete_func,
                                               "start")
 
 class QEndParagraph(QParagraphMark):
-    def __init__(self, pos, parent, cas_id, name, toc_num, page):
+    def __init__(self, pos, parent, cas_id, name, toc_num, page, delete_func):
         super(QEndParagraph, self).__init__(pos,
                                             parent,
                                             cas_id,
                                             name,
                                             toc_num,
                                             page,
+                                            delete_func,
                                             "end")
 
 MARKS_DICT = {"start": QStartParagraph,
               "end": QEndParagraph}
 
-def make_paragraph_mark(pos, parent, cas_id, name, toc_num, page, type):
-    return MARKS_DICT[type](pos, parent, cas_id, name, toc_num, page)
+def make_paragraph_mark(pos, parent, cas_id, name, toc_num, page, delete_func,
+                        type):
+    return MARKS_DICT[type](pos, parent, cas_id, name, toc_num, page, delete_func)
 
-
+def make_ruler_mark(pos, parent, name, delete_func,
+                    orientation=QRulerMark.ORIENT_HORIZONTAL):
+    return QRulerMark(pos, parent, name, delete_func, orientation)

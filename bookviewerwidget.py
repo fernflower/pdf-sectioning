@@ -5,7 +5,7 @@ from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from imagelabel import QImageLabel
 from documentprocessor import DocumentProcessor, LoaderError
-from paragraphmark import make_paragraph_mark
+from paragraphmark import make_paragraph_mark, QParagraphMark
 from tocelem import QTocElem
 
 
@@ -65,7 +65,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.cmenu = QtGui.QMenu()
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.actionDelete_selection = \
-            self.cmenu.addAction("Delete paragraph mark")
+            self.cmenu.addAction("Delete")
         self.actionDelete_selection.triggered.connect(
             self.delete_marks)
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(QPoint)"),
@@ -79,6 +79,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                          (1, self.dp.totalPages))
 
     def on_selection_change(self):
+        # always set normal mode for marks' creation
+        self.imageLabel.set_normal_mode()
         current = self.get_selected_toc_elem()
         if not current.is_not_started():
             (start_mark, end_mark) = \
@@ -99,10 +101,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     # widget here as well, after removing from all parallel data structures
     def delete_marks(self):
         selected = self.selected_marks() or \
-            [self.imageLabel.find_selected(self.last_right_click)]
+            [self.imageLabel.find_any_selected(self.last_right_click)]
         for m in selected:
-            self.paragraphs[str(self.pageNum)].remove(m)
-            self.imageLabel.delete_mark(m)
+            #TODO BAD, figure out how to do it better
+            if isinstance(m, QParagraphMark):
+                self.paragraphs[str(self.pageNum)].remove(m)
+            m.delete()
             m.destroy()
 
     def _fill_listview(self, items):
@@ -264,10 +268,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                     m.adjust(coeff)
 
     def set_horizontal_ruler(self):
-        print "SET HR!"
+        self.imageLabel.set_ruler_mode(QImageLabel.MODE_RULER_HOR)
 
     def set_vertical_ruler(self):
-        print "SET VR!"
+        self.imageLabel.set_ruler_mode(QImageLabel.MODE_RULER_VERT)
 
     def next_page(self):
         self.spinBox.setValue(self.pageNum + 1)
