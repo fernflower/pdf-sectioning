@@ -126,12 +126,9 @@
            <x>0</x>
            <y>0</y>
            <width>749</width>
-           <height>424</height>
+           <height>432</height>
           </rect>
          </property>
-         <zorder>widget</zorder>
-         <zorder>listWidget</zorder>
-         <zorder>listWidget</zorder>
         </widget>
        </widget>
       </item>
@@ -148,7 +145,7 @@
      <x>0</x>
      <y>0</y>
      <width>1035</width>
-     <height>20</height>
+     <height>17</height>
     </rect>
    </property>
   </widget>
@@ -166,6 +163,9 @@
    <addaction name="actionLoad_pdf"/>
    <addaction name="actionLoad_markup"/>
    <addaction name="actionSave"/>
+   <addaction name="separator"/>
+   <addaction name="actionSetHorizontalRuler"/>
+   <addaction name="actionSetVerticalRuler"/>
   </widget>
   <action name="actionLoad_pdf">
    <property name="text">
@@ -193,6 +193,22 @@
   <action name="actionLoad_markup">
    <property name="text">
     <string>load markup</string>
+   </property>
+  </action>
+  <action name="actionSetHorizontalRuler">
+   <property name="text">
+    <string>setHorizontalRuler</string>
+   </property>
+   <property name="iconText">
+    <string>Horizontal Ruler</string>
+   </property>
+  </action>
+  <action name="actionSetVerticalRuler">
+   <property name="text">
+    <string>setVerticalRuler</string>
+   </property>
+   <property name="iconText">
+    <string>Vertical Ruler</string>
    </property>
   </action>
  </widget>

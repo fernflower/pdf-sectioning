@@ -37,6 +37,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionLoad_pdf.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(self.save)
         self.actionLoad_markup.triggered.connect(self.load_markup)
+        self.actionSetVerticalRuler.triggered.connect(self.set_vertical_ruler)
+        self.actionSetHorizontalRuler.triggered.connect(
+            self.set_horizontal_ruler)
         self.prevPage_button.clicked.connect(self.prev_page)
         self.nextPage_button.clicked.connect(self.next_page)
         self.spinBox.connect(self.spinBox,
@@ -259,6 +262,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             for page_key, markslist in self.paragraphs.items():
                 for m in markslist:
                     m.adjust(coeff)
+
+    def set_horizontal_ruler(self):
+        print "SET HR!"
+
+    def set_vertical_ruler(self):
+        print "SET VR!"
 
     def next_page(self):
         self.spinBox.setValue(self.pageNum + 1)

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'layout.ui'
 #
-# Created: Fri Jan 24 21:05:47 2014
+# Created: Mon Feb  3 12:55:56 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -69,7 +69,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setAlignment(QtCore.Qt.AlignCenter)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 749, 424))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 749, 432))
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.verticalLayout_2.addWidget(self.scrollArea)
@@ -79,7 +79,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_5.addWidget(self.listView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1035, 20))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1035, 17))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtGui.QStatusBar(MainWindow)
@@ -98,9 +98,16 @@ class Ui_MainWindow(object):
         self.actionSave.setObjectName(_fromUtf8("actionSave"))
         self.actionLoad_markup = QtGui.QAction(MainWindow)
         self.actionLoad_markup.setObjectName(_fromUtf8("actionLoad_markup"))
+        self.actionSetHorizontalRuler = QtGui.QAction(MainWindow)
+        self.actionSetHorizontalRuler.setObjectName(_fromUtf8("actionSetHorizontalRuler"))
+        self.actionSetVerticalRuler = QtGui.QAction(MainWindow)
+        self.actionSetVerticalRuler.setObjectName(_fromUtf8("actionSetVerticalRuler"))
         self.toolBar.addAction(self.actionLoad_pdf)
         self.toolBar.addAction(self.actionLoad_markup)
         self.toolBar.addAction(self.actionSave)
+        self.toolBar.addSeparator()
+        self.toolBar.addAction(self.actionSetHorizontalRuler)
+        self.toolBar.addAction(self.actionSetVerticalRuler)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -117,4 +124,8 @@ class Ui_MainWindow(object):
         self.actionNext_page.setText(_translate("MainWindow", "next page", None))
         self.actionSave.setText(_translate("MainWindow", "save", None))
         self.actionLoad_markup.setText(_translate("MainWindow", "load markup", None))
+        self.actionSetHorizontalRuler.setText(_translate("MainWindow", "setHorizontalRuler", None))
+        self.actionSetHorizontalRuler.setIconText(_translate("MainWindow", "Horizontal Ruler", None))
+        self.actionSetVerticalRuler.setText(_translate("MainWindow", "setVerticalRuler", None))
+        self.actionSetVerticalRuler.setIconText(_translate("MainWindow", "Vertical Ruler", None))
 
