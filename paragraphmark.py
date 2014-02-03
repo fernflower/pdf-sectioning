@@ -15,7 +15,7 @@ class QMark(QtGui.QWidget):
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
                                            QtCore.QSize(parent.width(),
-                                                        QMark.WIDTH)))
+                                                        self.WIDTH)))
         self.mark.show()
         self.name = name
         self.label = QtGui.QLabel(self.name, parent)
@@ -42,11 +42,11 @@ class QMark(QtGui.QWidget):
 
     def paint_me(self, painter):
         if self.is_selected:
-            painter.fillRect(self.mark.geometry(), QMark.SELECT_COLOUR)
-            painter.fillRect(self.label.geometry(), QMark.SELECT_COLOUR)
+            painter.fillRect(self.mark.geometry(), self.SELECT_COLOUR)
+            painter.fillRect(self.label.geometry(), self.SELECT_COLOUR)
         else:
-            painter.fillRect(self.mark.geometry(), QMark.DESELECT_COLOUR)
-            painter.fillRect(self.label.geometry(), QMark.DESELECT_COLOUR)
+            painter.fillRect(self.mark.geometry(), self.DESELECT_COLOUR)
+            painter.fillRect(self.label.geometry(), self.DESELECT_COLOUR)
 
     def toggle_selected(self):
         self.is_selected = not self.is_selected
@@ -121,19 +121,12 @@ class QParagraphMark(QMark):
 
 
 class QRulerMark(QMark):
+    SELECT_COLOUR = QtGui.QColor(200, 0, 0, 50)
+    DESELECT_COLOUR = QtGui.QColor(100, 0, 0, 50)
     ORIENT_HORIZONTAL = "horizontal"
     ORIENT_VERTICAL = "vertical"
+
     def __init__(self, pos, parent, name, delete_func, orientation):
-        if orientation == QRulerMark.ORIENT_HORIZONTAL:
-            pos = QtCore.QPoint(0, pos.y())
-            super(QRulerMark, self).__init__(pos, parent, name, delete_func)
-        else:
-            pos = QtCore.QPoint(pos.x(), 0)
-            super(QRulerMark, self).__init__(pos, parent, name, delete_func)
-            vert_rect = QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
-                                    QtCore.QSize(QMark.WIDTH,
-                                                parent.height()))
-            self.set_geometry(vert_rect)
         self.type = orientation
 
 
@@ -184,13 +177,12 @@ class QEndParagraph(QParagraphMark):
 
 MARKS_DICT = {"start": QStartParagraph,
               "end": QEndParagraph,
-              "horizontal": QHorizontalRuler,
-              "vertical": QVerticalRuler}
+              QRulerMark.ORIENT_HORIZONTAL: QHorizontalRuler,
+              QRulerMark.ORIENT_VERTICAL: QVerticalRuler}
 
 def make_paragraph_mark(pos, parent, cas_id, name, toc_num, page, delete_func,
                         type):
     return MARKS_DICT[type](pos, parent, cas_id, name, toc_num, page, delete_func)
 
-def make_ruler_mark(pos, parent, name, delete_func,
-                    orientation=QRulerMark.ORIENT_HORIZONTAL):
+def make_ruler_mark(pos, parent, name, delete_func, orientation):
     return MARKS_DICT[orientation](pos, parent, name, delete_func)
