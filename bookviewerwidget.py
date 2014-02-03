@@ -33,6 +33,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def selected_marks(self):
         return [m for m in self.get_current_page_marks() if m.is_selected]
 
+    def selected_rulers(self):
+        return self.imageLabel.get_selected_rulers()
+
+    def selected_marks_and_rulers(self):
+        return self.selected_marks() + self.selected_rulers()
+
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(self.save)
@@ -93,15 +99,19 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 # do all work automatically
                 self.spinBox.setValue(page_goto)
 
+    # context menu fill be shownn only if sth is selected at the moment
     def show_context_menu(self, point):
         self.last_right_click = self.mapToGlobal(point)
-        self.cmenu.exec_(self.last_right_click)
+        if self.selected_marks_and_rulers() != []:
+            self.cmenu.exec_(self.last_right_click)
 
     # delete currently selected mark. Mark is always on current page. Destroy
     # widget here as well, after removing from all parallel data structures
     def delete_marks(self):
-        selected = self.selected_marks() or \
-            [self.imageLabel.find_any_selected(self.last_right_click)]
+        selected = self.selected_marks_and_rulers()
+        # maybe should delete things as well when right clicked on non-selected
+        # area with sth present?
+        #self.imageLabel.find_any_at_point(self.last_right_click)
         for m in selected:
             #TODO BAD, figure out how to do it better
             if isinstance(m, QParagraphMark):

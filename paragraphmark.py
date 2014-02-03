@@ -137,6 +137,29 @@ class QRulerMark(QMark):
         self.type = orientation
 
 
+class QHorizontalRuler(QRulerMark):
+    def __init__(self, pos, parent, name, delete_func):
+        pos = QtCore.QPoint(0, pos.y())
+        super(QRulerMark, self).__init__(pos, parent, name, delete_func)
+
+
+class QVerticalRuler(QRulerMark):
+    def __init__(self, pos, parent, name, delete_func):
+        pos = QtCore.QPoint(pos.x(), 0)
+        super(QRulerMark, self).__init__(pos, parent, name, delete_func)
+        vert_rect = QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
+                                 QtCore.QSize(QMark.WIDTH,
+                                            parent.height()))
+        self.set_geometry(vert_rect)
+
+    def move(self, delta):
+        g = self.mark.geometry()
+        self.mark.setGeometry(g.x() + delta.x(),
+                              g.y(),
+                              g.width(),
+                              g.height())
+        self._adjust_to_mark()
+
 class QStartParagraph(QParagraphMark):
     def __init__(self, pos, parent, cas_id, name, toc_num, page, delete_func):
         super(QStartParagraph, self).__init__(pos,
@@ -160,7 +183,9 @@ class QEndParagraph(QParagraphMark):
                                             "end")
 
 MARKS_DICT = {"start": QStartParagraph,
-              "end": QEndParagraph}
+              "end": QEndParagraph,
+              "horizontal": QHorizontalRuler,
+              "vertical": QVerticalRuler}
 
 def make_paragraph_mark(pos, parent, cas_id, name, toc_num, page, delete_func,
                         type):
@@ -168,4 +193,4 @@ def make_paragraph_mark(pos, parent, cas_id, name, toc_num, page, delete_func,
 
 def make_ruler_mark(pos, parent, name, delete_func,
                     orientation=QRulerMark.ORIENT_HORIZONTAL):
-    return QRulerMark(pos, parent, name, delete_func, orientation)
+    return MARKS_DICT[orientation](pos, parent, name, delete_func)

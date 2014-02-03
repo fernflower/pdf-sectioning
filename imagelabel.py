@@ -37,6 +37,9 @@ class QImageLabel(QtGui.QLabel):
     def cursor_pos(self):
         return self.mapFromGlobal(QtGui.QCursor.pos())
 
+    def get_selected_rulers(self):
+        return [r for r in self.get_rulers() if r.is_selected]
+
     def is_ruler_mode(self):
         return self.mode == QImageLabel.MODE_RULER_HOR or \
             self.mode == QImageLabel.MODE_RULER_VERT
@@ -62,7 +65,9 @@ class QImageLabel(QtGui.QLabel):
         img = self.page_viewer.get_image()
         pixmap = QtGui.QPixmap.fromImage(img)
         painter = QtGui.QPainter(self)
-        for mark in self.page_viewer.get_current_page_marks():
+        marks_and_rulers = self.page_viewer.get_current_page_marks() + \
+                           self.get_rulers()
+        for mark in marks_and_rulers:
             mark.paint_me(painter)
             mark.update()
         self.setPixmap(pixmap)
@@ -107,18 +112,17 @@ class QImageLabel(QtGui.QLabel):
             modifiers = QtGui.QApplication.keyboardModifiers()
             self.is_any_mark_selected = True
             selected.toggle_selected()
-            print selected.name
             if modifiers != QtCore.Qt.ShiftModifier:
                 self.is_any_mark_selected = selected.is_selected
                 map(lambda m: m.set_selected(False),
-                    filter(lambda x:x!=selected,
-                            self.page_viewer.get_current_page_marks()))
+                    filter(lambda x: x!=selected,
+                            self.page_viewer.selected_marks_and_rulers()))
 
         # disable right mouse click as it shows context menu
         if event.buttons() == QtCore.Qt.RightButton:
             return super(QImageLabel, self).mousePressEvent(event)
         if event.buttons() == QtCore.Qt.LeftButton:
-            selected = self.find_any_selected(self.mapToGlobal(event.pos()))
+            selected = self.find_any_at_point(self.mapToGlobal(event.pos()))
             self.coordinates = event.pos()
             if selected:
                 process_selected(selected)
@@ -129,7 +133,7 @@ class QImageLabel(QtGui.QLabel):
         delta = QtCore.QPoint(event.pos().x() - self.coordinates.x(),
                               event.pos().y() - self.coordinates.y())
         cursor = self.mapToGlobal(event.pos())
-        selected = self.page_viewer.selected_marks()
+        selected = self.page_viewer.selected_marks() + self.get_selected_rulers()
         for m in selected:
             m.move(delta)
         self.coordinates = event.pos()
@@ -224,7 +228,7 @@ class QImageLabel(QtGui.QLabel):
     # here point comes in GLOBAL coordinates, among sets a list of marks to look
     # through. If no list is given, will search among marks on current page
     # (excluding rulers)
-    def find_selected(self, point, among=[]):
+    def find_at_point(self, point, among=[]):
         def contains(mark, point):
             if mark is not None and mark.contains(point):
                 print "EXACT match for %s" % mark.name
@@ -255,9 +259,9 @@ class QImageLabel(QtGui.QLabel):
 
     # find any selected mark at point, either a paragraph mark or a ruler
     # point - in GLOBAL coordinates
-    def find_any_selected(self, point):
-        selected_mark = self.find_selected(point)
+    def find_any_at_point(self, point):
+        selected_mark = self.find_at_point(point)
         if selected_mark:
             return selected_mark
         else:
-            return self.find_selected(point, self.get_rulers())
+            return self.find_at_point(point, self.get_rulers())
