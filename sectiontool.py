@@ -25,21 +25,27 @@ class SectionTool(object):
         with open(config_filename) as f:
             self.config_data = {
                 line.split('=', 2)[0].strip(' \"\'') : \
-                line.split('=', 2)[1].strip('\"\' \n') for line in f.readlines()
+                line.split('=', 2)[1].strip('\"\' \n') \
+                for line in f.readlines() if not line.startswith('#')
             }
         if 'url' not in self.config_data.keys() or \
                 'resolve_url' not in self.config_data.keys():
             raise SectionToolError(
                 "Base cms url and resolve-url must be set in config!")
+        if 'cms-course' not in self.config_data.keys():
+            raise SectionToolError(
+            "Cms-course id should be set in config (cms-course field)!")
 
     # returns a list of {name, cas-id} in order of appearance in TOC
-    def get_cms_course_toc(self, course_id):
+    def get_cms_course_toc(self):
+        course_id = self.config_data['cms-course']
         course_url = self.config_data['url'].rstrip('/') + '/' + course_id
         storage = StringIO()
         c = pycurl.Curl()
         c.setopt(pycurl.URL, course_url)
         c.setopt(c.WRITEFUNCTION, storage.write)
-        c.setopt(pycurl.USERPWD, self.config_data['user'])
+        c.setopt(pycurl.USERPWD,
+                 self.config_data['username'] + ":" + self.config_data["password"])
         c.perform()
         if c.getinfo(pycurl.HTTP_CODE) == 200:
             TOC_XPATH = "/is:course/is:lessons/is:lesson/@name"
@@ -88,7 +94,7 @@ def main():
 
     filename, width, height, save_dir = parse_args()
     st = SectionTool("config")
-    toc = st.get_cms_course_toc('course:279feb39-aa65-4f2a-b42d-6da8a180ea44')
+    toc = st.get_cms_course_toc()
     for elem in toc:
         print elem["name"]
 
