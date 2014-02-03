@@ -114,9 +114,7 @@ class QImageLabel(QtGui.QLabel):
             selected.toggle_selected()
             if modifiers != QtCore.Qt.ShiftModifier:
                 self.is_any_mark_selected = selected.is_selected
-                map(lambda m: m.set_selected(False),
-                    filter(lambda x: x!=selected,
-                            self.page_viewer.selected_marks_and_rulers()))
+                self.page_viewer.deselect_all([selected])
 
         # disable right mouse click as it shows context menu
         if event.buttons() == QtCore.Qt.RightButton:
@@ -127,6 +125,8 @@ class QImageLabel(QtGui.QLabel):
             if selected:
                 process_selected(selected)
             else:
+                # deselected everything selected earlier on page
+                self.page_viewer.deselect_all()
                 self._create_mark_on_click(event)
 
     def mouseMoveEvent(self, event):

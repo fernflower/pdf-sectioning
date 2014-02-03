@@ -39,13 +39,21 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def selected_marks_and_rulers(self):
         return self.selected_marks() + self.selected_rulers()
 
+    # deselect all elems on page (both marks and rulers) if not in
+    # keep_selections list
+    def deselect_all(self, keep_selections = []):
+        map(lambda x: x.set_selected(False),
+            filter(lambda x: x not in keep_selections,
+                   self.selected_marks_and_rulers()))
+
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(self.save)
         self.actionLoad_markup.triggered.connect(self.load_markup)
-        self.actionSetVerticalRuler.triggered.connect(self.set_vertical_ruler)
+        self.actionSetVerticalRuler.triggered.connect(
+            self.set_vertical_ruler_state)
         self.actionSetHorizontalRuler.triggered.connect(
-            self.set_horizontal_ruler)
+            self.set_horizontal_ruler_state)
         self.prevPage_button.clicked.connect(self.prev_page)
         self.nextPage_button.clicked.connect(self.next_page)
         self.spinBox.connect(self.spinBox,
@@ -76,6 +84,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.delete_marks)
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(QPoint)"),
                      self.show_context_menu)
+        # make rulers' buttons checkable
+        self.actionSetVerticalRuler.setCheckable(True)
+        self.actionSetHorizontalRuler.setCheckable(True)
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
@@ -86,7 +97,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def on_selection_change(self):
         # always set normal mode for marks' creation
-        self.imageLabel.set_normal_mode()
+        self.set_normal_state()
         current = self.get_selected_toc_elem()
         if not current.is_not_started():
             (start_mark, end_mark) = \
@@ -277,11 +288,26 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 for m in markslist:
                     m.adjust(coeff)
 
-    def set_horizontal_ruler(self):
-        self.imageLabel.set_ruler_mode(QImageLabel.MODE_RULER_HOR)
+    def set_normal_state(self):
+        self.actionSetVerticalRuler.setChecked(False)
+        self.actionSetHorizontalRuler.setChecked(False)
+        self.imageLabel.set_normal_mode()
 
-    def set_vertical_ruler(self):
-        self.imageLabel.set_ruler_mode(QImageLabel.MODE_RULER_VERT)
+    def set_horizontal_ruler_state(self):
+        self.actionSetVerticalRuler.setChecked(False)
+        if self.actionSetHorizontalRuler.isChecked():
+            self.actionSetHorizontalRuler.setChecked(True)
+            self.imageLabel.set_ruler_mode(QImageLabel.MODE_RULER_HOR)
+        else:
+            self.set_normal_state()
+
+    def set_vertical_ruler_state(self):
+        self.actionSetHorizontalRuler.setChecked(False)
+        if self.actionSetVerticalRuler.isChecked():
+            self.actionSetVerticalRuler.setChecked(True)
+            self.imageLabel.set_ruler_mode(QImageLabel.MODE_RULER_VERT)
+        else:
+            self.set_normal_state()
 
     def next_page(self):
         self.spinBox.setValue(self.pageNum + 1)
