@@ -5,8 +5,7 @@ from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from imagelabel import QImageLabel
 from documentprocessor import DocumentProcessor, LoaderError
-from paragraphmark import make_paragraph_mark, QParagraphMark
-from tocelem import QTocElem
+from bookcontroller import BookController
 
 
 MAX_SCALE = 5
@@ -16,35 +15,16 @@ MIN_SCALE = 1
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     totalPagesText = "total %d out of %d"
 
-    def __init__(self, cms_course_toc, doc_processor=None):
+    def __init__(self, controller):
         super(BookViewerWidget, self).__init__()
         self.setupUi(self)
-        self.dp = doc_processor
+        self.controller = controller
         self.last_right_click = None
-        # first page has number 1
-        self.paragraphs = {}
-        self.course_toc = cms_course_toc
         self.pageNum = 1
         self.scale = 1
         self._set_widgets_data_on_doc_load()
         self.init_actions()
         self.init_widgets()
-
-    def selected_marks(self):
-        return [m for m in self.get_current_page_marks() if m.is_selected]
-
-    def selected_rulers(self):
-        return self.imageLabel.get_selected_rulers()
-
-    def selected_marks_and_rulers(self):
-        return self.selected_marks() + self.selected_rulers()
-
-    # deselect all elems on page (both marks and rulers) if not in
-    # keep_selections list
-    def deselect_all(self, keep_selections = []):
-        map(lambda x: x.set_selected(False),
-            filter(lambda x: x not in keep_selections,
-                   self.selected_marks_and_rulers()))
 
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
@@ -62,7 +42,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def init_widgets(self):
         # add image label
-        self.imageLabel = QImageLabel(self, self)
+        self.imageLabel = QImageLabel(self, self.controller)
         self.imageLabel.setScaledContents(True)
         self.scrollArea.setWidget(self.imageLabel)
         self.scrollArea.setGeometry(self.scrollArea.x(),
@@ -70,7 +50,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                     self.frameSize().width(),
                                     self.frameSize().height())
         # show toc elems
-        self._fill_listview(self.course_toc)
+        self._fill_listview()
         self.imageLabel.setFocus(True)
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.listView.selectionModel().selectionChanged.connect(
@@ -90,25 +70,23 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
-        if self.dp:
-            self.spinBox.setRange(1, self.dp.totalPages)
-            self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
-                                         (1, self.dp.totalPages))
+        total_pages = self.controller.get_total_pages()
+        self.spinBox.setRange(1, total_pages)
+        self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
+                                     (1, total_pages))
 
     def on_selection_change(self):
         # always set normal mode for marks' creation
         self.set_normal_state()
         current = self.get_selected_toc_elem()
         if not current.is_not_started():
-            (start_mark, end_mark) = \
-                self.imageLabel.paragraph_marks[current.cas_id]
-            page_goto = next(
-                (mark.page for mark in [start_mark, end_mark] if mark), None)
+            first_mark = self.controller.\
+                get_first_paragraph_mark(current.cas_id)
             # navigate to page where start mark is
-            if page_goto:
+            if first_mark:
                 # only have to change spinbox value: the connected signal will
                 # do all work automatically
-                self.spinBox.setValue(page_goto)
+                self.spinBox.setValue(first_mark.page)
 
     # context menu fill be shownn only if sth is selected at the moment
     def show_context_menu(self, point):
@@ -116,29 +94,19 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if self.selected_marks_and_rulers() != []:
             self.cmenu.exec_(self.last_right_click)
 
-    # delete currently selected mark. Mark is always on current page. Destroy
+    # delete currently selected marks on current page. Destroy
     # widget here as well, after removing from all parallel data structures
     def delete_marks(self):
-        selected = self.selected_marks_and_rulers()
-        # maybe should delete things as well when right clicked on non-selected
-        # area with sth present?
-        #self.imageLabel.find_any_at_point(self.last_right_click)
-        for m in selected:
-            #TODO BAD, figure out how to do it better
-            if isinstance(m, QParagraphMark):
-                self.paragraphs[str(self.pageNum)].remove(m)
-            m.delete()
-            m.destroy()
+        self.controller.delete_marks()
 
-    def _fill_listview(self, items):
+    def _fill_listview(self):
         # show toc elems
         model = self.listView.model()
         if model:
             model.clear()
         else:
             model = QtGui.QStandardItemModel()
-        for i, elem in enumerate(items):
-            item = QTocElem(elem["name"], elem["cas-id"], i)
+        for item in self.controller.get_toc_elems():
             model.appendRow(item)
         self.listView.setModel(model)
 
@@ -165,113 +133,53 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_toc_elem(self, cas_id):
-        def find():
-            for i, elem in enumerate(self.course_toc):
-                if elem["cas-id"] == cas_id:
-                    return i
-            return -1
-        order_num = find()
-        if order_num != -1:
-            return self.listView.model().item(order_num)
+        return self.controller.get_toc_elem(cas_id)
 
     def open_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'OpenFile', '.')
         if not filename:
             return
         #TODO dialog with warning if any file open at the moment
-        self.dp = DocumentProcessor(unicode(filename))
+        self.controller.open_file(unicode(filename))
         self._set_widgets_data_on_start()
         self.update()
 
     def load_markup(self):
         # TODO dialog with warning that all data that has not been saved will
         # be lost
-        if not self.dp:
-            return
         filename = QtGui.QFileDialog.getOpenFileName(self,
                                                      'OpenFile',
                                                      '.',
                                                      "Xml files (*.xml)")
         if not filename:
             return
-        # destroy previous data
-        for page, marks in self.paragraphs.items():
-            map(lambda m: m.destroy(), marks)
-        self.paragraphs = {}
-        # convert from QString
-        filename = str(filename)
-        paragraphs = self.dp.load_native_xml(filename)
-        # clear listView and fill again with appropriate for given course-id
-        # data fetched from cas
-        self._fill_listview(self.course_toc)
-        # generate start\end marks from paragraphs' data
-        for i, (cas_id, marks) in enumerate(paragraphs.items()):
-            for m in marks:
-                str_page = m["page"]
-                mark = make_paragraph_mark(parent=self.imageLabel,
-                                           cas_id=cas_id,
-                                           name=m["name"],
-                                           pos=QtCore.QPoint(0, float(m["y"])),
-                                           page=int(str_page),
-                                           toc_num=i,
-                                           type=m["type"])
-                mark.adjust(self.scale)
-                # mark loaded paragraphs gray
-                # TODO think how to eliminate calling this func twice
-                elem = self.get_toc_elem(cas_id)
-                if elem:
-                    elem.mark_finished()
-                if mark.page != self.pageNum:
-                    mark.hide()
-                try:
-                    self.paragraphs[str_page].append(mark)
-                except KeyError:
-                    self.paragraphs[str_page] = [mark]
-        self.imageLabel.reload_markup(self.paragraphs)
+        self.controller.load_markup(unicode(filename))
 
     def get_image(self):
-        if not self.dp:
-            return None
-        res = self.dp.curr_page(self.scale)
-        return res
+        return self.controller.get_image(self.scale)
 
     def save(self):
-        # normalize to get pdf-coordinates (save with scale=1.0)
-        pdf_paragraphs = {}
-        for key, markslist in self.paragraphs.items():
-            for m in markslist:
-                para_key = m.cas_id
-                mark = {"page" : m.page,
-                        "name" : m.name,
-                        "y": self.transform_to_pdf_coords(m.geometry()).y()}
-                try:
-                    pdf_paragraphs[para_key].append(mark)
-                except KeyError:
-                    pdf_paragraphs[para_key] = [mark]
         # check that all marked paragraphs have both marks
-        if not self.imageLabel.verify_mark_pairs():
+        if not self.controller.verify_mark_pairs():
             QtGui.QMessageBox.warning(self, "Warning",
                                       "The result won't be saved " + \
                                       "as some paragraphs don't have END marks")
             return
         dir_name = QtGui.QFileDialog.getExistingDirectory(self,
                                                           'Select Directory')
-        if not self.dp:
+        if not dir_name:
             return
-        if dir_name:
-            self.dp.save_all(str(dir_name), pdf_paragraphs)
+        self.controller.save(unicode(dir_name))
 
     # here 1st page has number 1
     def go_to_page(self, pagenum):
-        if not self.dp:
+        if self.controller.get_total_pages() == 0:
             return
         # hide selections on this page
-        if str(self.pageNum) in self.paragraphs.keys():
-            map(lambda m: m.hide(), self.paragraphs[str(self.pageNum)])
+        self.controller.hide_page_marks(self.pageNum)
         # show selections on page we are switching to
-        if str(pagenum) in self.paragraphs.keys():
-            map(lambda m: m.show(), self.paragraphs[str(pagenum)])
-        if self.dp.go_to_page(pagenum - 1):
+        self.controller.show_page_marks(pagenum)
+        if self.controller.go_to_page(pagenum - 1):
             self.pageNum = pagenum
             self.update()
 
@@ -284,20 +192,18 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if new_scale >= MIN_SCALE and new_scale <= MAX_SCALE:
             self.scale = new_scale
             coeff = new_scale / old_scale
-            for page_key, markslist in self.paragraphs.items():
-                for m in markslist:
-                    m.adjust(coeff)
+            self.controller.zoom(coeff)
 
     def set_normal_state(self):
         self.actionSetVerticalRuler.setChecked(False)
         self.actionSetHorizontalRuler.setChecked(False)
-        self.imageLabel.set_normal_mode()
+        self.controller.set_normal_mode()
 
     def set_horizontal_ruler_state(self):
         self.actionSetVerticalRuler.setChecked(False)
         if self.actionSetHorizontalRuler.isChecked():
             self.actionSetHorizontalRuler.setChecked(True)
-            self.imageLabel.set_ruler_mode(QImageLabel.MODE_RULER_HOR)
+            self.controller.set_horzontal_ruler_mode()
         else:
             self.set_normal_state()
 
@@ -305,53 +211,27 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionSetHorizontalRuler.setChecked(False)
         if self.actionSetVerticalRuler.isChecked():
             self.actionSetVerticalRuler.setChecked(True)
-            self.imageLabel.set_ruler_mode(QImageLabel.MODE_RULER_VERT)
+            self.controller.set_vertical_ruler_mode()
         else:
             self.set_normal_state()
 
     def next_page(self):
+        total_pages = selg.controller.get_total_pages()
         self.spinBox.setValue(self.pageNum + 1)
         nextNum = self.spinBox.value()
         self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
-                                     (nextNum, self.dp.totalPages))
-        self.nextPage_button.setEnabled(not nextNum == self.dp.totalPages)
+                                     (nextNum, total_pages))
+        self.nextPage_button.setEnabled(not nextNum == total_pages)
         self.prevPage_button.setEnabled(not nextNum == 1)
 
     def prev_page(self):
+        total_pages = selg.controller.get_total_pages()
         self.spinBox.setValue(self.pageNum - 1)
         nextNum = self.spinBox.value()
         self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
-                                     (nextNum, self.dp.totalPages))
-        self.nextPage_button.setEnabled(not nextNum == self.dp.totalPages)
+                                     (nextNum, total_pages))
+        self.nextPage_button.setEnabled(not nextNum == total_pages)
         self.prevPage_button.setEnabled(not nextNum == 1)
 
     def get_current_page_marks(self):
-        try:
-            return self.paragraphs[str(self.pageNum)]
-        except KeyError:
-            return []
-
-    # add paragraph mark (without duplicates)
-    def add_paragraph_mark(self, mark):
-        try:
-            if mark not in self.paragraphs[str(mark.page)]:
-                self.paragraphs[str(mark.page)].append(mark)
-        except KeyError:
-            self.paragraphs[str(mark.page)] = [mark]
-
-    def update_paragraphs(self, paragraph_marks):
-        for cas_id, (start, end) in paragraph_marks.items():
-            if start is not None:
-                self.add_paragraph_mark(start)
-                if end is not None:
-                    self.add_paragraph_mark(end)
-
-    def transform_to_pdf_coords(self, rect):
-        img = self.dp.curr_page()
-        if img is None:
-            return QtCore.QRectF(0, 0, 0, 0)
-        return QtCore.QRectF(
-                      rect.x() / self.scale,
-                      rect.y() / self.scale,
-                      rect.width() / self.scale,
-                      rect.height() / self.scale)
+        return self.controller.get_page_marks(self.pageNum)

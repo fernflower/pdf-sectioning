@@ -8,6 +8,7 @@ from lxml import etree
 from lxml.builder import ElementMaker
 from bookviewerwidget import BookViewerWidget
 from documentprocessor import DocumentProcessor, LoaderError
+from bookcontroller import BookController
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
 E = ElementMaker(namespace=XHTML_NAMESPACE,
@@ -101,7 +102,8 @@ def main():
     # show window
     app = QtGui.QApplication(sys.argv)
     dp = DocumentProcessor(filename)
-    ui_mw = BookViewerWidget(toc, dp)
+    controller = BookController(toc, dp)
+    ui_mw = BookViewerWidget(controller)
     ui_mw.show()
     sys.exit(app.exec_())
 

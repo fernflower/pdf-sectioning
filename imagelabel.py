@@ -11,15 +11,10 @@ tlogger = TimeLogger()
 # class. It keeps track of all paragraph marks with coordinates in dict, key is
 # cas-id
 class QImageLabel(QtGui.QLabel):
-    MODE_NORMAL = "normal"
-    MODE_RULER_HOR = QRulerMark.ORIENT_HORIZONTAL
-    MODE_RULER_VERT = QRulerMark.ORIENT_VERTICAL
 
-    def __init__(self, parent, page_viewer):
-        self.page_viewer = page_viewer
-        self.paragraph_marks = {}
+    def __init__(self, parent, controller):
+        self.controller = controller
         self.is_any_mark_selected = False
-        self.rulers = []
         self.mode = QImageLabel.MODE_NORMAL
         # for move event, to calculate delta
         # TODO there might be another way, perhaps tp retrieve delta from move event
@@ -27,11 +22,6 @@ class QImageLabel(QtGui.QLabel):
         super(QImageLabel, self).__init__(parent)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
-    def set_ruler_mode(self, mode):
-        self.mode = mode
-
-    def set_normal_mode(self):
-        self.mode = QImageLabel.MODE_NORMAL
 
     @property
     def cursor_pos(self):
@@ -48,12 +38,11 @@ class QImageLabel(QtGui.QLabel):
         return self.mode == QImageLabel.MODE_NORMAL
 
     def get_rulers(self):
-        #TODO return all rulers
         return self.rulers
 
     # return corresponding toc_elem for start\end paragraph mark
     def get_toc_elem(self, mark):
-        return self.page_viewer.get_toc_elem(mark.cas_id)
+        return self.controller.get_toc_elem(mark.cas_id)
 
     def wheelEvent(self, event):
         self.page_viewer.zoom(event.delta())
@@ -147,11 +136,6 @@ class QImageLabel(QtGui.QLabel):
         # synchronize paragraph_marks data
         self.page_viewer.update_paragraphs(self.paragraph_marks)
 
-    # returns True if all marked paragraphs have both start and end marks. Useful when
-    # saving result
-    def verify_mark_pairs(self):
-        return all(map(lambda (x, y): y is not None,
-                       self.paragraph_marks.values()))
 
     # here data is received from bookviewer as dict { page: list of marks }
     # (useful when loading markup)

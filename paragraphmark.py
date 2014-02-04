@@ -54,6 +54,7 @@ class QMark(QtGui.QWidget):
 
     def set_selected(self, value):
         self.is_selected = value
+        self.update()
 
     def destroy(self):
         self.hide()

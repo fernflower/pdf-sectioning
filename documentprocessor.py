@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from popplerqt4 import Poppler
-from PyQt4 import QtCore
 from lxml import etree
 from lxml.builder import ElementMaker
 from timelogger import TimeLogger
