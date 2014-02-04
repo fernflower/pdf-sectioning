@@ -2,13 +2,11 @@
 from popplerqt4 import Poppler
 from lxml import etree
 from lxml.builder import ElementMaker
-from timelogger import TimeLogger
 
 XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml"
 E = ElementMaker(namespace=XHTML_NAMESPACE,
                  nsmap={'is' : XHTML_NAMESPACE})
 
-tlogger = TimeLogger()
 
 class LoaderError(Exception):
     pass
@@ -19,13 +17,10 @@ class DocumentProcessor(object):
     toc_file_name = 'toc.xml'
 
     def __init__(self, filename):
-        self.tlogger = TimeLogger()
         self.filename = filename
         print "filename is %s" % filename
         try:
-            self.tlogger.start("load page")
             self.doc = Poppler.Document.load(filename)
-            self.tlogger.end()
         except:
             # TODO AWFUL exception handling!!!!
             raise LoaderError(u'Файла %s не существует' % filename)
@@ -54,7 +49,6 @@ class DocumentProcessor(object):
     # returns a QImage
     def render_page(self, num, scale):
         page = self.doc.page(num)
-        #tlogger.start("get QImage")
         qimage = page.renderToImage(self.resolution * scale,
                                   self.resolution * scale,
                                   0,
@@ -62,7 +56,6 @@ class DocumentProcessor(object):
                                   page.pageSize().width() * scale,
                                   page.pageSize().height() * scale,
                                   0)
-        #tlogger.end()
         return qimage
 
     def next_page(self):

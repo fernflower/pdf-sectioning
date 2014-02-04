@@ -14,6 +14,8 @@ class QImageLabel(QtGui.QLabel):
 
     def __init__(self, parent, controller):
         self.controller = controller
+        # keep it here on order to pass some keyPressEvents to parent
+        self.parent = parent
         self.is_any_mark_selected = False
         # for move event, to calculate delta
         # TODO there might be another way, perhaps to retrieve delta from move event
@@ -71,10 +73,9 @@ class QImageLabel(QtGui.QLabel):
     def mouseMoveEvent(self, event):
         delta = QtCore.QPoint(event.pos().x() - self.coordinates.x(),
                               event.pos().y() - self.coordinates.y())
-        cursor = self.mapToGlobal(event.pos())
-        self.controller.move(delta)
+        self.controller.move(delta, event.pos())
         self.coordinates = event.pos()
 
     ## should be here to navigate when focused
-    #def keyPressEvent(self, event):
-        #self.parent.keyPressEvent(event)
+    def keyPressEvent(self, event):
+        self.parent.keyPressEvent(event)

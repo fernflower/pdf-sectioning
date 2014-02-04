@@ -12,6 +12,7 @@ class QMark(QtGui.QWidget):
     def __init__(self, pos, parent, name, delete_func):
         super(QMark, self).__init__(parent)
         self.is_selected = False
+        self.delete_func = delete_func
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
                                            QtCore.QSize(parent.width(),
@@ -23,7 +24,6 @@ class QMark(QtGui.QWidget):
         self.label.show()
         # repaint newly created as unselected
         self.update()
-        self.delete_func = delete_func
 
     def hide(self):
         self.mark.hide()
@@ -86,7 +86,6 @@ class QMark(QtGui.QWidget):
     def y(self):
         return self.mark.pos().y()
 
-
     def update(self):
         self.mark.update()
         self.label.update()
@@ -117,8 +116,24 @@ class QParagraphMark(QMark):
         self.cas_id = cas_id
         self.page = page
         self.toc_num = toc_num
+        self.ruler = None
         self.type = type
         self.label.setText("%s of paragraph %s" % (self.type, self.name))
+
+    def bind_to_ruler(self, ruler):
+        self.ruler = ruler
+        self.set_geometry(self.ruler.geometry())
+
+    def unbind_from_ruler(self):
+        self.ruler = None
+
+    def geometry(self):
+        # if ruler is present, then take one of the coordinates (x or y,
+        # depending on ruler) from ruler. Otherwise use super().geometry()
+        if self.ruler:
+            return self.ruler.recalc_geometry(self)
+        else:
+            return super(QParagraphMark, self).geometry()
 
 
 class QRulerMark(QMark):
@@ -129,6 +144,10 @@ class QRulerMark(QMark):
 
     def __init__(self, pos, parent, name, delete_func, orientation):
         self.type = orientation
+
+    def recalc_geometry(self, mark):
+        # regardless of mark by default
+        return self.geometry()
 
 
 class QHorizontalRuler(QRulerMark):
@@ -161,6 +180,12 @@ class QVerticalRuler(QRulerMark):
                               rect.width(),
                               rect.height() * scale)
         self._adjust_to_mark()
+
+    def recalc_geometry(self, mark):
+        # y coordinate if taken from mark, x - from ruler
+        return QtCore.QRect(self.geometry.x(), mark.geometry().x(),
+                            self.geometry().width(), self.geometry().height())
+
 
 class QStartParagraph(QParagraphMark):
     def __init__(self, pos, parent, cas_id, name, toc_num, page, delete_func):

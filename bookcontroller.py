@@ -74,7 +74,7 @@ class BookController(object):
 
     ### getters section
     def get_selected_rulers(self):
-        return [r for r in self.get_rulers() if r.is_selected]
+        return [r for r in self.rulers if r.is_selected]
 
     def get_rulers(self):
         return self.rulers
@@ -137,10 +137,14 @@ class BookController(object):
 
     # here marks_parent is a parent widget to set at marks' creation
     def load_markup(self, filename, marks_parent):
-        # destroy previous data
+        # destroy previous marks
         for page, marks in self.paragraphs.items():
             map(lambda m: m.destroy(), marks)
         self.paragraphs = {}
+        # destroy previous rulers
+        for r in self.rulers:
+            r.destroy()
+        self.rulers = []
         # convert from QString
         filename = str(filename)
         paragraphs = self.dp.load_native_xml(filename)
@@ -229,7 +233,7 @@ class BookController(object):
             self.paragraphs[str(mark.page)] = [mark]
 
     # synchronize PARAGRAPH_MARKS with PARAGRAPHS. On creation new marks and
-    # rulers are added to poaragrapg_marks first, so have to call this func to
+    # rulers are added to paragraph_marks first, so have to call this func to
     # keep paragraphs dict up to date
     def update(self):
         for cas_id, (start, end) in self.paragraph_marks.items():
@@ -284,8 +288,24 @@ class BookController(object):
         return self.dp.go_to_page(pagenum)
 
     # move all currently selected elems
-    def move(self, delta):
+    def move(self, delta, point):
+        # if only one mark is selected at a time, the check whether we want to
+        # bind it to a ruler
+        if len(self.selected_marks()) == 1:
+            # check if there are any rulers at point
+            mark = self.selected_marks()[0]
+            ruler = self.find_at_point(point, self.rulers)
+            if ruler:
+                mark.bind_to_ruler(ruler)
+            else:
+                # no ruler should be assigned to mark
+                mark.unbind_from_ruler()
+                mark.move(delta)
+            print mark.ruler
+            return
+        # else move as usual
         for m in self.selected_marks_and_rulers():
+            print "just moving"
             m.move(delta)
 
     # delete currently selected marks on current page. Destroy
@@ -293,7 +313,7 @@ class BookController(object):
     def delete_marks(self):
         selected = self.selected_marks_and_rulers()
         # maybe should delete things as well when right clicked on non-selected
-        # area with sth present?
+        # area with sth present? Sth like the following:
         #self.imageLabel.find_any_at_point(self.last_right_click)
         for m in selected:
             #TODO BAD, figure out how to do it better
@@ -328,7 +348,6 @@ class BookController(object):
         # start\end mark available
         if self.is_normal_mode() and self.is_toc_selected:
             toc_elem = self.current_toc_elem
-            page = self.pagenum
             key = toc_elem.cas_id
             (start, end) = (None, None)
             mark_type = self.get_available_marks(key)
@@ -339,7 +358,7 @@ class BookController(object):
                                        toc_elem.cas_id,
                                        toc_elem.name,
                                        toc_elem.order_num,
-                                       page,
+                                       self.pagenum,
                                        self.delete_mark,
                                        mark_type[0])
             self.add_mark(mark)
@@ -374,7 +393,7 @@ class BookController(object):
             self.paragraph_marks[mark.cas_id] = (mark, None)
             toc_elem.mark_not_finished()
 
-    def find_at_point(self, point, among=[]):
+    def find_at_point(self, point, among=None):
         def contains(mark, point):
             if mark is not None and mark.contains(point):
                 print "EXACT match for %s" % mark.name
@@ -387,7 +406,7 @@ class BookController(object):
 
         # in order to be a bit more user-friendly, first search precisely at
         # point clicked, then add some delta and search withing +-delta area
-        page_marks = self.get_current_page_marks() if among == [] else among
+        page_marks = self.get_current_page_marks() if among is None else among
         exact_match = next(
             (mark for mark in page_marks if contains(mark, point)), None)
         if exact_match:
@@ -417,4 +436,4 @@ class BookController(object):
         if selected_mark:
             return selected_mark
         else:
-            return self.find_at_point(point, self.get_rulers())
+            return self.find_at_point(point, self.rulers)

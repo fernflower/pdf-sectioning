@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import sys
 from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from imagelabel import QImageLabel
@@ -44,7 +43,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                     self.frameSize().height())
         # show toc elems
         self._fill_listview()
-        self.imageLabel.setFocus(True)
+        self.setFocus(True)
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.listView.selectionModel().selectionChanged.connect(
             self.on_selection_change)
@@ -132,7 +131,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             return
         #TODO dialog with warning if any file open at the moment
         self.controller.open_file(unicode(filename))
-        self._set_widgets_data_on_start()
+        self._set_widgets_data_on_doc_load()
         self.update()
 
     def load_markup(self):
@@ -167,7 +166,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if self.controller.get_total_pages() == 0:
             return
         # hide selections on this page
-        print "old %d new %d" % (self.pageNum, pagenum)
         self.controller.hide_page_marks(self.pageNum)
         # show selections on page we are switching to
         self.controller.show_page_marks(pagenum)
