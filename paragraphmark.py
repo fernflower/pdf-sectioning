@@ -154,6 +154,14 @@ class QVerticalRuler(QRulerMark):
                               g.height())
         self._adjust_to_mark()
 
+    def adjust(self, scale):
+        rect = self.geometry()
+        self.mark.setGeometry(rect.x() * scale,
+                              rect.y() * scale,
+                              rect.width(),
+                              rect.height() * scale)
+        self._adjust_to_mark()
+
 class QStartParagraph(QParagraphMark):
     def __init__(self, pos, parent, cas_id, name, toc_num, page, delete_func):
         super(QStartParagraph, self).__init__(pos,

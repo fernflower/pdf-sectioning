@@ -257,9 +257,13 @@ class BookController(object):
         if new_scale >= self.MIN_SCALE and new_scale <= self.MAX_SCALE:
             self.scale = new_scale
             coeff = new_scale / old_scale
+            # have to adjust ALL items including rulers
             for page_key, markslist in self.paragraphs.items():
                 for m in markslist:
                     m.adjust(coeff)
+            # now rulers
+            for r in self.rulers:
+                r.adjust(coeff)
 
     # deselect all elems on page (both marks and rulers) if not in
     # keep_selections list
