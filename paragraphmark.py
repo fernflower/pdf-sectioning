@@ -146,8 +146,7 @@ class QRulerMark(QMark):
         self.type = orientation
 
     def recalc_geometry(self, mark):
-        # regardless of mark by default
-        return self.geometry()
+        return mark.geometry()
 
 
 class QHorizontalRuler(QRulerMark):
@@ -183,8 +182,10 @@ class QVerticalRuler(QRulerMark):
 
     def recalc_geometry(self, mark):
         # y coordinate if taken from mark, x - from ruler
-        return QtCore.QRect(self.geometry.x(), mark.geometry().x(),
-                            self.geometry().width(), self.geometry().height())
+        g = self.geometry()
+        mark_g = mark.geometry()
+        return QtCore.QRect(g.x(), mark_g.x(),
+                            mark_g.width(), mark_g.height())
 
 
 class QStartParagraph(QParagraphMark):
