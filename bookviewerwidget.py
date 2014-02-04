@@ -4,12 +4,6 @@ import sys
 from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from imagelabel import QImageLabel
-from documentprocessor import DocumentProcessor, LoaderError
-from bookcontroller import BookController
-
-
-MAX_SCALE = 5
-MIN_SCALE = 1
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
@@ -21,7 +15,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.controller = controller
         self.last_right_click = None
         self.pageNum = 1
-        self.scale = 1
         self._set_widgets_data_on_doc_load()
         self.init_actions()
         self.init_widgets()
@@ -91,7 +84,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     # context menu fill be shownn only if sth is selected at the moment
     def show_context_menu(self, point):
         self.last_right_click = self.mapToGlobal(point)
-        if self.selected_marks_and_rulers() != []:
+        if self.controller.selected_marks_and_rulers() != []:
             self.cmenu.exec_(self.last_right_click)
 
     # delete currently selected marks on current page. Destroy
@@ -106,7 +99,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             model.clear()
         else:
             model = QtGui.QStandardItemModel()
-        for item in self.controller.get_toc_elems():
+        for item in self.controller.create_toc_elems():
             model.appendRow(item)
         self.listView.setModel(model)
 
@@ -121,15 +114,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.delete_marks()
         self.update()
 
-    @property
-    def is_toc_selected(self):
-        return self.get_selected_toc_elem() is not None
-
     def get_selected_toc_elem(self):
         model = self.listView.model()
         selected_idx = self.listView.currentIndex()
         if selected_idx:
-            return model.itemFromIndex(selected_idx)
+            elem = model.itemFromIndex(selected_idx)
+            self.controller.set_current_toc_elem(elem)
+            return elem
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_toc_elem(self, cas_id):
@@ -153,10 +144,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                                      "Xml files (*.xml)")
         if not filename:
             return
-        self.controller.load_markup(unicode(filename))
-
-    def get_image(self):
-        return self.controller.get_image(self.scale)
+        # clear listView and fill again with appropriate for given course-id
+        # data fetched from cas
+        self._fill_listview()
+        self.controller.load_markup(unicode(filename), self.imageLabel)
 
     def save(self):
         # check that all marked paragraphs have both marks
@@ -176,6 +167,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if self.controller.get_total_pages() == 0:
             return
         # hide selections on this page
+        print "old %d new %d" % (self.pageNum, pagenum)
         self.controller.hide_page_marks(self.pageNum)
         # show selections on page we are switching to
         self.controller.show_page_marks(pagenum)
@@ -184,15 +176,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.update()
 
     def zoom(self, delta):
-        new_scale = old_scale = self.scale
-        if delta > 0:
-            new_scale = self.scale + 0.5
-        elif delta < 0:
-            new_scale = self.scale - 0.5
-        if new_scale >= MIN_SCALE and new_scale <= MAX_SCALE:
-            self.scale = new_scale
-            coeff = new_scale / old_scale
-            self.controller.zoom(coeff)
+        return self.controller.zoom(delta)
 
     def set_normal_state(self):
         self.actionSetVerticalRuler.setChecked(False)
@@ -203,7 +187,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionSetVerticalRuler.setChecked(False)
         if self.actionSetHorizontalRuler.isChecked():
             self.actionSetHorizontalRuler.setChecked(True)
-            self.controller.set_horzontal_ruler_mode()
+            self.controller.set_horizontal_ruler_mode()
         else:
             self.set_normal_state()
 
@@ -216,7 +200,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.set_normal_state()
 
     def next_page(self):
-        total_pages = selg.controller.get_total_pages()
+        total_pages = self.controller.get_total_pages()
         self.spinBox.setValue(self.pageNum + 1)
         nextNum = self.spinBox.value()
         self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
@@ -225,7 +209,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.prevPage_button.setEnabled(not nextNum == 1)
 
     def prev_page(self):
-        total_pages = selg.controller.get_total_pages()
+        total_pages = self.controller.get_total_pages()
         self.spinBox.setValue(self.pageNum - 1)
         nextNum = self.spinBox.value()
         self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
