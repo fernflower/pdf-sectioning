@@ -33,9 +33,10 @@ class BookController(object):
         # a list of all rulers present
         self.rulers = []
         # zoom scale
-        # TODO think if it can be moved outside to some of th views
         self.scale = 1.0
+        # QTocElem currently selected
         self.current_toc_elem = None
+        # add mark mode (adding paragraph marks or rulers)
         self.mode = self.MODE_NORMAL
 
     ### properties section
@@ -98,14 +99,8 @@ class BookController(object):
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_toc_elem(self, cas_id):
-        def find():
-            for i, elem in enumerate(self.course_toc):
-                if elem["cas-id"] == cas_id:
-                    return i
-            return -1
-        order_num = find()
-        if order_num != -1:
-            return self.toc_elems[order_num]
+        return next((elem for (i, elem) in enumerate(self.toc_elems) \
+                     if elem.cas_id == cas_id), None)
 
     # returns first start\end mark for paragraph with given cas-id
     def get_first_paragraph_mark(self, cas_id):
@@ -185,7 +180,6 @@ class BookController(object):
                     self.paragraph_marks[mark.cas_id] = (start, mark)
                 except KeyError:
                     self.paragraph_marks[mark.cas_id] = (mark, None)
-        print self.paragraph_marks
 
     def save(self, dirname):
         # normalize to get pdf-coordinates (save with scale=1.0)
@@ -224,23 +218,13 @@ class BookController(object):
     def selected_marks_and_rulers(self):
         return self.selected_marks() + self.selected_rulers()
 
-    # add paragraph mark (without duplicates)
+    # add paragraph mark to paragraph_marks (without duplicates)
     def add_paragraph_mark(self, mark):
         try:
             if mark not in self.paragraphs[str(mark.page)]:
                 self.paragraphs[str(mark.page)].append(mark)
         except KeyError:
             self.paragraphs[str(mark.page)] = [mark]
-
-    # synchronize PARAGRAPH_MARKS with PARAGRAPHS. On creation new marks and
-    # rulers are added to paragraph_marks first, so have to call this func to
-    # keep paragraphs dict up to date
-    def update(self):
-        for cas_id, (start, end) in self.paragraph_marks.items():
-            if start is not None:
-                self.add_paragraph_mark(start)
-                if end is not None:
-                    self.add_paragraph_mark(end)
 
     def transform_to_pdf_coords(self, rect):
         img = self.dp.curr_page()
@@ -301,11 +285,9 @@ class BookController(object):
                 # no ruler should be assigned to mark
                 mark.unbind_from_ruler()
                 mark.move(delta)
-            print mark.ruler
             return
         # else move as usual
         for m in self.selected_marks_and_rulers():
-            print "just moving"
             m.move(delta)
 
     # delete currently selected marks on current page. Destroy
@@ -362,6 +344,7 @@ class BookController(object):
                                        self.delete_mark,
                                        mark_type[0])
             self.add_mark(mark)
+            self.add_paragraph_mark(mark)
         elif self.is_ruler_mode():
             mark = make_ruler_mark(pos,
                                    mark_parent,
@@ -369,7 +352,6 @@ class BookController(object):
                                    self.delete_ruler,
                                    self.mode)
             self.rulers.append(mark)
-        self.update()
 
     # add mark to a correct place (start comes first, end - second)
     def add_mark(self, mark):

@@ -11,12 +11,16 @@ tlogger = TimeLogger()
 # class. It keeps track of all paragraph marks with coordinates in dict, key is
 # cas-id
 class QImageLabel(QtGui.QLabel):
+    MOVE_KEYS_DELTA = { QtCore.Qt.Key_Up: QtCore.QPoint(0, -2),
+                        QtCore.Qt.Key_Down: QtCore.QPoint(0, 2),
+                        QtCore.Qt.Key_Left: QtCore.QPoint(-2, 0),
+                        QtCore.Qt.Key_Right: QtCore.QPoint(2, 0) }
 
     def __init__(self, parent, controller):
         self.controller = controller
         # keep it here on order to pass some keyPressEvents to parent
         self.parent = parent
-        self.is_any_mark_selected = False
+        self.last_selected = None
         # for move event, to calculate delta
         # TODO there might be another way, perhaps to retrieve delta from move event
         self.coordinates = None
@@ -51,11 +55,16 @@ class QImageLabel(QtGui.QLabel):
             # if clicked with shift -> add to existing selection
         def process_selected(selected):
             modifiers = QtGui.QApplication.keyboardModifiers()
-            self.is_any_mark_selected = True
-            selected.toggle_selected()
             if modifiers != QtCore.Qt.ShiftModifier:
-                self.is_any_mark_selected = selected.is_selected
+                if not self.last_selected == selected:
+                    selected.toggle_selected()
                 self.controller.deselect_all([selected])
+            else:
+                # for group selection second click removes object from group
+                # selection
+                selected.toggle_selected()
+            self.last_selected = selected
+
 
         # disable right mouse click as it shows context menu
         if event.buttons() == QtCore.Qt.RightButton:
@@ -73,9 +82,14 @@ class QImageLabel(QtGui.QLabel):
     def mouseMoveEvent(self, event):
         delta = QtCore.QPoint(event.pos().x() - self.coordinates.x(),
                               event.pos().y() - self.coordinates.y())
-        self.controller.move(delta, event.pos())
         self.coordinates = event.pos()
+        self.controller.move(delta, self.coordinates)
 
-    ## should be here to navigate when focused
     def keyPressEvent(self, event):
-        self.parent.keyPressEvent(event)
+        if event.key() in self.MOVE_KEYS_DELTA.keys():
+            delta = self.MOVE_KEYS_DELTA[event.key()]
+            self.coordinates = self.coordinates + delta
+            self.controller.move(delta, self.coordinates)
+        else:
+            # should be here to navigate when focused
+            self.parent.keyPressEvent(event)

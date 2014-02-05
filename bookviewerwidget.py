@@ -45,8 +45,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._fill_listview()
         self.setFocus(True)
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.listView.selectionModel().selectionChanged.connect(
-            self.on_selection_change)
+        self.listView.clicked.connect(self.on_selection_change)
         # context menu
         self.cmenu = QtGui.QMenu()
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -71,7 +70,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # always set normal mode for marks' creation
         self.set_normal_state()
         current = self.get_selected_toc_elem()
-        if not current.is_not_started():
+        if current and not current.is_not_started():
             first_mark = self.controller.\
                 get_first_paragraph_mark(current.cas_id)
             # navigate to page where start mark is
