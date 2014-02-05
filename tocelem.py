@@ -24,8 +24,8 @@ class QTocElem(QtGui.QStandardItem):
             self.setBackground(QtGui.QBrush())
         elif self.state == QTocElem.STATE_NOT_STARTED:
             self.setSelectable(True)
-            #self.setForeground(QtCore.Qt.black)
-            #self.setBackground(QtGui.QBrush())
+            self.setForeground(QtCore.Qt.black)
+            self.setBackground(QtGui.QBrush())
         elif self.state == QTocElem.STATE_NOT_FINISHED:
             self.setBackground(QtCore.Qt.cyan)
 
