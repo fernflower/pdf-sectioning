@@ -18,6 +18,8 @@ class BookController(object):
     # zooming
     MAX_SCALE = 5
     MIN_SCALE = 1
+    # viewport delta
+    VIEWPORT_DELTA = 5
 
     def __init__(self, cms_course_toc, doc_processor=None):
         self.dp = doc_processor
@@ -218,6 +220,24 @@ class BookController(object):
     def selected_marks_and_rulers(self):
         return self.selected_marks() + self.selected_rulers()
 
+    # validate that selection is in pdf's viewport
+    def is_in_viewport(self, pos):
+        img = self.get_image()
+        if not img:
+            return
+        img = img.rect()
+        viewport = QtCore.QRect(img.x(),
+                               img.y() + self.VIEWPORT_DELTA,
+                               img.width(),
+                               img.height() - self.VIEWPORT_DELTA)
+        if type(pos) == QtCore.QPoint:
+            return viewport.contains(pos)
+        elif type(pos) == QtCore.QRect:
+            return viewport.intersects(pos)
+        else:
+            print "Damn it"
+            return False
+
     # add paragraph mark to paragraph_marks (without duplicates)
     def add_paragraph_mark(self, mark):
         try:
@@ -276,6 +296,8 @@ class BookController(object):
         # if only one mark is selected at a time, the check whether we want to
         # bind it to a ruler
         if len(self.selected_marks()) == 1:
+            if not self.is_in_viewport(point):
+                return
             # check if there are any rulers at point
             mark = self.selected_marks()[0]
             ruler = self.find_at_point(point, self.rulers)
@@ -287,8 +309,18 @@ class BookController(object):
                 mark.move(delta)
             return
         # else move as usual
-        for m in self.selected_marks_and_rulers():
-            m.move(delta)
+        if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
+                   self.selected_marks())):
+            for m in self.selected_marks():
+                m.move(delta)
+        # if rulers become invisible after move -> delete them
+        for r in self.selected_rulers():
+            r.move(delta)
+            if not self.is_in_viewport(r.geometry()):
+                # delete ruler
+                r.delete()
+                r.destroy()
+                print self.rulers
 
     # delete currently selected marks on current page. Destroy
     # widget here as well, after removing from all parallel data structures
@@ -328,6 +360,8 @@ class BookController(object):
     def _create_mark_on_click(self, pos, mark_parent):
         # else create new one if any TOC elem selected and free space for
         # start\end mark available
+        if not self.is_in_viewport(pos):
+            return
         if self.is_normal_mode() and self.is_toc_selected:
             toc_elem = self.current_toc_elem
             key = toc_elem.cas_id

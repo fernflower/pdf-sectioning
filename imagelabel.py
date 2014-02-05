@@ -11,6 +11,7 @@ tlogger = TimeLogger()
 # class. It keeps track of all paragraph marks with coordinates in dict, key is
 # cas-id
 class QImageLabel(QtGui.QLabel):
+    STYLESHEET = "QImageLabel { background-color: rgb(58, 56, 56); }"
     MOVE_KEYS_DELTA = { QtCore.Qt.Key_Up: QtCore.QPoint(0, -2),
                         QtCore.Qt.Key_Down: QtCore.QPoint(0, 2),
                         QtCore.Qt.Key_Left: QtCore.QPoint(-2, 0),
@@ -26,10 +27,7 @@ class QImageLabel(QtGui.QLabel):
         self.coordinates = None
         super(QImageLabel, self).__init__(parent)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
-
-    @property
-    def cursor_pos(self):
-        return self.mapFromGlobal(QtGui.QCursor.pos())
+        self.setStyleSheet(self.STYLESHEET)
 
     def wheelEvent(self, event):
         self.controller.zoom(event.delta())

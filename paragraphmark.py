@@ -87,6 +87,9 @@ class QMark(QtGui.QWidget):
     def y(self):
         return self.mark.pos().y()
 
+    def pos(self):
+        return self.mark.pos()
+
     def update(self):
         self.mark.update()
         self.label.update()

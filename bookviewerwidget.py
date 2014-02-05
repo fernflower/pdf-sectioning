@@ -7,6 +7,13 @@ from imagelabel import QImageLabel
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     totalPagesText = "total %d out of %d"
+    listview_stylesheet = \
+        """
+        QListView { background: rgb(81, 81, 81);}
+        QListView::item:selected { background: gray; }
+        QListView::item { color: rgb(230, 230, 230); }
+        """
+    general_stylesheet = "QStandardItem { foreground: rgb(230, 230, 230) }"
 
     def __init__(self, controller):
         super(BookViewerWidget, self).__init__()
@@ -58,6 +65,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # make rulers' buttons checkable
         self.actionSetVerticalRuler.setCheckable(True)
         self.actionSetHorizontalRuler.setCheckable(True)
+        # colors and buttons
+        self._set_appearance()
+
+    def _set_appearance(self):
+        self.listView.setStyleSheet(self.listview_stylesheet)
+        self.setStyleSheet(self.general_stylesheet)
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
