@@ -84,7 +84,8 @@ class QImageLabel(QtGui.QLabel):
         self.controller.move(delta, self.coordinates)
 
     def keyPressEvent(self, event):
-        if event.key() in self.MOVE_KEYS_DELTA.keys():
+        if self.controller.selected_marks_and_rulers() != [] and \
+                event.key() in self.MOVE_KEYS_DELTA.keys():
             delta = self.MOVE_KEYS_DELTA[event.key()]
             self.coordinates = self.coordinates + delta
             self.controller.move(delta, self.coordinates)

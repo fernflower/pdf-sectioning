@@ -225,12 +225,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             QtGui.QMessageBox.warning(self, "Warning",
                                       "The result won't be saved " + \
                                       "as some paragraphs don't have END marks")
-            return
+            return False
         dir_name = QtGui.QFileDialog.getExistingDirectory(self,
                                                           'Select Directory')
         if not dir_name:
             return
         self.controller.save(unicode(dir_name))
+        return True
 
     # here 1st page has number 1
     def go_to_page(self, pagenum):
@@ -288,3 +289,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def get_current_page_marks(self):
         return self.controller.get_page_marks(self.pageNum)
+
+    def closeEvent(self, event):
+        if self.save():
+            event.accept()
+        else:
+            event.ignore()
