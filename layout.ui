@@ -45,10 +45,20 @@
          <item>
           <widget class="QToolButton" name="prevPage_button">
            <property name="text">
-            <string>prev</string>
+            <string/>
            </property>
            <property name="arrowType">
-            <enum>Qt::LeftArrow</enum>
+            <enum>Qt::NoArrow</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="nextPage_button">
+           <property name="text">
+            <string/>
+           </property>
+           <property name="arrowType">
+            <enum>Qt::NoArrow</enum>
            </property>
           </widget>
          </item>
@@ -75,16 +85,6 @@
           </widget>
          </item>
          <item>
-          <widget class="QToolButton" name="nextPage_button">
-           <property name="text">
-            <string>next</string>
-           </property>
-           <property name="arrowType">
-            <enum>Qt::RightArrow</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QLabel" name="totalPagesLabel">
            <property name="text">
             <string>(page 0 from 0)</string>
@@ -105,11 +105,11 @@
           </spacer>
          </item>
         </layout>
-        <zorder>prevPage_button</zorder>
-        <zorder>nextPage_button</zorder>
         <zorder>totalPagesLabel</zorder>
         <zorder>spinBox</zorder>
         <zorder>horizontalSpacer</zorder>
+        <zorder>nextPage_button</zorder>
+        <zorder>prevPage_button</zorder>
        </widget>
       </item>
       <item>
@@ -126,7 +126,7 @@
            <x>0</x>
            <y>0</y>
            <width>749</width>
-           <height>432</height>
+           <height>415</height>
           </rect>
          </property>
         </widget>
@@ -145,7 +145,7 @@
      <x>0</x>
      <y>0</y>
      <width>1035</width>
-     <height>17</height>
+     <height>20</height>
     </rect>
    </property>
   </widget>
@@ -166,10 +166,13 @@
    <addaction name="separator"/>
    <addaction name="actionSetHorizontalRuler"/>
    <addaction name="actionSetVerticalRuler"/>
+   <addaction name="separator"/>
+   <addaction name="actionPrev_page"/>
+   <addaction name="actionNext_page"/>
   </widget>
   <action name="actionLoad_pdf">
    <property name="text">
-    <string>load file</string>
+    <string/>
    </property>
    <property name="toolTip">
     <string>Загрузить pdf</string>
@@ -177,38 +180,38 @@
   </action>
   <action name="actionPrev_page">
    <property name="text">
-    <string>prev page</string>
+    <string/>
    </property>
   </action>
   <action name="actionNext_page">
    <property name="text">
-    <string>next page</string>
+    <string/>
    </property>
   </action>
   <action name="actionSave">
    <property name="text">
-    <string>save</string>
+    <string/>
    </property>
   </action>
   <action name="actionLoad_markup">
    <property name="text">
-    <string>load markup</string>
+    <string/>
    </property>
   </action>
   <action name="actionSetHorizontalRuler">
    <property name="text">
-    <string>setHorizontalRuler</string>
+    <string/>
    </property>
    <property name="iconText">
-    <string>Horizontal Ruler</string>
+    <string/>
    </property>
   </action>
   <action name="actionSetVerticalRuler">
    <property name="text">
-    <string>setVerticalRuler</string>
+    <string/>
    </property>
    <property name="iconText">
-    <string>Vertical Ruler</string>
+    <string/>
    </property>
   </action>
  </widget>

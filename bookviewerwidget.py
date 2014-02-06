@@ -6,7 +6,7 @@ from imagelabel import QImageLabel
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
-    totalPagesText = "total %d out of %d"
+    totalPagesText = u"%d из %d"
     stylesheet = \
         """
         QMainWindow { background: rgb(83, 83, 83);}
@@ -25,7 +25,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         QListView::item:selected { background: rgb(10, 90, 160); }
         QListView::item { color: rgb(230, 230, 230);
                           border-bottom: 0.0px solid gray }
-
+        QSpinBox {background-color: rgb(58, 56, 56);
+                  color: rgb(235, 235, 235)}
         """
 
     def __init__(self, controller):
@@ -38,6 +39,22 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.init_actions()
         self.init_widgets()
 
+    def generate_toolbutton_stylesheet(self, button_name):
+        return  \
+            """
+            QToolButton {
+                        border: none;
+                        background: url(%s.png) top center no-repeat;
+            }
+            QToolButton:hover {
+                background: url(%s_hover.png) top center no-repeat;
+                color: blue;
+            }
+            QToolButton:pressed, QToolButton:checked {
+                        background: url(%s_pressed.png) top center no-repeat;
+                        color: gray;}
+        """ % (button_name, button_name, button_name)
+
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
         self.actionSave.triggered.connect(self.save)
@@ -46,6 +63,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.set_vertical_ruler_state)
         self.actionSetHorizontalRuler.triggered.connect(
             self.set_horizontal_ruler_state)
+        self.actionPrev_page.triggered.connect(self.prev_page)
+        self.actionNext_page.triggered.connect(self.next_page)
         self.prevPage_button.clicked.connect(self.prev_page)
         self.nextPage_button.clicked.connect(self.next_page)
         self.spinBox.connect(self.spinBox,
@@ -83,7 +102,34 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def _set_appearance(self):
         self.setStyleSheet(self.stylesheet)
-        self.prevPage_button.setIcon(QtGui.QIcon("buttons/Page_down.png"))
+        self.prevPage_button.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Page_down'))
+        self.nextPage_button.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Page_up'))
+        # toolbar buttons
+        load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
+        load_pdf.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Load_file'))
+        load_markup = self.toolBar.widgetForAction(self.actionLoad_markup)
+        load_markup.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Load_markup'))
+        save = self.toolBar.widgetForAction(self.actionSave)
+        save.setStyleSheet(self.generate_toolbutton_stylesheet('buttons/Save'))
+        hor_ruler = self.toolBar.widgetForAction(self.actionSetHorizontalRuler)
+        hor_ruler.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Upper_border'))
+        vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
+        # TODO substitute with a nice pic
+        vert_ruler.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Lower_border'))
+        prev_page = self.toolBar.widgetForAction(self.actionPrev_page)
+        prev_page.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Page_down'))
+        next_page = self.toolBar.widgetForAction(self.actionNext_page)
+        next_page.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Page_up'))
+        # total pages text set to white without affecting QRubberBand
+        self.totalPagesLabel.setStyleSheet("QLabel {color: rgb(235, 235, 235)}")
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
