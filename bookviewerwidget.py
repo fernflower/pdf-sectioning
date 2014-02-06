@@ -10,8 +10,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     stylesheet = \
         """
         QMainWindow { background: rgb(83, 83, 83);}
-        QScrollArea {background-color: rgb(58, 56, 56);
-                     border: 1px solid black}
+        QScrollArea { background-color: rgb(58, 56, 56);
+                      border: 1px solid black }
         QScrollBar:horizontal, QScrollBar:vertical
         {
             border: 2px solid grey;
@@ -23,7 +23,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         }
         QListView { background: rgb(81, 81, 81);}
         QListView::item:selected { background: rgb(10, 90, 160); }
-        QListView::item { color: rgb(230, 230, 230); }
+        QListView::item { color: rgb(230, 230, 230);
+                          border-bottom: 0.0px solid gray }
 
         """
 
@@ -81,8 +82,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._set_appearance()
 
     def _set_appearance(self):
-        self.listView.setStyleSheet(self.stylesheet)
         self.setStyleSheet(self.stylesheet)
+        self.prevPage_button.setIcon(QtGui.QIcon("buttons/Page_down.png"))
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
