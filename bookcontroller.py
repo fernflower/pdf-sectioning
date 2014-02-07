@@ -40,6 +40,8 @@ class BookController(object):
         self.current_toc_elem = None
         # add mark mode (adding paragraph marks or rulers)
         self.mode = self.MODE_NORMAL
+        # only for start\end marks, not rulers
+        self.any_unsaved_changes = False
 
     ### properties section
     @property
@@ -199,12 +201,23 @@ class BookController(object):
         if not self.dp:
             return
         self.dp.save_all(dirname, pdf_paragraphs)
+        self.any_unsaved_changes = False
 
-    # returns True if all marked paragraphs have both start and end marks.
+    # returns True if all marked paragraphs have both start and end marks in
+    # the correct order (start mark goes first).
     # Useful when saving result
     def verify_mark_pairs(self):
-        return all(map(lambda (x, y): y is not None,
-                       self.paragraph_marks.values()))
+        paired = all(map(lambda (x, y): y is not None and x is not None,
+                         self.paragraph_marks.values()))
+        if not paired:
+            return False
+        for (start, end) in self.paragraph_marks.values():
+            # marks are on the same page, compare y coordinate
+            if start.page == end.page and start.y() >= end.y():
+                return False
+            elif start.page > end.page:
+                return False
+        return True
 
     def get_image(self):
         if not self.dp:
@@ -301,6 +314,7 @@ class BookController(object):
             # check if there are any rulers at point
             mark = self.selected_marks()[0]
             ruler = self.find_at_point(point, self.rulers)
+            self.any_unsaved_changes = True
             if ruler:
                 mark.bind_to_ruler(ruler)
             else:
@@ -311,6 +325,7 @@ class BookController(object):
         # else move as usual
         if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
                    self.selected_marks())):
+            self.any_unsaved_changes = True
             for m in self.selected_marks():
                 m.move(delta)
         # if rulers become invisible after move -> delete them
@@ -363,6 +378,7 @@ class BookController(object):
         if not self.is_in_viewport(pos):
             return
         if self.is_normal_mode() and self.is_toc_selected:
+            self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
             key = toc_elem.cas_id
             (start, end) = (None, None)

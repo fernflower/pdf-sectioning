@@ -85,7 +85,7 @@ class QMark(QtGui.QWidget):
 
     # get start-y coordinate
     def y(self):
-        return self.mark.pos().y()
+        return self.geometry().y()
 
     def pos(self):
         return self.mark.pos()

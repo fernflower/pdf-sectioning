@@ -35,6 +35,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.controller = controller
         self.last_right_click = None
         self.pageNum = 1
+        # dialogs
+        self.unsaved_changes_dialog = None
+        self.cant_save_dialog = None
         self._set_widgets_data_on_doc_load()
         self.init_actions()
         self.init_widgets()
@@ -119,7 +122,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         hor_ruler.setStyleSheet(
             self.generate_toolbutton_stylesheet('buttons/Upper_border'))
         vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
-        # TODO substitute with a nice pic
+        # TODO substitute with an appropriate pic
         vert_ruler.setStyleSheet(
             self.generate_toolbutton_stylesheet('buttons/Lower_border'))
         prev_page = self.toolBar.widgetForAction(self.actionPrev_page)
@@ -197,7 +200,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         return self.controller.get_toc_elem(cas_id)
 
     def open_file(self):
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'OpenFile', '.')
+        filename = QtGui.QFileDialog.getOpenFileName(
+            self, QtCore.QString.fromUtf8(u'Загрузить учебник'), '.')
         if not filename:
             return
         #TODO dialog with warning if any file open at the moment
@@ -206,12 +210,14 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.update()
 
     def load_markup(self):
-        # TODO dialog with warning that all data that has not been saved will
-        # be lost
-        filename = QtGui.QFileDialog.getOpenFileName(self,
-                                                     'OpenFile',
-                                                     '.',
-                                                     "Xml files (*.xml)")
+        if self.controller.any_unsaved_changes and \
+                not self.show_unsaved_data_dialog():
+            return
+        filename = QtGui.QFileDialog.\
+            getOpenFileName(self,
+                            QtCore.QString.fromUtf8(u'Загрузить разметку'),
+                            '.',
+                            "Xml files (*.xml)")
         if not filename:
             return
         # clear listView and fill again with appropriate for given course-id
@@ -222,12 +228,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def save(self):
         # check that all marked paragraphs have both marks
         if not self.controller.verify_mark_pairs():
-            QtGui.QMessageBox.warning(self, "Warning",
-                                      "The result won't be saved " + \
-                                      "as some paragraphs don't have END marks")
+            self.show_cant_save_dialog()
             return False
-        dir_name = QtGui.QFileDialog.getExistingDirectory(self,
-                                                          'Select Directory')
+        dir_name = QtGui.QFileDialog.\
+            getExistingDirectory(self,
+                                 QtCore.QString.fromUtf8(u'Сохранить разметку'))
         if not dir_name:
             return
         self.controller.save(unicode(dir_name))
@@ -291,7 +296,40 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         return self.controller.get_page_marks(self.pageNum)
 
     def closeEvent(self, event):
-        if self.save():
-            event.accept()
-        else:
+        if self.controller.any_unsaved_changes and \
+                not self.show_unsaved_data_dialog():
             event.ignore()
+        else:
+            event.accept()
+
+    ## all possible dialogs go here
+    # general politics: returns True if can proceed with anything after
+    # the func call, False if should return from any function
+    def show_unsaved_data_dialog(self):
+        if not self.unsaved_changes_dialog:
+            self.unsaved_changes_dialog = QtGui.QMessageBox(self)
+            self.unsaved_changes_dialog.setText(u"Документ был изменен.")
+            self.unsaved_changes_dialog.setInformativeText(
+                u"Хотите сохранить изменения?")
+            self.unsaved_changes_dialog.setStandardButtons(
+                QtGui.QMessageBox.Cancel |
+                QtGui.QMessageBox.Discard |
+                QtGui.QMessageBox.Save)
+            self.unsaved_changes_dialog.setDefaultButton(QtGui.QMessageBox.Save)
+        result = self.unsaved_changes_dialog.exec_()
+        if result == QtGui.QMessageBox.Save:
+            return self.save()
+        elif result == QtGui.QMessageBox.Discard:
+            return True
+        elif result == QtGui.QMessageBox.Cancel:
+            return False
+
+    def show_cant_save_dialog(self):
+        if not self.cant_save_dialog:
+            self.cant_save_dialog = QtGui.QMessageBox(self)
+            self.cant_save_dialog.setText(u"Невозможно сохранить изменения.")
+            self.cant_save_dialog.setInformativeText(
+                u"Не у всех размеченных параграфов есть метки начала и " + \
+                u"конца в правильном порядке.")
+            self.cant_save_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
+        self.cant_save_dialog.exec_()
