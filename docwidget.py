@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'layout.ui'
 #
-# Created: Thu Feb  6 23:05:29 2014
+# Created: Mon Feb 10 19:27:42 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(1035, 559)
+        MainWindow.resize(1010, 548)
         MainWindow.setFocusPolicy(QtCore.Qt.NoFocus)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
@@ -71,22 +71,41 @@ class Ui_MainWindow(object):
         self.scrollArea.setAlignment(QtCore.Qt.AlignCenter)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 749, 415))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 487, 424))
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.verticalLayout_2.addWidget(self.scrollArea)
         self.horizontalLayout_5.addLayout(self.verticalLayout_2)
-        self.listView = QtGui.QListView(self.centralwidget)
+        self.tabWidget = QtGui.QTabWidget(self.centralwidget)
+        self.tabWidget.setObjectName(_fromUtf8("tabWidget"))
+        self.tab = QtGui.QWidget()
+        self.tab.setObjectName(_fromUtf8("tab"))
+        self.verticalLayout = QtGui.QVBoxLayout(self.tab)
+        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.listView = QtGui.QListView(self.tab)
         self.listView.setObjectName(_fromUtf8("listView"))
-        self.horizontalLayout_5.addWidget(self.listView)
+        self.verticalLayout.addWidget(self.listView)
+        self.consoleLayout = QtGui.QHBoxLayout()
+        self.consoleLayout.setObjectName(_fromUtf8("consoleLayout"))
+        self.verticalLayout.addLayout(self.consoleLayout)
+        self.tabWidget.addTab(self.tab, _fromUtf8(""))
+        self.tab_2 = QtGui.QWidget()
+        self.tab_2.setObjectName(_fromUtf8("tab_2"))
+        self.tabWidget.addTab(self.tab_2, _fromUtf8(""))
+        self.horizontalLayout_5.addWidget(self.tabWidget)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1035, 20))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1010, 20))
         self.menubar.setObjectName(_fromUtf8("menubar"))
+        self.menuFile = QtGui.QMenu(self.menubar)
+        self.menuFile.setObjectName(_fromUtf8("menuFile"))
+        self.menuEdit = QtGui.QMenu(self.menubar)
+        self.menuEdit.setObjectName(_fromUtf8("menuEdit"))
+        self.menuView = QtGui.QMenu(self.menubar)
+        self.menuView.setObjectName(_fromUtf8("menuView"))
+        self.menuHelp = QtGui.QMenu(self.menubar)
+        self.menuHelp.setObjectName(_fromUtf8("menuHelp"))
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtGui.QStatusBar(MainWindow)
-        self.statusbar.setObjectName(_fromUtf8("statusbar"))
-        MainWindow.setStatusBar(self.statusbar)
         self.toolBar = QtGui.QToolBar(MainWindow)
         self.toolBar.setObjectName(_fromUtf8("toolBar"))
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
@@ -113,6 +132,10 @@ class Ui_MainWindow(object):
         self.actionSetVerticalRuler.setText(_fromUtf8(""))
         self.actionSetVerticalRuler.setIconText(_fromUtf8(""))
         self.actionSetVerticalRuler.setObjectName(_fromUtf8("actionSetVerticalRuler"))
+        self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuEdit.menuAction())
+        self.menubar.addAction(self.menuView.menuAction())
+        self.menubar.addAction(self.menuHelp.menuAction())
         self.toolBar.addAction(self.actionLoad_pdf)
         self.toolBar.addAction(self.actionLoad_markup)
         self.toolBar.addAction(self.actionSave)
@@ -124,11 +147,18 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.actionNext_page)
 
         self.retranslateUi(MainWindow)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
         self.totalPagesLabel.setText(_translate("MainWindow", "(page 0 from 0)", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Structure", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Markup", None))
+        self.menuFile.setTitle(_translate("MainWindow", "File", None))
+        self.menuEdit.setTitle(_translate("MainWindow", "Edit", None))
+        self.menuView.setTitle(_translate("MainWindow", "View", None))
+        self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
         self.toolBar.setWindowTitle(_translate("MainWindow", "toolBar", None))
         self.actionLoad_pdf.setToolTip(_translate("MainWindow", "Загрузить pdf", None))
 

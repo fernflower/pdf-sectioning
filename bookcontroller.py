@@ -106,14 +106,6 @@ class BookController(object):
         return next((elem for (i, elem) in enumerate(self.toc_elems) \
                      if elem.cas_id == cas_id), None)
 
-    # returns first start\end mark for paragraph with given cas-id
-    def get_first_paragraph_mark(self, cas_id):
-        try:
-            (start_mark, end_mark) = self.paragraph_marks[cas_id]
-            return next((mark for mark in [start_mark, end_mark] if mark), None)
-        except KeyError:
-            return None
-
     # returns mark following given mark for toc elem with given cas-id. Used in
     # bookviewer in order to implement human-friendly navigation to start\end
     # marks when clicked on toc elem
@@ -125,6 +117,16 @@ class BookController(object):
                 (m for m in [start, end] if m != mark and m is not None), mark)
         except KeyError:
             return mark
+
+    def get_first_error_mark(self):
+        error_elem =  next((e for e in self.toc_elems if e.is_not_finished()),
+                           None)
+        if not error_elem:
+            return None
+        return self.get_next_paragraph_mark(error_elem.cas_id)
+
+    def get_total_error_count(self):
+        return len(filter(lambda e:e.is_not_finished(), self.toc_elems))
 
     def get_available_marks(self, cas_id):
         both = ["start", "end"]

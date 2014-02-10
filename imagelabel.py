@@ -45,6 +45,8 @@ class QImageLabel(QtGui.QLabel):
             mark.update()
         self.setPixmap(pixmap)
         self.setFixedSize(pixmap.size())
+        # update all necessary data in parent (bookviewer)
+        self.parent.update()
 
     def mousePressEvent(self, event):
         # general for both modes

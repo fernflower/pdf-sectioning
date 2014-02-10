@@ -3,6 +3,7 @@
 from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from imagelabel import QImageLabel
+from console import QConsole
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
@@ -10,8 +11,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     stylesheet = \
         """
         QMainWindow { background: rgb(83, 83, 83);}
+
+        QToolBar { border: 1px solid rgb(58, 56, 56) }
+
         QScrollArea { background-color: rgb(58, 56, 56);
-                      border: 1px solid black }
+                      border: 1px solid rgb(58, 56, 56) }
+
         QScrollBar:horizontal, QScrollBar:vertical
         {
             border: 2px solid grey;
@@ -21,16 +26,27 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         {
           background: none;
         }
-        QListView { background: rgb(81, 81, 81);}
+
+        QListView, QTabWidget, QTabBar, QMenuBar {
+          background: rgb(81, 81, 81);
+          color: rgb(235, 235, 235)
+        }
         QListView::item:selected { background: rgb(10, 90, 160); }
         QListView::item { color: rgb(230, 230, 230);
-                          border-bottom: 0.5px solid rgb(58, 56, 56);
-                        }
+                          border-bottom: 0.5px solid rgb(58, 56, 56); }
         QListView::item::icon {
           padding: 7px;
         }
-        QSpinBox {background-color: rgb(58, 56, 56);
-                  color: rgb(235, 235, 235)}
+
+        QTabWidget::pane { border: 1px solid rgb(58, 56, 56); }
+        QTabBar::tab::text { color: rgb(235, 235, 235); }
+        QTabBar::tab:!enabled::text { color: rgb(50, 50, 50); }
+
+        QSpinBox { background-color: rgb(58, 56, 56);
+                   color: rgb(235, 235, 235) }
+
+        QParagraphMark::text { color: rgb(0, 0, 0) }
+
         """
 
     def __init__(self, controller):
@@ -107,6 +123,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # make rulers' buttons checkable
         self.actionSetVerticalRuler.setCheckable(True)
         self.actionSetHorizontalRuler.setCheckable(True)
+        # add console
+        self.console = QConsole(self.tab, self.verticalLayout, self)
+        # TODO will be changed soon
+        self.tabWidget.setTabEnabled(1, False)
         # colors and buttons
         self._set_appearance()
 
@@ -256,6 +276,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.pageNum = pagenum
             self.update()
 
+    def navigate_to_first_error(self):
+        error = self.controller.get_first_error_mark()
+        if error:
+            toc_elem = self.get_toc_elem(error.cas_id)
+            self.listView.setCurrentIndex(toc_elem.index())
+            self.go_to_page(error.page)
+
     def zoom(self, delta):
         return self.controller.zoom(delta)
 
@@ -307,6 +334,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             event.ignore()
         else:
             event.accept()
+
+    def update(self):
+        super(BookViewerWidget, self).update()
+        self.console.set_error_count(self.controller.get_total_error_count())
 
     ## all possible dialogs go here
     # general politics: returns True if can proceed with anything after
