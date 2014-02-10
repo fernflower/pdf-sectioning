@@ -24,7 +24,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         QListView { background: rgb(81, 81, 81);}
         QListView::item:selected { background: rgb(10, 90, 160); }
         QListView::item { color: rgb(230, 230, 230);
-                          border-bottom: 0.0px solid gray }
+                          border-bottom: 0.5px solid rgb(58, 56, 56);
+                        }
+        QListView::item::icon {
+          padding: 7px;
+        }
         QSpinBox {background-color: rgb(58, 56, 56);
                   color: rgb(235, 235, 235)}
         """
@@ -35,6 +39,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.controller = controller
         self.last_right_click = None
         self.pageNum = 1
+        # in order to implement navigation on toc-elem click. Store last mark
+        # navigated to here
+        self.mark_to_navigate = None
         # dialogs
         self.unsaved_changes_dialog = None
         self.cant_save_dialog = None
@@ -106,9 +113,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def _set_appearance(self):
         self.setStyleSheet(self.stylesheet)
         self.prevPage_button.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Page_down'))
-        self.nextPage_button.setStyleSheet(
             self.generate_toolbutton_stylesheet('buttons/Page_up'))
+        self.nextPage_button.setStyleSheet(
+            self.generate_toolbutton_stylesheet('buttons/Page_down'))
         # toolbar buttons
         load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
         load_pdf.setStyleSheet(
@@ -127,10 +134,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.generate_toolbutton_stylesheet('buttons/Lower_border'))
         prev_page = self.toolBar.widgetForAction(self.actionPrev_page)
         prev_page.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Page_down'))
+            self.generate_toolbutton_stylesheet('buttons/Page_up'))
         next_page = self.toolBar.widgetForAction(self.actionNext_page)
         next_page.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Page_up'))
+            self.generate_toolbutton_stylesheet('buttons/Page_down'))
         # total pages text set to white without affecting QRubberBand
         self.totalPagesLabel.setStyleSheet("QLabel {color: rgb(235, 235, 235)}")
 
@@ -146,13 +153,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.set_normal_state()
         current = self.get_selected_toc_elem()
         if current and not current.is_not_started():
-            first_mark = self.controller.\
-                get_first_paragraph_mark(current.cas_id)
-            # navigate to page where start mark is
-            if first_mark:
-                # only have to change spinbox value: the connected signal will
-                # do all work automatically
-                self.spinBox.setValue(first_mark.page)
+            self.mark_to_navigate = self.controller.\
+                get_next_paragraph_mark(current.cas_id, self.mark_to_navigate)
+            # only have to change spinbox value: the connected signal will
+            # do all work automatically
+            if self.mark_to_navigate:
+                self.spinBox.setValue(self.mark_to_navigate.page)
 
     # context menu fill be shownn only if sth is selected at the moment
     def show_context_menu(self, point):

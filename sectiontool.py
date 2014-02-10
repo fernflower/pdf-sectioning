@@ -47,6 +47,9 @@ class SectionTool(object):
         c.setopt(c.WRITEFUNCTION, storage.write)
         c.setopt(pycurl.USERPWD,
                  self.config_data['username'] + ":" + self.config_data["password"])
+        # TODO find out how to use certificate
+        c.setopt(pycurl.SSL_VERIFYPEER, 0)
+        c.setopt(pycurl.SSL_VERIFYHOST, 0)
         c.perform()
         if c.getinfo(pycurl.HTTP_CODE) == 200:
             TOC_XPATH = "/is:course/is:lessons/is:lesson/@name"
@@ -96,8 +99,8 @@ def main():
     filename, width, height, save_dir = parse_args()
     st = SectionTool("config")
     toc = st.get_cms_course_toc()
-    for elem in toc:
-        print elem["name"]
+    #for elem in toc:
+        #print elem["name"]
 
     # show window
     app = QtGui.QApplication(sys.argv)

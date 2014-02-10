@@ -114,6 +114,18 @@ class BookController(object):
         except KeyError:
             return None
 
+    # returns mark following given mark for toc elem with given cas-id. Used in
+    # bookviewer in order to implement human-friendly navigation to start\end
+    # marks when clicked on toc elem
+    # no mark given means that we should take first paragraph mark found
+    def get_next_paragraph_mark(self, cas_id, mark=None):
+        try:
+            (start, end) = self.paragraph_marks[cas_id]
+            return next(
+                (m for m in [start, end] if m != mark and m is not None), mark)
+        except KeyError:
+            return mark
+
     def get_available_marks(self, cas_id):
         both = ["start", "end"]
         end_only = ["end"]
@@ -211,12 +223,15 @@ class BookController(object):
                          self.paragraph_marks.values()))
         if not paired:
             return False
-        for (start, end) in self.paragraph_marks.values():
-            # marks are on the same page, compare y coordinate
-            if start.page == end.page and start.y() >= end.y():
-                return False
-            elif start.page > end.page:
-                return False
+        return all(map(lambda (x, y): self.verify_start_end(x, y),
+                       self.paragraph_marks.values()))
+
+    def verify_start_end(self, start, end):
+        # marks are on the same page, compare y coordinate
+        if start.page == end.page and start.y() >= end.y():
+            return False
+        elif start.page > end.page:
+            return False
         return True
 
     def get_image(self):
@@ -420,7 +435,11 @@ class BookController(object):
             if not end or not start:
                 toc_elem.mark_not_finished()
             else:
-                toc_elem.mark_finished()
+                # check that end and start mark come in correct order
+                if self.verify_start_end(start, end):
+                    toc_elem.mark_finished()
+                else:
+                    toc_elem.mark_not_finished()
         except KeyError:
             self.paragraph_marks[mark.cas_id] = (mark, None)
             toc_elem.mark_not_finished()
