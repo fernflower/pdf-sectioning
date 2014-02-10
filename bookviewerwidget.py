@@ -335,9 +335,18 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         else:
             event.accept()
 
+    def update_console_data(self):
+        first_error = self.controller.get_first_error_mark()
+        msg = self.get_toc_elem(first_error.cas_id).get_message() \
+            if first_error else u""
+        self.console.set_first_error_data(
+                self.controller.get_total_error_count(), msg)
+
     def update(self):
         super(BookViewerWidget, self).update()
-        self.console.set_error_count(self.controller.get_total_error_count())
+        # update console data
+        # TODO it might not be here, think of a better place
+        self.update_console_data()
 
     ## all possible dialogs go here
     # general politics: returns True if can proceed with anything after

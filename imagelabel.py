@@ -65,7 +65,6 @@ class QImageLabel(QtGui.QLabel):
                 selected.toggle_selected()
             self.last_selected = selected
 
-
         # disable right mouse click as it shows context menu
         if event.buttons() == QtCore.Qt.RightButton:
             return super(QImageLabel, self).mousePressEvent(event)
@@ -78,12 +77,14 @@ class QImageLabel(QtGui.QLabel):
                 # deselected everything selected earlier on page
                 self.controller.deselect_all()
                 self.controller._create_mark_on_click(event.pos(), self)
+        self.update()
 
     def mouseMoveEvent(self, event):
         delta = QtCore.QPoint(event.pos().x() - self.coordinates.x(),
                               event.pos().y() - self.coordinates.y())
         self.coordinates = event.pos()
         self.controller.move(delta, self.coordinates)
+        self.update()
 
     def keyPressEvent(self, event):
         if self.controller.selected_marks_and_rulers() != [] and \
@@ -94,3 +95,4 @@ class QImageLabel(QtGui.QLabel):
         else:
             # should be here to navigate when focused
             self.parent.keyPressEvent(event)
+        self.update()

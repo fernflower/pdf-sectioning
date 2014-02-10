@@ -119,14 +119,14 @@ class BookController(object):
             return mark
 
     def get_first_error_mark(self):
-        error_elem =  next((e for e in self.toc_elems if e.is_not_finished()),
+        error_elem =  next((e for e in self.toc_elems if e.is_error()),
                            None)
         if not error_elem:
             return None
         return self.get_next_paragraph_mark(error_elem.cas_id)
 
     def get_total_error_count(self):
-        return len(filter(lambda e:e.is_not_finished(), self.toc_elems))
+        return len(filter(lambda e:e.is_error(), self.toc_elems))
 
     def get_available_marks(self, cas_id):
         both = ["start", "end"]
@@ -178,7 +178,7 @@ class BookController(object):
                 # TODO think how to eliminate calling this func twice
                 elem = self.get_toc_elem(cas_id)
                 if elem:
-                    elem.mark_finished()
+                    elem.set_finished()
                 if mark.page != self.pagenum:
                     mark.hide()
                 try:
@@ -338,6 +338,18 @@ class BookController(object):
                 # no ruler should be assigned to mark
                 mark.unbind_from_ruler()
                 mark.move(delta)
+                # after mark is moved verify that start comes before end,
+                # otherwise set error state
+                other_mark = self.get_next_paragraph_mark(mark.cas_id, mark)
+                if other_mark and other_mark != mark:
+                    start = mark if isinstance(mark, QStartParagraph) \
+                                 else other_mark
+                    end = other_mark if start == mark else mark
+                    toc_elem = self.get_toc_elem(mark.cas_id)
+                    if self.verify_start_end(start, end):
+                        toc_elem.set_finished()
+                    else:
+                        toc_elem.set_mixed_up_marks()
             return
         # else move as usual
         if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
@@ -380,10 +392,10 @@ class BookController(object):
                 self.paragraph_marks[mark.cas_id] = (None, end)
             elif end == mark:
                 self.paragraph_marks[mark.cas_id] = (start, None)
-            toc_elem.mark_not_finished()
+            toc_elem.set_not_finished()
         if self.paragraph_marks[mark.cas_id] == (None, None):
             del self.paragraph_marks[mark.cas_id]
-            toc_elem.mark_not_started()
+            toc_elem.set_not_started()
 
     def delete_ruler(self, ruler):
         self.rulers.remove(ruler)
@@ -435,16 +447,16 @@ class BookController(object):
             self.paragraph_marks[mark.cas_id] = (start, end)
             # set correct states
             if not end or not start:
-                toc_elem.mark_not_finished()
+                toc_elem.set_not_finished()
             else:
                 # check that end and start mark come in correct order
                 if self.verify_start_end(start, end):
-                    toc_elem.mark_finished()
+                    toc_elem.set_finished()
                 else:
-                    toc_elem.mark_not_finished()
+                    toc_elem.set_mixed_up_marks()
         except KeyError:
             self.paragraph_marks[mark.cas_id] = (mark, None)
-            toc_elem.mark_not_finished()
+            toc_elem.set_not_finished()
 
     def find_at_point(self, point, among=None):
         def contains(mark, point):

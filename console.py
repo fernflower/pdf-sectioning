@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
+from tocelem import QTocElem
 
 
 class QConsole(QtGui.QWidget):
@@ -22,9 +23,8 @@ class QConsole(QtGui.QWidget):
     def __init__(self, parent, parent_layout, bookviewer):
         super(QConsole, self).__init__()
         self.bookviewer = bookviewer
-        self.errors_total = 0
         self.errors_count = QtGui.QPushButton(parent)
-        self.errors_count.setText(self.COUNT_ERRORS_TEXT % self.errors_total)
+        self.errors_count.setText(self.COUNT_ERRORS_TEXT % 0)
         self.errors_count.setMaximumSize(QtCore.QSize(70, 30))
         self.errors_count.clicked.connect(self.errors_clicked)
         self.errors_data = QtGui.QLabel(parent)
@@ -40,9 +40,11 @@ class QConsole(QtGui.QWidget):
         self.errors_data.setStyleSheet(self.ERROR_DATA_STYLESHEET)
 
     def set_error_count(self, count):
-        self.errors_total = count
-        self.errors_count.setText(self.COUNT_ERRORS_TEXT % self.errors_total)
         self.update()
+
+    def set_first_error_data(self, total_errors, message):
+        self.errors_count.setText(self.COUNT_ERRORS_TEXT % total_errors)
+        self.errors_data.setText(message)
 
     def update(self):
         self.errors_count.update()
