@@ -216,47 +216,80 @@
    <addaction name="actionNext_page"/>
   </widget>
   <action name="actionLoad_pdf">
+   <property name="icon">
+    <iconset>
+     <normaloff>buttons/Load_file.png</normaloff>
+     <activeon>buttons/Load_file_hover.png</activeon>
+     <selectedon>buttons/Load_file_pressed.png</selectedon>buttons/Load_file.png</iconset>
+   </property>
    <property name="text">
-    <string/>
+    <string>Загрузить pdf</string>
+   </property>
+   <property name="iconText">
+    <string>Загрузить pdf</string>
    </property>
    <property name="toolTip">
     <string>Загрузить pdf</string>
    </property>
   </action>
   <action name="actionPrev_page">
+   <property name="icon">
+    <iconset>
+     <normaloff>buttons/Page_up.png</normaloff>buttons/Page_up.png</iconset>
+   </property>
    <property name="text">
-    <string/>
+    <string>Предыдущая страница</string>
    </property>
   </action>
   <action name="actionNext_page">
+   <property name="icon">
+    <iconset>
+     <normaloff>buttons/Page_down.png</normaloff>buttons/Page_down.png</iconset>
+   </property>
    <property name="text">
-    <string/>
+    <string>Следующая страница</string>
    </property>
   </action>
   <action name="actionSave">
+   <property name="icon">
+    <iconset>
+     <normaloff>buttons/Save.png</normaloff>buttons/Save.png</iconset>
+   </property>
    <property name="text">
-    <string/>
+    <string>Сохранить</string>
    </property>
   </action>
   <action name="actionLoad_markup">
+   <property name="icon">
+    <iconset>
+     <normaloff>buttons/Load_markup.png</normaloff>buttons/Load_markup.png</iconset>
+   </property>
    <property name="text">
-    <string/>
+    <string>Загрузить разметку</string>
    </property>
   </action>
   <action name="actionSetHorizontalRuler">
+   <property name="icon">
+    <iconset>
+     <normaloff>buttons/Horisontal_ruler.png</normaloff>buttons/Horisontal_ruler.png</iconset>
+   </property>
    <property name="text">
-    <string/>
+    <string>Установить горизонтальный разделитель</string>
    </property>
    <property name="iconText">
-    <string/>
+    <string>Установить горизонтальный разделитель</string>
    </property>
   </action>
   <action name="actionSetVerticalRuler">
+   <property name="icon">
+    <iconset>
+     <normaloff>buttons/Vertical_ruler.png</normaloff>buttons/Vertical_ruler.png</iconset>
+   </property>
    <property name="text">
-    <string/>
+    <string>Установить вертикальный разделитель</string>
    </property>
    <property name="iconText">
-    <string/>
+    <string>Установить вертикальный разделитель</string>
    </property>
   </action>
  </widget>

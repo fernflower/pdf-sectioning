@@ -27,7 +27,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
           background: none;
         }
 
-        QListView, QTabWidget, QTabBar, QMenuBar {
+        QListView, QTabWidget, QTabBar, QMenuBar, QMenu {
           background: rgb(81, 81, 81);
           color: rgb(235, 235, 235)
         }
@@ -125,6 +125,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionSetHorizontalRuler.setCheckable(True)
         # add console
         self.console = QConsole(self.tab, self.verticalLayout, self)
+        # fill file/edit/view menus
+        self.menuFile.addAction(self.actionLoad_pdf)
+        self.menuFile.addAction(self.actionLoad_markup)
+        self.menuFile.addAction(self.actionSave)
+        self.menuEdit.addAction(self.actionSetHorizontalRuler)
+        self.menuEdit.addAction(self.actionSetVerticalRuler)
         # TODO will be changed soon
         self.tabWidget.setTabEnabled(1, False)
         # colors and buttons
@@ -147,11 +153,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         save.setStyleSheet(self.generate_toolbutton_stylesheet('buttons/Save'))
         hor_ruler = self.toolBar.widgetForAction(self.actionSetHorizontalRuler)
         hor_ruler.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Upper_border'))
+            self.generate_toolbutton_stylesheet('buttons/Horisontal_ruler'))
         vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
         # TODO substitute with an appropriate pic
         vert_ruler.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Lower_border'))
+            self.generate_toolbutton_stylesheet('buttons/Vertical_ruler'))
         prev_page = self.toolBar.widgetForAction(self.actionPrev_page)
         prev_page.setStyleSheet(
             self.generate_toolbutton_stylesheet('buttons/Page_up'))
