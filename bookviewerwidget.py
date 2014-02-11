@@ -13,6 +13,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         QMainWindow { background: rgb(83, 83, 83);}
 
         QToolBar { border: 1px solid rgb(58, 56, 56) }
+        QMenu::item:!enabled::text { color: rgb(52, 51, 51) }
 
         QScrollArea { background-color: rgb(58, 56, 56);
                       border: 1px solid rgb(58, 56, 56) }
@@ -29,11 +30,14 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
         QListView, QTabWidget, QTabBar, QMenuBar, QMenu {
           background: rgb(81, 81, 81);
-          color: rgb(235, 235, 235)
+          color: rgb(235, 235, 235);
         }
+        QListView { font-size: 12px;
+                    font-family: "Arial"}
         QListView::item:selected { background: rgb(10, 90, 160); }
         QListView::item { color: rgb(230, 230, 230);
-                          border-bottom: 0.5px solid rgb(58, 56, 56); }
+                          border-bottom: 0.5px solid rgb(58, 56, 56);
+                        }
         QListView::item::icon {
           padding: 7px;
         }
@@ -64,6 +68,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._set_widgets_data_on_doc_load()
         self.init_actions()
         self.init_widgets()
+        self.init_menubar()
 
     def generate_toolbutton_stylesheet(self, button_name):
         return  \
@@ -83,8 +88,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
-        self.actionSave.triggered.connect(self.save)
+        self.actionLoad_pdf.setShortcut('Ctrl+O')
         self.actionLoad_markup.triggered.connect(self.load_markup)
+        self.actionLoad_markup.setShortcut('Ctrl+M')
+        self.actionSave.triggered.connect(self.save)
+        self.actionSave.setShortcut('Ctrl+S')
         self.actionSetVerticalRuler.triggered.connect(
             self.set_vertical_ruler_state)
         self.actionSetHorizontalRuler.triggered.connect(
@@ -93,12 +101,25 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionNext_page.triggered.connect(self.next_page)
         self.prevPage_button.clicked.connect(self.prev_page)
         self.nextPage_button.clicked.connect(self.next_page)
+        # delete selection action
+        self.actionDelete_selection = QtGui.QAction(u"Удалить объект", self)
+        self.actionDelete_selection.setShortcut('Delete')
+        self.actionDelete_selection.triggered.connect(self.delete_marks)
         self.spinBox.connect(self.spinBox,
                              QtCore.SIGNAL("valueChanged(int)"),
                              self.go_to_page)
 
+    # called after all actions and widgets are created
+    def init_menubar(self):
+        # fill file/edit/view menus
+        self.menuFile.addAction(self.actionLoad_pdf)
+        self.menuFile.addAction(self.actionLoad_markup)
+        self.menuFile.addAction(self.actionSave)
+        self.menuEdit.addAction(self.actionSetHorizontalRuler)
+        self.menuEdit.addAction(self.actionSetVerticalRuler)
+        self.menuEdit.addAction(self.actionDelete_selection)
+
     def init_widgets(self):
-        # add image label
         self.imageLabel = QImageLabel(self, self.controller)
         self.imageLabel.setScaledContents(True)
         self.scrollArea.setWidget(self.imageLabel)
@@ -113,11 +134,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.listView.clicked.connect(self.on_selection_change)
         # context menu
         self.cmenu = QtGui.QMenu()
+        self.cmenu.addAction(self.actionDelete_selection)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.actionDelete_selection = \
-            self.cmenu.addAction("Delete")
-        self.actionDelete_selection.triggered.connect(
-            self.delete_marks)
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(QPoint)"),
                      self.show_context_menu)
         # make rulers' buttons checkable
@@ -125,12 +143,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionSetHorizontalRuler.setCheckable(True)
         # add console
         self.console = QConsole(self.tab, self.verticalLayout, self)
-        # fill file/edit/view menus
-        self.menuFile.addAction(self.actionLoad_pdf)
-        self.menuFile.addAction(self.actionLoad_markup)
-        self.menuFile.addAction(self.actionSave)
-        self.menuEdit.addAction(self.actionSetHorizontalRuler)
-        self.menuEdit.addAction(self.actionSetVerticalRuler)
         # TODO will be changed soon
         self.tabWidget.setTabEnabled(1, False)
         # colors and buttons
@@ -155,7 +167,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         hor_ruler.setStyleSheet(
             self.generate_toolbutton_stylesheet('buttons/Horisontal_ruler'))
         vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
-        # TODO substitute with an appropriate pic
         vert_ruler.setStyleSheet(
             self.generate_toolbutton_stylesheet('buttons/Vertical_ruler'))
         prev_page = self.toolBar.widgetForAction(self.actionPrev_page)
@@ -189,8 +200,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     # context menu fill be shownn only if sth is selected at the moment
     def show_context_menu(self, point):
         self.last_right_click = self.mapToGlobal(point)
-        if self.controller.selected_marks_and_rulers() != []:
-            self.cmenu.exec_(self.last_right_click)
+        self.cmenu.exec_(self.last_right_click)
 
     # delete currently selected marks on current page. Destroy
     # widget here as well, after removing from all parallel data structures
@@ -215,8 +225,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.prev_page()
         elif event.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_PageUp]:
             self.next_page()
-        elif event.key() == QtCore.Qt.Key_Delete:
-            self.delete_marks()
+        #elif event.key() == QtCore.Qt.Key_Delete:
+            #self.delete_marks()
         self.update()
 
     def get_selected_toc_elem(self):
@@ -286,7 +296,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         error = self.controller.get_first_error_mark()
         if error:
             toc_elem = self.get_toc_elem(error.cas_id)
+            # scroll to element to make it 100% visible
+            self.listView.scrollTo(toc_elem.index())
             self.listView.setCurrentIndex(toc_elem.index())
+            self.controller.set_current_toc_elem(toc_elem)
             self.go_to_page(error.page)
 
     def zoom(self, delta):
@@ -353,6 +366,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # update console data
         # TODO it might not be here, think of a better place
         self.update_console_data()
+        # set actions enabled\disabled depending on current situation
+        anything_selected = self.controller.selected_marks_and_rulers() != []
+        self.actionDelete_selection.setEnabled(anything_selected)
 
     ## all possible dialogs go here
     # general politics: returns True if can proceed with anything after

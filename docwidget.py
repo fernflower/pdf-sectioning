@@ -185,4 +185,3 @@ class Ui_MainWindow(object):
         self.actionSetHorizontalRuler.setIconText(_translate("MainWindow", "Установить горизонтальный разделитель", None))
         self.actionSetVerticalRuler.setText(_translate("MainWindow", "Установить вертикальный разделитель", None))
         self.actionSetVerticalRuler.setIconText(_translate("MainWindow", "Установить вертикальный разделитель", None))
-
