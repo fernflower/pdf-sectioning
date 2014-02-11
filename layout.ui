@@ -17,122 +17,26 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_5">
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QWidget" name="widget" native="true">
-        <property name="minimumSize">
-         <size>
-          <width>50</width>
-          <height>30</height>
-         </size>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <item>
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QToolButton" name="prevPage_button">
-           <property name="text">
-            <string/>
-           </property>
-           <property name="arrowType">
-            <enum>Qt::NoArrow</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QToolButton" name="nextPage_button">
-           <property name="text">
-            <string/>
-           </property>
-           <property name="arrowType">
-            <enum>Qt::NoArrow</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="spinBox">
-           <property name="maximumSize">
-            <size>
-             <width>50</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="cursor">
-            <cursorShape>IBeamCursor</cursorShape>
-           </property>
-           <property name="mouseTracking">
-            <bool>false</bool>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::ClickFocus</enum>
-           </property>
-           <property name="buttonSymbols">
-            <enum>QAbstractSpinBox::NoButtons</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="totalPagesLabel">
-           <property name="text">
-            <string>(page 0 from 0)</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-        <zorder>totalPagesLabel</zorder>
-        <zorder>spinBox</zorder>
-        <zorder>horizontalSpacer</zorder>
-        <zorder>nextPage_button</zorder>
-        <zorder>prevPage_button</zorder>
-       </widget>
-      </item>
-      <item>
-       <widget class="QScrollArea" name="scrollArea">
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <widget class="QWidget" name="scrollAreaWidgetContents">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>487</width>
-           <height>424</height>
-          </rect>
-         </property>
-        </widget>
-       </widget>
-      </item>
-     </layout>
+     <widget class="QScrollArea" name="scrollArea">
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>489</width>
+         <height>472</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
     </item>
     <item>
      <widget class="QTabWidget" name="tabWidget">
@@ -180,6 +84,11 @@
      <string>Edit</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+   </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
      <string>View</string>
@@ -192,6 +101,7 @@
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
+   <addaction name="menuTools"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -212,8 +122,6 @@
    <addaction name="actionSetHorizontalRuler"/>
    <addaction name="actionSetVerticalRuler"/>
    <addaction name="separator"/>
-   <addaction name="actionPrev_page"/>
-   <addaction name="actionNext_page"/>
   </widget>
   <action name="actionLoad_pdf">
    <property name="icon">

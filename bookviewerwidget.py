@@ -10,7 +10,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     TOTAL_PAGES_TEXT = u"%d из %d"
     STYLESHEET = \
         """
-        QMainWindow { background: rgb(83, 83, 83);}
+        QMainWindow { background-color: rgb(83, 83, 83);}
 
         QToolBar { border: 1px solid rgb(58, 56, 56) }
         QMenu::item:!enabled::text { color: rgb(52, 51, 51) }
@@ -29,7 +29,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         }
 
         QListView, QTabWidget, QTabBar, QMenuBar, QMenu {
-          background: rgb(81, 81, 81);
+          background-color: rgb(81, 81, 81);
           color: rgb(235, 235, 235);
         }
         QListView { font-size: 12px;
@@ -65,10 +65,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # dialogs
         self.unsaved_changes_dialog = None
         self.cant_save_dialog = None
-        self._set_widgets_data_on_doc_load()
         self.init_actions()
         self.init_widgets()
         self.init_menubar()
+        self._set_widgets_data_on_doc_load()
 
     def generate_toolbutton_stylesheet(self, button_name):
         return  \
@@ -97,18 +97,17 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.set_vertical_ruler_state)
         self.actionSetHorizontalRuler.triggered.connect(
             self.set_horizontal_ruler_state)
+        self.actionPrev_page = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Предыдущая страница"), self)
+        self.actionNext_page = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Следующая страница"), self)
+        # create other action
         self.actionPrev_page.triggered.connect(self.prev_page)
         self.actionNext_page.triggered.connect(self.next_page)
-        self.prevPage_button.clicked.connect(self.prev_page)
-        self.nextPage_button.clicked.connect(self.next_page)
-        # delete selection action
         self.actionDelete_selection = QtGui.QAction(
             QtCore.QString.fromUtf8(u"Удалить объект"), self)
         self.actionDelete_selection.setShortcut('Delete')
         self.actionDelete_selection.triggered.connect(self.delete_marks)
-        self.spinBox.connect(self.spinBox,
-                             QtCore.SIGNAL("valueChanged(int)"),
-                             self.go_to_page)
 
     # called after all actions and widgets are created
     def init_menubar(self):
@@ -116,9 +115,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.menuFile.addAction(self.actionLoad_pdf)
         self.menuFile.addAction(self.actionLoad_markup)
         self.menuFile.addAction(self.actionSave)
-        self.menuEdit.addAction(self.actionSetHorizontalRuler)
-        self.menuEdit.addAction(self.actionSetVerticalRuler)
         self.menuEdit.addAction(self.actionDelete_selection)
+        self.menuTools.addAction(self.actionSetHorizontalRuler)
+        self.menuTools.addAction(self.actionSetVerticalRuler)
 
     def init_widgets(self):
         self.imageLabel = QImageLabel(self, self.controller)
@@ -146,15 +145,25 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.console = QConsole(self.tab, self.verticalLayout, self)
         # TODO will be changed soon
         self.tabWidget.setTabEnabled(1, False)
+        # add spinbox to toolbar
+        self.spinBox = QtGui.QSpinBox(self)
+        self.spinBox.setMouseTracking(False)
+        self.spinBox.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.spinBox.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)
+        self.spinBox.connect(self.spinBox,
+                             QtCore.SIGNAL("valueChanged(int)"),
+                             self.go_to_page)
+        self.toolBar.addAction(self.actionPrev_page)
+        self.toolBar.addAction(self.actionNext_page)
+        self.toolBar.addWidget(self.spinBox)
+        self.totalPagesLabel = QtGui.QLabel(BookViewerWidget.TOTAL_PAGES_TEXT,
+                                            self)
+        self.toolBar.addWidget(self.totalPagesLabel)
         # colors and buttons
         self._set_appearance()
 
     def _set_appearance(self):
         self.setStyleSheet(self.STYLESHEET)
-        self.prevPage_button.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Page_up'))
-        self.nextPage_button.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Page_down'))
         # toolbar buttons
         load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
         load_pdf.setStyleSheet(
@@ -170,12 +179,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
         vert_ruler.setStyleSheet(
             self.generate_toolbutton_stylesheet('buttons/Vertical_ruler'))
-        prev_page = self.toolBar.widgetForAction(self.actionPrev_page)
-        prev_page.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Page_up'))
-        next_page = self.toolBar.widgetForAction(self.actionNext_page)
-        next_page.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Page_down'))
         # total pages text set to white without affecting QRubberBand
         self.totalPagesLabel.setStyleSheet("QLabel {color: rgb(235, 235, 235)}")
 
