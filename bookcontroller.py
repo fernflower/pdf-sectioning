@@ -77,6 +77,9 @@ class BookController(object):
     def is_normal_mode(self):
         return self.mode == self.MODE_NORMAL
 
+    def is_file_given(self):
+        return self.dp is not None
+
     ### getters section
     def get_selected_rulers(self):
         return [r for r in self.rulers if r.is_selected]
@@ -144,12 +147,7 @@ class BookController(object):
         except KeyError:
             return both
 
-    ### different operations
-    def open_file(self, filename):
-        self.dp = DocumentProcessor(filename)
-
-    # here marks_parent is a parent widget to set at marks' creation
-    def load_markup(self, filename, marks_parent):
+    def _clear_paragraph_data(self):
         # destroy previous marks
         for page, marks in self.paragraphs.items():
             map(lambda m: m.destroy(), marks)
@@ -158,6 +156,18 @@ class BookController(object):
         for r in self.rulers:
             r.destroy()
         self.rulers = []
+
+    ### different operations
+    def open_file(self, filename):
+        self._clear_paragraph_data()
+        # deselect all in toc list
+        for elem in self.toc_elems:
+            elem.set_not_started()
+        self.dp = DocumentProcessor(filename)
+
+    # here marks_parent is a parent widget to set at marks' creation
+    def load_markup(self, filename, marks_parent):
+        self._clear_paragraph_data()
         # convert from QString
         filename = str(filename)
         paragraphs = self.dp.load_native_xml(filename)

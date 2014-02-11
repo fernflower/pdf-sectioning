@@ -36,15 +36,16 @@ class QImageLabel(QtGui.QLabel):
     def paintEvent(self, event):
         super(QImageLabel, self).paintEvent(event)
         img = self.controller.get_image()
-        pixmap = QtGui.QPixmap.fromImage(img)
         painter = QtGui.QPainter(self)
         marks_and_rulers = self.controller.get_current_page_marks() + \
                            self.controller.get_rulers()
         for mark in marks_and_rulers:
             mark.paint_me(painter)
             mark.update()
-        self.setPixmap(pixmap)
-        self.setFixedSize(pixmap.size())
+        if img:
+            pixmap = QtGui.QPixmap.fromImage(img)
+            self.setPixmap(pixmap)
+            self.setFixedSize(pixmap.size())
         # update all necessary data in parent (bookviewer)
         self.parent.update()
 

@@ -88,9 +88,9 @@ def main():
             except ValueError:
                 # no such param
                 return None
-        if len(sys.argv) < 2:
-            raise LoaderError("Pdf-file name should come as 1st param")
-        filename = sys.argv[1]
+        filename = None
+        if len(sys.argv) >= 2:
+            filename = sys.argv[1]
         maxwidth = get_value("--width", sys.argv)
         maxheight = get_value("--height", sys.argv)
         save_dir = get_value("--savedir", sys.argv) or '.'
@@ -99,15 +99,16 @@ def main():
     filename, width, height, save_dir = parse_args()
     st = SectionTool("config")
     toc = st.get_cms_course_toc()
-    #for elem in toc:
-        #print elem["name"]
 
     # show window
     app = QtGui.QApplication(sys.argv)
-    dp = DocumentProcessor(filename)
+    # if no filename given: construct controller without docprocessor
+    dp = DocumentProcessor(filename) if filename else None
     controller = BookController(toc, dp)
     ui_mw = BookViewerWidget(controller)
     ui_mw.show()
+    if not dp:
+        ui_mw.open_file()
     sys.exit(app.exec_())
 
 

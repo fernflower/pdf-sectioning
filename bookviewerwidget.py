@@ -7,8 +7,8 @@ from console import QConsole
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
-    totalPagesText = u"%d из %d"
-    stylesheet = \
+    TOTAL_PAGES_TEXT = u"%d из %d"
+    STYLESHEET = \
         """
         QMainWindow { background: rgb(83, 83, 83);}
 
@@ -102,7 +102,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.prevPage_button.clicked.connect(self.prev_page)
         self.nextPage_button.clicked.connect(self.next_page)
         # delete selection action
-        self.actionDelete_selection = QtGui.QAction(u"Удалить объект", self)
+        self.actionDelete_selection = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Удалить объект"), self)
         self.actionDelete_selection.setShortcut('Delete')
         self.actionDelete_selection.triggered.connect(self.delete_marks)
         self.spinBox.connect(self.spinBox,
@@ -149,7 +150,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._set_appearance()
 
     def _set_appearance(self):
-        self.setStyleSheet(self.stylesheet)
+        self.setStyleSheet(self.STYLESHEET)
         self.prevPage_button.setStyleSheet(
             self.generate_toolbutton_stylesheet('buttons/Page_up'))
         self.nextPage_button.setStyleSheet(
@@ -182,7 +183,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.spinBox.setValue(1)
         total_pages = self.controller.get_total_pages()
         self.spinBox.setRange(1, total_pages)
-        self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
+        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (1, total_pages))
 
     def on_selection_change(self):
@@ -214,6 +215,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             model.clear()
         else:
             model = QtGui.QStandardItemModel()
+        # have to do this as when model is cleared all elems are deleted and
+        # will get deleted wrapped obj error
+        self.controller.set_current_toc_elem(None)
         for item in self.controller.create_toc_elems():
             model.appendRow(item)
         self.listView.setModel(model)
@@ -242,13 +246,19 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         return self.controller.get_toc_elem(cas_id)
 
     def open_file(self):
+        if self.controller.any_unsaved_changes and \
+                not self.show_unsaved_data_dialog():
+            return
         filename = QtGui.QFileDialog.getOpenFileName(
             self, QtCore.QString.fromUtf8(u'Загрузить учебник'), '.')
         if not filename:
             return
-        #TODO dialog with warning if any file open at the moment
+        # deselect all in listview
+        self._fill_listview()
         self.controller.open_file(unicode(filename))
         self._set_widgets_data_on_doc_load()
+        # clear listView and fill again with appropriate for given course-id
+        # data fetched from cas
         self.update()
 
     def load_markup(self):
@@ -330,7 +340,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         total_pages = self.controller.get_total_pages()
         self.spinBox.setValue(self.pageNum + 1)
         nextNum = self.spinBox.value()
-        self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
+        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (nextNum, total_pages))
         self.nextPage_button.setEnabled(not nextNum == total_pages)
         self.prevPage_button.setEnabled(not nextNum == 1)
@@ -339,7 +349,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         total_pages = self.controller.get_total_pages()
         self.spinBox.setValue(self.pageNum - 1)
         nextNum = self.spinBox.value()
-        self.totalPagesLabel.setText(BookViewerWidget.totalPagesText % \
+        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (nextNum, total_pages))
         self.nextPage_button.setEnabled(not nextNum == total_pages)
         self.prevPage_button.setEnabled(not nextNum == 1)
