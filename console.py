@@ -6,8 +6,6 @@ from tocelem import QTocElem
 
 class QConsole(QtGui.QWidget):
     COUNT_ERRORS_TEXT = u"%d ошибок"
-    EVERYTHING_OK = u"Пока все хорошо"
-    WRONG_ORDER = u"Ошибка в разметке: %s - конец параграфа стоит выше начала"
     # stylesheets section
     ERROR_COUNT_STYLESHEET_DFLT = \
         """
@@ -33,7 +31,6 @@ class QConsole(QtGui.QWidget):
         self.errors_count.setMaximumSize(QtCore.QSize(70, 30))
         self.errors_count.clicked.connect(self.errors_clicked)
         self.errors_data = QtGui.QLabel(parent)
-        self.errors_data.setText(self.EVERYTHING_OK)
         # now bind to layout
         self.consoleLayout = QtGui.QHBoxLayout()
         self.consoleLayout.addWidget(self.errors_count)

@@ -79,6 +79,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.controller = controller
         self.last_right_click = None
+        self.last_zoom_index = 0
         self.pageNum = 1
         # in order to implement navigation on toc-elem click. Store last mark
         # navigated to here
@@ -91,6 +92,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.init_menubar()
         self._set_widgets_data_on_doc_load()
 
+    # properties of most typically used child widgets in order to write less
+    # code
     @property
     def totalPagesLabel(self):
         return self.toolbarpart.totalPages_label
@@ -107,21 +110,28 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def prevPage_button(self):
         return self.toolbarpart.prevPage_button
 
+    @property
+    def zoom_comboBox(self):
+        return self.toolbarpart.zoomComboBox
+
     def generate_toolbutton_stylesheet(self, button_name):
         return  \
             """
-            QAbstractButton {
+            QToolButton {
                         border: none;
                         background: url(%s.png) top center no-repeat;
             }
-            QAbstractButton:hover {
+            QToolButton:hover {
                 background: url(%s_hover.png) top center no-repeat;
                 color: blue;
             }
-            QAbstractButton:pressed, QAbstractButton:checked {
+            QToolButton:pressed, QAbstractButton:checked {
                         background: url(%s_pressed.png) top center no-repeat;
                         color: gray;}
-        """ % (button_name, button_name, button_name)
+            QToolButton:disabled {
+                        background: url(%s_disabled.png) top center no-repeat;
+            }
+        """ % (button_name, button_name, button_name, button_name)
 
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
@@ -138,7 +148,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             QtCore.QString.fromUtf8(u"Предыдущая страница"), self)
         self.actionNext_page = QtGui.QAction(
             QtCore.QString.fromUtf8(u"Следующая страница"), self)
-        # create other action
         self.actionPrev_page.triggered.connect(self.prev_page)
         self.actionNext_page.triggered.connect(self.next_page)
         self.actionDelete_selection = QtGui.QAction(
@@ -170,9 +179,17 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.spinBox.connect(self.spinBox,
                              QtCore.SIGNAL("valueChanged(int)"),
                              self.go_to_page)
+        self.imageLabel.connect(self.imageLabel,
+                                QtCore.SIGNAL("zoomChanged(float)"),
+                                self.on_zoom_changed)
+        self.zoom_comboBox.connect(self.zoom_comboBox,
+                                   QtCore.SIGNAL("currentIndexChanged(int)"),
+                                   self.on_zoom_value_change)
+        # add console
+        self.console = QConsole(self.tab, self.verticalLayout, self)
+        self.setFocus(True)
         # show toc elems
         self._fill_listview()
-        self.setFocus(True)
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.listView.clicked.connect(self.on_selection_change)
         # context menu
@@ -184,17 +201,21 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # make rulers' and modes buttons checkable
         self.actionSetVerticalRuler.setCheckable(True)
         self.actionSetHorizontalRuler.setCheckable(True)
-        self.prevPage_button.setCheckable(True)
-        self.nextPage_button.setCheckable(True)
-        # add console
-        self.console = QConsole(self.tab, self.verticalLayout, self)
+        self.toolbarpart.onePage_button.setCheckable(True)
+        self.toolbarpart.twoPage_button.setCheckable(True)
+        # add all zoom values
+        self.zoom_comboBox.addItems(self.controller.get_all_zoom_values())
         # TODO will be changed soon
         self.tabWidget.setTabEnabled(1, False)
         self.toolbarpart.changeIcons_button.setEnabled(False)
         # unfortunately could not assign actions as could not get rid of action
         # text displayed
         self.prevPage_button.clicked.connect(self.prev_page)
+        self.prevPage_button.setShortcut(QtCore.Qt.Key_Left)
         self.nextPage_button.clicked.connect(self.next_page)
+        self.nextPage_button.setShortcut(QtCore.Qt.Key_Right)
+        self.toolbarpart.zoomIn_button.clicked.connect(self.zoom_in)
+        self.toolbarpart.zoomOut_button.clicked.connect(self.zoom_out)
         self.toolBar.addWidget(self.toolbarpart.widget)
         self._set_appearance()
 
@@ -251,6 +272,22 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             if self.mark_to_navigate:
                 self.spinBox.setValue(self.mark_to_navigate.page)
 
+    # mind that every time currentIndex is changed on_zoom_value_changed is
+    # called, so to eliminate double work have to check that delta is not 0
+    def on_zoom_changed(self, scale):
+        # set combo box value
+        self.last_zoom_index = self.controller.get_current_zoom_index()
+        self.zoom_comboBox.setCurrentIndex(self.last_zoom_index)
+
+    def on_zoom_value_change(self):
+        # calc delta, set widgets data and call zoom
+        current = self.zoom_comboBox.currentIndex()
+        delta = (current - self.last_zoom_index) * (self.controller.ZOOM_DELTA)
+        if delta != 0 :
+            self.last_zoom_index = current
+            self.zoom_comboBox.setCurrentIndex(self.last_zoom_index)
+            self.controller.zoom(delta, step_by_step=False)
+
     # context menu fill be shownn only if sth is selected at the moment
     def show_context_menu(self, point):
         self.last_right_click = self.mapToGlobal(point)
@@ -274,17 +311,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         for item in self.controller.create_toc_elems():
             model.appendRow(item)
         self.listView.setModel(model)
-
-    # should be here to navigate regardless of focused widget (imagelabel or
-    # listview)
-    def keyPressEvent(self, event):
-        if event.key() in [QtCore.Qt.Key_Left, QtCore.Qt.Key_PageDown]:
-            self.prev_page()
-        elif event.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_PageUp]:
-            self.next_page()
-        #elif event.key() == QtCore.Qt.Key_Delete:
-            #self.delete_marks()
-        self.update()
 
     def get_selected_toc_elem(self):
         model = self.listView.model()
@@ -365,8 +391,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.controller.set_current_toc_elem(toc_elem)
             self.go_to_page(error.page)
 
-    def zoom(self, delta):
-        return self.controller.zoom(delta)
+    def zoom_in(self):
+        value = self.controller.zoom(self.controller.ZOOM_DELTA)
+        self.on_zoom_changed(value)
+
+    def zoom_out(self):
+        value = self.controller.zoom(-self.controller.ZOOM_DELTA)
+        self.on_zoom_changed(value)
 
     def set_normal_state(self):
         self.actionSetVerticalRuler.setChecked(False)

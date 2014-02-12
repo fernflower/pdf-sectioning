@@ -18,6 +18,7 @@ class BookController(object):
     # zooming
     MAX_SCALE = 5
     MIN_SCALE = 1
+    ZOOM_DELTA = 0.5
     # viewport delta
     VIEWPORT_DELTA = 5
 
@@ -121,9 +122,21 @@ class BookController(object):
         except KeyError:
             return mark
 
-    # returns zoom in percents to show in bookviewer
-    def get_zoom(self):
-        return str(self.zoom * 100.0) + "%"
+    # returns zoom's order num in list to set up in combo box
+    def get_current_zoom_index(self):
+        doubled_list = range(self.MIN_SCALE * 2,
+                             self.MAX_SCALE * 2, int(self.ZOOM_DELTA * 2))
+        try:
+            return  doubled_list.index(int(self.scale * 2))
+        except ValueError:
+            return 0 if self.scale < self.MIN_SCALE else len(doubled_list) - 1
+
+    # had to do this cumbersome trick as python range doesn't accept floats
+    def get_all_zoom_values(self):
+        return [ str(zoom * 100 / 2) + "%" for zoom in \
+                range(self.MIN_SCALE * 2,
+                      self.MAX_SCALE * 2,
+                      int(self.ZOOM_DELTA * 2)) ]
 
     def get_first_error_mark(self):
         error_elem =  next((e for e in self.toc_elems if e.is_error()),
@@ -300,12 +313,17 @@ class BookController(object):
                       rect.width() / self.scale,
                       rect.height() / self.scale)
 
-    def zoom(self, delta):
+    # if step_by_step is True then scale will be either increased or decreased
+    # by 1. Otherwise - scale will be taken from delta: delta + old if delta in [MIN,
+    # MAX], or not taken if out of bounds
+    def zoom(self, delta, step_by_step=True):
         new_scale = old_scale = self.scale
-        if delta > 0:
-            new_scale = self.scale + 0.5
-        elif delta < 0:
-            new_scale = self.scale - 0.5
+        if step_by_step:
+            if delta > 0:
+                new_scale = self.scale + self.ZOOM_DELTA
+            elif delta < 0:
+                new_scale = self.scale - self.ZOOM_DELTA
+        else: new_scale = delta + self.scale
         if new_scale >= self.MIN_SCALE and new_scale <= self.MAX_SCALE:
             self.scale = new_scale
             coeff = new_scale / old_scale
@@ -316,6 +334,7 @@ class BookController(object):
             # now rulers
             for r in self.rulers:
                 r.adjust(coeff)
+        return self.scale
 
     # deselect all elems on page (both marks and rulers) if not in
     # keep_selections list

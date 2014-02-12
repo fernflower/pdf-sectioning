@@ -25,12 +25,16 @@ class QImageLabel(QtGui.QLabel):
         # for move event, to calculate delta
         # TODO there might be another way, perhaps to retrieve delta from move event
         self.coordinates = None
+        self.zoomed_signal = QtCore.SIGNAL("zoomChanged(float)")
         super(QImageLabel, self).__init__(parent)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setStyleSheet(self.STYLESHEET)
 
     def wheelEvent(self, event):
-        self.controller.zoom(event.delta())
+        scale = self.controller.zoom(event.delta())
+        # notify parent that zoom has changed and combo box has to be updated
+        # with new value
+        self.emit(self.zoomed_signal, scale)
 
     # override paint event
     def paintEvent(self, event):
@@ -93,7 +97,4 @@ class QImageLabel(QtGui.QLabel):
             delta = self.MOVE_KEYS_DELTA[event.key()]
             self.coordinates = self.coordinates + delta
             self.controller.move(delta, self.coordinates)
-        else:
-            # should be here to navigate when focused
-            self.parent.keyPressEvent(event)
         self.update()
