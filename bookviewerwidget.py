@@ -5,74 +5,11 @@ from docwidget import Ui_MainWindow
 from toolbarpart import Ui_ToolBarPart
 from imagelabel import QImageLabel
 from console import QConsole
+from stylesheets import GENERAL_STYLESHEET, BLACK_LABEL_STYLESHEET
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     TOTAL_PAGES_TEXT = u"%d из %d"
-    STYLESHEET = \
-        """
-        QMainWindow { background-color: rgb(83, 83, 83);}
-
-        QToolBar { border: 1px solid rgb(58, 56, 56) }
-        QMenu::item:!enabled::text { color: rgb(52, 51, 51) }
-
-        QScrollArea { background-color: rgb(58, 56, 56);
-                      border: 1px solid rgb(58, 56, 56) }
-
-        QScrollBar:horizontal, QScrollBar:vertical
-        {
-            border: 2px solid grey;
-            background: gray;
-        }
-        QScrollBar::add-page, QScrollBar::sub-page
-        {
-          background: none;
-        }
-
-        QListView, QTabWidget, QTabBar, QMenuBar, QMenu {
-          background-color: rgb(81, 81, 81);
-          color: rgb(235, 235, 235);
-        }
-        QListView { font-size: 12px;
-                    font-family: "Arial"}
-        QListView::item:selected { background: rgb(10, 90, 160); }
-        QListView::item { color: rgb(230, 230, 230);
-                          border-bottom: 0.5px solid rgb(58, 56, 56);
-                        }
-        QListView::item::icon {
-          padding: 7px;
-        }
-
-        QTabWidget::pane { border: 1px solid rgb(58, 56, 56); }
-        QTabBar::tab {
-          background: solid rgb(81,81,81);
-          border: 2px solid rgb(45,45,45);
-          border-bottom-color: solid rgb(81,81,81);
-          border-top-left-radius: 5px;
-          border-top-right-radius: 5px;
-          min-width: 80px;
-          padding: 12px;
-        }
-        QTabBar::tab::!selected {
-          border-bottom-color: solid rgb(45,45,45);
-          background: solid rgb(56,56,56)
-        }
-
-        QTabBar::tab::text { color: rgb(235, 235, 235); }
-        QTabBar::tab:!enabled::text { color: rgb(50, 50, 50); }
-
-        #toolBar QSpinBox { background-color: rgb(58, 56, 56);
-                   color: rgb(235, 235, 235) }
-
-        QParagraphMark::text { color: rgb(0, 0, 0) }
-
-        #toolBar QComboBox { background: rgb(58, 56, 56) }
-        QComboBox::down-arrow { color: white }
-        """
-
-    BLACK_LABEL_STYLESHEET = """ QLabel { color: rgb(235, 235, 235);
-                                          background-color: rgb(81, 81, 81)}
-                             """
 
     def __init__(self, controller):
         super(BookViewerWidget, self).__init__()
@@ -125,7 +62,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 background: url(%s_hover.png) top center no-repeat;
                 color: blue;
             }
-            QToolButton:pressed, QAbstractButton:checked {
+            QToolButton:pressed, QToolButton:checked {
                         background: url(%s_pressed.png) top center no-repeat;
                         color: gray;}
             QToolButton:disabled {
@@ -208,6 +145,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # TODO will be changed soon
         self.tabWidget.setTabEnabled(1, False)
         self.toolbarpart.changeIcons_button.setEnabled(False)
+        self.toolbarpart.autozone_button.setEnabled(False)
         # unfortunately could not assign actions as could not get rid of action
         # text displayed
         self.prevPage_button.clicked.connect(self.prev_page)
@@ -243,8 +181,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         for (widget, style) in appearance.items():
             widget.setStyleSheet(self.generate_toolbutton_stylesheet(style))
         # all other stylesheets come here
-        self.totalPagesLabel.setStyleSheet(self.BLACK_LABEL_STYLESHEET)
-        self.setStyleSheet(self.STYLESHEET)
+        self.totalPagesLabel.setStyleSheet(BLACK_LABEL_STYLESHEET)
+        self.setStyleSheet(GENERAL_STYLESHEET)
         self.my_widget = QtGui.QWidget(self.centralwidget)
         self.layout_general = QtGui.QVBoxLayout(self.my_widget)
         self.layout_general.addWidget(self.toolBar)
