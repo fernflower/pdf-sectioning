@@ -9,9 +9,14 @@ class QConsole(QtGui.QWidget):
     EVERYTHING_OK = u"Пока все хорошо"
     WRONG_ORDER = u"Ошибка в разметке: %s - конец параграфа стоит выше начала"
     # stylesheets section
-    ERROR_COUNT_STYLESHEET = \
+    ERROR_COUNT_STYLESHEET_DFLT = \
         """
             QPushButton { background-color: rgb(0, 51, 153);
+                          color: rgb(235, 235, 235)}
+        """
+    ERROR_COUNT_STYLESHEET_ERR = \
+        """
+            QPushButton { background-color: rgb(227, 58, 13);
                           color: rgb(235, 235, 235)}
         """
 
@@ -36,13 +41,17 @@ class QConsole(QtGui.QWidget):
         # add all to parent layout
         parent_layout.addLayout(self.consoleLayout)
         # now set appearance
-        self.errors_count.setStyleSheet(self.ERROR_COUNT_STYLESHEET)
+        self.errors_count.setStyleSheet(self.ERROR_COUNT_STYLESHEET_DFLT)
         self.errors_data.setStyleSheet(self.ERROR_DATA_STYLESHEET)
 
     def set_error_count(self, count):
         self.update()
 
     def set_first_error_data(self, total_errors, message):
+        if total_errors == 0:
+            self.errors_count.setStyleSheet(self.ERROR_COUNT_STYLESHEET_DFLT)
+        else:
+            self.errors_count.setStyleSheet(self.ERROR_COUNT_STYLESHEET_ERR)
         self.errors_count.setText(self.COUNT_ERRORS_TEXT % total_errors)
         self.errors_data.setText(message)
 

@@ -121,6 +121,10 @@ class BookController(object):
         except KeyError:
             return mark
 
+    # returns zoom in percents to show in bookviewer
+    def get_zoom(self):
+        return str(self.zoom * 100.0) + "%"
+
     def get_first_error_mark(self):
         error_elem =  next((e for e in self.toc_elems if e.is_error()),
                            None)

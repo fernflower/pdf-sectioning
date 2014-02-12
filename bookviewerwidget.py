@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
+from toolbarpart import Ui_ToolBarPart
 from imagelabel import QImageLabel
 from console import QConsole
 
@@ -43,15 +44,35 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         }
 
         QTabWidget::pane { border: 1px solid rgb(58, 56, 56); }
+        QTabBar::tab {
+          background: solid rgb(81,81,81);
+          border: 2px solid rgb(45,45,45);
+          border-bottom-color: solid rgb(81,81,81);
+          border-top-left-radius: 5px;
+          border-top-right-radius: 5px;
+          min-width: 80px;
+          padding: 12px;
+        }
+        QTabBar::tab::!selected {
+          border-bottom-color: solid rgb(45,45,45);
+          background: solid rgb(56,56,56)
+        }
+
         QTabBar::tab::text { color: rgb(235, 235, 235); }
         QTabBar::tab:!enabled::text { color: rgb(50, 50, 50); }
 
-        QSpinBox { background-color: rgb(58, 56, 56);
+        #toolBar QSpinBox { background-color: rgb(58, 56, 56);
                    color: rgb(235, 235, 235) }
 
         QParagraphMark::text { color: rgb(0, 0, 0) }
 
+        #toolBar QComboBox { background: rgb(58, 56, 56) }
+        QComboBox::down-arrow { color: white }
         """
+
+    BLACK_LABEL_STYLESHEET = """ QLabel { color: rgb(235, 235, 235);
+                                          background-color: rgb(81, 81, 81)}
+                             """
 
     def __init__(self, controller):
         super(BookViewerWidget, self).__init__()
@@ -70,18 +91,34 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.init_menubar()
         self._set_widgets_data_on_doc_load()
 
+    @property
+    def totalPagesLabel(self):
+        return self.toolbarpart.totalPages_label
+
+    @property
+    def spinBox(self):
+        return self.toolbarpart.pagesSpinBox
+
+    @property
+    def nextPage_button(self):
+        return self.toolbarpart.nextPage_button
+
+    @property
+    def prevPage_button(self):
+        return self.toolbarpart.prevPage_button
+
     def generate_toolbutton_stylesheet(self, button_name):
         return  \
             """
-            QToolButton {
+            QAbstractButton {
                         border: none;
                         background: url(%s.png) top center no-repeat;
             }
-            QToolButton:hover {
+            QAbstractButton:hover {
                 background: url(%s_hover.png) top center no-repeat;
                 color: blue;
             }
-            QToolButton:pressed, QToolButton:checked {
+            QAbstractButton:pressed, QAbstractButton:checked {
                         background: url(%s_pressed.png) top center no-repeat;
                         color: gray;}
         """ % (button_name, button_name, button_name)
@@ -127,6 +164,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                     self.scrollArea.y(),
                                     self.frameSize().width(),
                                     self.frameSize().height())
+        # add spinbox to toolbar
+        self.toolbarpart = Ui_ToolBarPart()
+        self.toolbarpart.setupUi(self)
+        self.spinBox.connect(self.spinBox,
+                             QtCore.SIGNAL("valueChanged(int)"),
+                             self.go_to_page)
         # show toc elems
         self._fill_listview()
         self.setFocus(True)
@@ -138,49 +181,56 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(QPoint)"),
                      self.show_context_menu)
-        # make rulers' buttons checkable
+        # make rulers' and modes buttons checkable
         self.actionSetVerticalRuler.setCheckable(True)
         self.actionSetHorizontalRuler.setCheckable(True)
+        self.prevPage_button.setCheckable(True)
+        self.nextPage_button.setCheckable(True)
         # add console
         self.console = QConsole(self.tab, self.verticalLayout, self)
         # TODO will be changed soon
         self.tabWidget.setTabEnabled(1, False)
-        # add spinbox to toolbar
-        self.spinBox = QtGui.QSpinBox(self)
-        self.spinBox.setMouseTracking(False)
-        self.spinBox.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.spinBox.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)
-        self.spinBox.connect(self.spinBox,
-                             QtCore.SIGNAL("valueChanged(int)"),
-                             self.go_to_page)
-        self.toolBar.addAction(self.actionPrev_page)
-        self.toolBar.addAction(self.actionNext_page)
-        self.toolBar.addWidget(self.spinBox)
-        self.totalPagesLabel = QtGui.QLabel(BookViewerWidget.TOTAL_PAGES_TEXT,
-                                            self)
-        self.toolBar.addWidget(self.totalPagesLabel)
-        # colors and buttons
+        self.toolbarpart.changeIcons_button.setEnabled(False)
+        # unfortunately could not assign actions as could not get rid of action
+        # text displayed
+        self.prevPage_button.clicked.connect(self.prev_page)
+        self.nextPage_button.clicked.connect(self.next_page)
+        self.toolBar.addWidget(self.toolbarpart.widget)
         self._set_appearance()
 
+    # all work on colors and buttons' styles done here
     def _set_appearance(self):
-        self.setStyleSheet(self.STYLESHEET)
-        # toolbar buttons
+        # here come toolbuttons created in designer
         load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
-        load_pdf.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Load_file'))
         load_markup = self.toolBar.widgetForAction(self.actionLoad_markup)
-        load_markup.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Load_markup'))
         save = self.toolBar.widgetForAction(self.actionSave)
-        save.setStyleSheet(self.generate_toolbutton_stylesheet('buttons/Save'))
         hor_ruler = self.toolBar.widgetForAction(self.actionSetHorizontalRuler)
-        hor_ruler.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Horisontal_ruler'))
         vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
-        vert_ruler.setStyleSheet(
-            self.generate_toolbutton_stylesheet('buttons/Vertical_ruler'))
-        # total pages text set to white without affecting QRubberBand
-        self.totalPagesLabel.setStyleSheet("QLabel {color: rgb(235, 235, 235)}")
+        appearance = { self.toolbarpart.nextPage_button: 'buttons/Page_down',
+                       self.toolbarpart.prevPage_button: 'buttons/Page_up',
+                       load_pdf: 'buttons/Load_file',
+                       load_markup: 'buttons/Load_markup',
+                       save: 'buttons/Save',
+                       vert_ruler: 'buttons/Vertical_ruler',
+                       hor_ruler: 'buttons/Horisontal_ruler',
+                       self.toolbarpart.zoomIn_button: 'buttons/Plus',
+                       self.toolbarpart.zoomOut_button: 'buttons/Minus',
+                       self.toolbarpart.onePage_button: 'buttons/Single',
+                       self.toolbarpart.twoPage_button: 'buttons/Double',
+                       self.toolbarpart.changeIcons_button: \
+                          'buttons/Choose_icons'}
+        for (widget, style) in appearance.items():
+            widget.setStyleSheet(self.generate_toolbutton_stylesheet(style))
+        # all other stylesheets come here
+        self.totalPagesLabel.setStyleSheet(self.BLACK_LABEL_STYLESHEET)
+        self.setStyleSheet(self.STYLESHEET)
+        self.my_widget = QtGui.QWidget(self.centralwidget)
+        self.layout_general = QtGui.QVBoxLayout(self.my_widget)
+        self.layout_general.addWidget(self.toolBar)
+        self.layout_general.addWidget(self.scrollArea)
+        self.layoutmain = QtGui.QHBoxLayout(self.centralwidget)
+        self.layoutmain.addWidget(self.my_widget)
+        self.layoutmain.addWidget(self.tabWidget)
 
     def _set_widgets_data_on_doc_load(self):
         self.spinBox.setValue(1)
