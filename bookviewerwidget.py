@@ -210,8 +210,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def on_selection_change(self):
         # always set normal mode for marks' creation
+        self.listView.setStyleSheet(GENERAL_STYLESHEET)
         self.set_normal_state()
-        current = self.get_selected_toc_elem()
+        selected_idx = self.listView.currentIndex()
+        if not selected_idx:
+            return
+        current = self.listView.model().itemFromIndex(selected_idx)
+        self.controller.set_current_toc_elem(current)
         if current and not current.is_not_started():
             self.mark_to_navigate = self.controller.\
                 get_next_paragraph_mark(current.cas_id, self.mark_to_navigate)
@@ -259,14 +264,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         for item in self.controller.create_toc_elems():
             model.appendRow(item)
         self.listView.setModel(model)
-
-    def get_selected_toc_elem(self):
-        model = self.listView.model()
-        selected_idx = self.listView.currentIndex()
-        if selected_idx:
-            elem = model.itemFromIndex(selected_idx)
-            self.controller.set_current_toc_elem(elem)
-            return elem
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_toc_elem(self, cas_id):
@@ -328,10 +325,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     # depending on last_open_doc executes either save or save as
     def smart_save(self):
-        print "smart save"
         self.save() if self.last_open_doc_name else self.save_as()
 
     # here 1st page has number 1
+    # if there are any marks on page, highlight the corresponding paragraph of
+    # the first met in the toc-list
     def go_to_page(self, pagenum):
         total_pages = self.controller.get_total_pages()
         if total_pages == 0:
@@ -348,16 +346,38 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # set total pages label text
         self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (self.pageNum, total_pages))
+        # now highlight first met marks' toc-elem
+        # TODO NO DAMNED PARAGRAPHS HIGHLIGHTING WITHOUT THOROUGH THINKING
+        # OVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        marks = self.controller.get_page_marks(self.pageNum)
+        if marks != []:
+            toc_elem = self.select_toc_elem(marks[0].cas_id)
+            self.highlight_selected_readonly()
+        else:
+            # set normal selection color-scheme
+            self.listView.setStyleSheet(GENERAL_STYLESHEET)
+
+    # draw nice violet selection on toc-elem with id
+    # elem as current so that it can't be modified
+    def highlight_selected_readonly(self):
+        self.listView.setStyleSheet(
+            """ QListView::item:selected{ background-color: rgb(100, 149, 237) }
+            """)
 
     def navigate_to_first_error(self):
         error = self.controller.get_first_error_mark()
         if error:
-            toc_elem = self.get_toc_elem(error.cas_id)
-            # scroll to element to make it 100% visible
-            self.listView.scrollTo(toc_elem.index())
-            self.listView.setCurrentIndex(toc_elem.index())
+            toc_elem = self.select_toc_elem(error.cas_id)
             self.controller.set_current_toc_elem(toc_elem)
             self.go_to_page(error.page)
+
+    def select_toc_elem(self, cas_id):
+        toc_elem = self.get_toc_elem(cas_id)
+        if not toc_elem:
+            return
+        self.listView.scrollTo(toc_elem.index())
+        self.listView.setCurrentIndex(toc_elem.index())
+        return toc_elem
 
     def zoom_in(self):
         value = self.controller.zoom(self.controller.ZOOM_DELTA)

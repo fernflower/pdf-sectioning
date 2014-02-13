@@ -98,7 +98,7 @@ class BookController(object):
 
     def get_page_marks(self, page_num):
         try:
-            return self.paragraphs[str(page_num)]
+            return self.paragraphs[page_num]
         except KeyError:
             return []
 
@@ -230,8 +230,8 @@ class BookController(object):
     def save(self, dirname):
         # normalize to get pdf-coordinates (save with scale=1.0)
         pdf_paragraphs = {}
-        for key, markslist in self.paragraphs.items():
-            for m in markslist:
+        for pagenum in sorted(self.paragraphs.keys()):
+            for m in self.paragraphs[pagenum]:
                 para_key = m.cas_id
                 mark = {"page" : m.page,
                         "name" : m.name,
@@ -301,10 +301,10 @@ class BookController(object):
     # add paragraph mark to paragraph_marks (without duplicates)
     def add_paragraph_mark(self, mark):
         try:
-            if mark not in self.paragraphs[str(mark.page)]:
-                self.paragraphs[str(mark.page)].append(mark)
+            if mark not in self.paragraphs[mark.page]:
+                self.paragraphs[mark.page].append(mark)
         except KeyError:
-            self.paragraphs[str(mark.page)] = [mark]
+            self.paragraphs[mark.page] = [mark]
 
     def transform_to_pdf_coords(self, rect):
         img = self.dp.curr_page()
@@ -347,12 +347,12 @@ class BookController(object):
                    self.selected_marks_and_rulers()))
 
     def hide_page_marks(self, pagenum):
-        if str(pagenum) in self.paragraphs.keys():
-            map(lambda m: m.hide(), self.paragraphs[str(pagenum)])
+        if pagenum in self.paragraphs.keys():
+            map(lambda m: m.hide(), self.paragraphs[pagenum])
 
     def show_page_marks(self, pagenum):
-        if str(pagenum) in self.paragraphs.keys():
-            map(lambda m: m.show(), self.paragraphs[str(pagenum)])
+        if pagenum in self.paragraphs.keys():
+            map(lambda m: m.show(), self.paragraphs[pagenum])
 
     def go_to_page(self, pagenum):
         return self.dp.go_to_page(pagenum)
@@ -412,7 +412,7 @@ class BookController(object):
         for m in selected:
             #TODO BAD, figure out how to do it better
             if isinstance(m, QParagraphMark):
-                self.paragraphs[str(self.pagenum)].remove(m)
+                self.paragraphs[self.pagenum].remove(m)
             m.delete()
             m.destroy()
 
@@ -463,7 +463,7 @@ class BookController(object):
         elif self.is_ruler_mode():
             mark = make_ruler_mark(pos,
                                    mark_parent,
-                                   "i am a ruler",
+                                   "",
                                    self.delete_ruler,
                                    self.mode)
             self.rulers.append(mark)
@@ -497,12 +497,12 @@ class BookController(object):
     def find_at_point(self, point, among=None):
         def contains(mark, point):
             if mark is not None and mark.contains(point):
-                print "EXACT match for %s" % mark.name
+                #print "EXACT match for %s" % mark.name
                 return mark
 
         def intersects(mark, rect):
             if mark is not None and mark.intersects(rect):
-                print "NON-EXACT match for %s" % mark.name
+                #print "NON-EXACT match for %s" % mark.name
                 return mark
 
         # in order to be a bit more user-friendly, first search precisely at

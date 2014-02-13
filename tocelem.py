@@ -31,11 +31,6 @@ class QTocElem(QtGui.QStandardItem):
 
     def update(self):
         # set widget design according to it's state
-        if self.state == QTocElem.STATE_FINISHED:
-            self.setSelectable(False)
-        elif self.state == QTocElem.STATE_NOT_STARTED:
-            self.setSelectable(True)
-        # set correct state icon
         self.setIcon(QtGui.QIcon(self.ICONS[self.state]))
 
     def set_finished(self):

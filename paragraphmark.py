@@ -12,6 +12,7 @@ class QMark(QtGui.QWidget):
     def __init__(self, pos, parent, name, delete_func):
         super(QMark, self).__init__(parent)
         self.is_selected = False
+        self.cursor = QtGui.QCursor(QtCore.Qt.SizeAllCursor)
         self.delete_func = delete_func
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, parent)
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
@@ -133,16 +134,35 @@ class QParagraphMark(QMark):
 
 
 class QRulerMark(QMark):
+    # TODO try to move to stylesheets
     SELECT_COLOUR = QtGui.QColor(200, 0, 0, 50)
     DESELECT_COLOUR = QtGui.QColor(100, 0, 0, 50)
     ORIENT_HORIZONTAL = "horizontal"
     ORIENT_VERTICAL = "vertical"
 
     def __init__(self, pos, parent, name, delete_func, orientation):
+        super(QRulerMark, self).__init__(pos, parent, name, delete_func)
         self.type = orientation
+        # label is not needed, so have to overload all methods using it,
+        # escpecialling those which do repainting
+        self.label.hide()
+
+    def show(self):
+        self.mark.show()
+        self.label.hide()
 
     def set_mark_geometry(self, mark):
         mark.set_geometry(self.geometry())
+
+    def update(self):
+        self.mark.update()
+        self.label.hide()
+
+    def paint_me(self, painter):
+        if self.is_selected:
+            painter.fillRect(self.mark.geometry(), self.SELECT_COLOUR)
+        else:
+            painter.fillRect(self.mark.geometry(), self.DESELECT_COLOUR)
 
 
 class QHorizontalRuler(QRulerMark):

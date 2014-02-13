@@ -76,3 +76,19 @@ BLACK_LABEL_STYLESHEET = \
     """ QLabel { color: rgb(235, 235, 235);
                  background-color: rgb(81, 81, 81) }
     """
+
+RULER_STYLESHEET = \
+    """ QRubberBand
+    { color: rgb(0, 0, 0);
+      background-color: rgb(200, 0, 0);
+      opacity: 50
+    }
+    """
+
+RULER_SELECTED_STYLESHEET = \
+    """ QRubberBand
+    { color: rgb(0, 0, 0);
+      background-color: rgb(200, 0, 0);
+      opacity: 20
+    }
+    """

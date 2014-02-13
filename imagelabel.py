@@ -40,6 +40,16 @@ class QImageLabel(QtGui.QLabel):
         else:
             self.parent.wheelEvent(event)
 
+    def _set_cursor(self, pos):
+        # if over a ruler or mark - change cursor appropriately
+        any_mark = self.controller.find_any_at_point(pos)
+        if any_mark:
+            QtGui.QApplication.setOverrideCursor(
+                QtGui.QCursor(any_mark.cursor))
+        else:
+            QtGui.QApplication.setOverrideCursor(
+                QtGui.QCursor(QtCore.Qt.ArrowCursor))
+
     # override paint event
     def paintEvent(self, event):
         super(QImageLabel, self).paintEvent(event)
@@ -54,6 +64,7 @@ class QImageLabel(QtGui.QLabel):
             pixmap = QtGui.QPixmap.fromImage(img)
             self.setPixmap(pixmap)
             self.setFixedSize(pixmap.size())
+        self._set_cursor(self.mapFromGlobal(QtGui.QCursor.pos()))
         # update all necessary data in parent (bookviewer)
         self.parent.update()
 
@@ -82,6 +93,9 @@ class QImageLabel(QtGui.QLabel):
             self.coordinates = event.pos()
             if selected:
                 process_selected(selected)
+                # TODO send signal or sth
+                toc_elem = self.parent.select_toc_elem(selected.cas_id)
+                self.controller.set_current_toc_elem(toc_elem)
             else:
                 # deselected everything selected earlier on page
                 self.controller.deselect_all()
