@@ -207,8 +207,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.spinBox.setValue(1)
         total_pages = self.controller.get_total_pages()
         self.spinBox.setRange(1, total_pages)
-        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
-                                     (1, total_pages))
 
     def on_selection_change(self):
         # always set normal mode for marks' creation
@@ -347,6 +345,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.nextPage_button.setEnabled(not self.pageNum == total_pages)
             self.prevPage_button.setEnabled(not self.pageNum == 1)
             self.update()
+        # set total pages label text
+        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
+                                     (self.pageNum, total_pages))
 
     def navigate_to_first_error(self):
         error = self.controller.get_first_error_mark()
@@ -388,18 +389,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.set_normal_state()
 
     def next_page(self):
-        total_pages = self.controller.get_total_pages()
         self.spinBox.setValue(self.pageNum + 1)
-        nextNum = self.spinBox.value()
-        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
-                                     (nextNum, total_pages))
 
     def prev_page(self):
-        total_pages = self.controller.get_total_pages()
         self.spinBox.setValue(self.pageNum - 1)
-        nextNum = self.spinBox.value()
-        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
-                                     (nextNum, total_pages))
 
     def get_current_page_marks(self):
         return self.controller.get_page_marks(self.pageNum)
