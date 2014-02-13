@@ -81,8 +81,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                         self)
         self.actionSave.triggered.connect(self.save)
         self.actionSave.setShortcut('Ctrl+S')
+        self.actionSaveAs = QtGui.QAction(
+            QtCore.QString.fromUtf8(u'Сохранить как ...'), self)
         self.actionSaveAs.triggered.connect(self.save_as)
         self.actionSaveAs.setShortcut('Ctrl+Shift+S')
+        self.actionSmartSave.triggered.connect(self.smart_save)
         self.actionSetVerticalRuler.triggered.connect(
             self.set_vertical_ruler_state)
         self.actionSetVerticalRuler.setShortcut('v')
@@ -171,7 +174,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # here come toolbuttons created in designer
         load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
         load_markup = self.toolBar.widgetForAction(self.actionLoad_markup)
-        save = self.toolBar.widgetForAction(self.actionSaveAs)
+        save = self.toolBar.widgetForAction(self.actionSmartSave)
         hor_ruler = self.toolBar.widgetForAction(self.actionSetHorizontalRuler)
         vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
         appearance = { self.toolbarpart.nextPage_button: 'buttons/Page_down',
@@ -325,6 +328,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.last_open_doc_name = self.controller.save(unicode(dir_name))
         return True
 
+    # depending on last_open_doc executes either save or save as
+    def smart_save(self):
+        print "smart save"
+        self.save() if self.last_open_doc_name else self.save_as()
+
     # here 1st page has number 1
     def go_to_page(self, pagenum):
         total_pages = self.controller.get_total_pages()
@@ -388,7 +396,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def prev_page(self):
         total_pages = self.controller.get_total_pages()
-        print total_pages
         self.spinBox.setValue(self.pageNum - 1)
         nextNum = self.spinBox.value()
         self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \

@@ -243,7 +243,9 @@ class BookController(object):
         if not self.dp:
             return
         self.any_unsaved_changes = False
-        return self.dp.save_all(dirname, pdf_paragraphs)
+        # if not all paragraphs have been marked -> add unfinished_ to filename
+        finished = len(pdf_paragraphs) == len(self.toc_elems)
+        return self.dp.save_all(dirname, pdf_paragraphs, finished=finished)
 
     # returns True if all marked paragraphs have both start and end marks in
     # the correct order (start mark goes first).

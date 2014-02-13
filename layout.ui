@@ -127,7 +127,7 @@
    </attribute>
    <addaction name="actionLoad_pdf"/>
    <addaction name="actionLoad_markup"/>
-   <addaction name="actionSaveAs"/>
+   <addaction name="actionSmartSave"/>
    <addaction name="separator"/>
    <addaction name="actionSetHorizontalRuler"/>
    <addaction name="actionSetVerticalRuler"/>
@@ -168,7 +168,7 @@
     <string>Следующая страница</string>
    </property>
   </action>
-  <action name="actionSaveAs">
+  <action name="actionSmartSave">
    <property name="icon">
     <iconset>
      <normaloff>buttons/Save.png</normaloff>buttons/Save.png</iconset>

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from popplerqt4 import Poppler
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -176,14 +177,16 @@ class DocumentProcessor(object):
         filenames = []
         save_path = path[:-1] if path[-1]=='/' else path
         for i, png in enumerate(self._render_all_to_png(), start=1):
-            name = save_path + '/' + self.png_prefix + str(i)
+            name = os.path.join(save_path, self.png_prefix + str(i))
             filenames.append(name)
             png.save(name, "png")
         return filenames
 
-    def save_all(self, path_to_dir, paragraphs):
+    def save_all(self, path_to_dir, paragraphs, finished=True):
         # save native xml
-        filename = path_to_dir + "/" + self.result_file_name
+        filename = os.path.join(path_to_dir, self.result_file_name) \
+            if finished else os.path.join(path_to_dir,
+                                          'unfinished_' + self.result_file_name)
         fname = open(filename, 'w')
         fname.write(self.gen_native_xml(paragraphs))
         fname.close()
