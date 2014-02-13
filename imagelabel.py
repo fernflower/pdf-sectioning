@@ -31,10 +31,14 @@ class QImageLabel(QtGui.QLabel):
         self.setStyleSheet(self.STYLESHEET)
 
     def wheelEvent(self, event):
-        scale = self.controller.zoom(event.delta())
-        # notify parent that zoom has changed and combo box has to be updated
-        # with new value
-        self.emit(self.zoomed_signal, scale)
+        modifiers = QtGui.QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.ControlModifier:
+            scale = self.controller.zoom(event.delta())
+            # notify parent that zoom has changed and combo box has to be
+            # updated with new value
+            self.emit(self.zoomed_signal, scale)
+        else:
+            self.parent.wheelEvent(event)
 
     # override paint event
     def paintEvent(self, event):

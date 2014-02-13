@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'layout.ui'
 #
-# Created: Wed Feb 12 20:36:04 2014
+# Created: Thu Feb 13 13:50:28 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -91,11 +91,11 @@ class Ui_MainWindow(object):
         icon2.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Page_down.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionNext_page.setIcon(icon2)
         self.actionNext_page.setObjectName(_fromUtf8("actionNext_page"))
-        self.actionSave = QtGui.QAction(MainWindow)
+        self.actionSaveAs = QtGui.QAction(MainWindow)
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Save.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionSave.setIcon(icon3)
-        self.actionSave.setObjectName(_fromUtf8("actionSave"))
+        self.actionSaveAs.setIcon(icon3)
+        self.actionSaveAs.setObjectName(_fromUtf8("actionSaveAs"))
         self.actionLoad_markup = QtGui.QAction(MainWindow)
         icon4 = QtGui.QIcon()
         icon4.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Load_markup.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -118,7 +118,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
         self.toolBar.addAction(self.actionLoad_pdf)
         self.toolBar.addAction(self.actionLoad_markup)
-        self.toolBar.addAction(self.actionSave)
+        self.toolBar.addAction(self.actionSaveAs)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.actionSetHorizontalRuler)
         self.toolBar.addAction(self.actionSetVerticalRuler)
@@ -143,7 +143,7 @@ class Ui_MainWindow(object):
         self.actionLoad_pdf.setToolTip(_translate("MainWindow", "Загрузить pdf", None))
         self.actionPrev_page.setText(_translate("MainWindow", "Предыдущая страница", None))
         self.actionNext_page.setText(_translate("MainWindow", "Следующая страница", None))
-        self.actionSave.setText(_translate("MainWindow", "Сохранить", None))
+        self.actionSaveAs.setText(_translate("MainWindow", "Сохранить как ...", None))
         self.actionLoad_markup.setText(_translate("MainWindow", "Загрузить разметку", None))
         self.actionSetHorizontalRuler.setText(_translate("MainWindow", "Установить горизонтальный разделитель", None))
         self.actionSetHorizontalRuler.setIconText(_translate("MainWindow", "Установить горизонтальный разделитель", None))

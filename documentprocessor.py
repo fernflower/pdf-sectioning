@@ -187,6 +187,7 @@ class DocumentProcessor(object):
         fname = open(filename, 'w')
         fname.write(self.gen_native_xml(paragraphs))
         fname.close()
+        return filename
 
     def _processTextBlocks(self):
         result = dict()

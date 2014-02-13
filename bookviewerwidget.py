@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from toolbarpart import Ui_ToolBarPart
@@ -17,6 +18,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.controller = controller
         self.last_right_click = None
         self.last_zoom_index = 0
+        self.last_open_doc_name = None
         self.pageNum = 1
         # in order to implement navigation on toc-elem click. Store last mark
         # navigated to here
@@ -75,12 +77,18 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionLoad_pdf.setShortcut('Ctrl+O')
         self.actionLoad_markup.triggered.connect(self.load_markup)
         self.actionLoad_markup.setShortcut('Ctrl+M')
+        self.actionSave = QtGui.QAction(QtCore.QString.fromUtf8(u'Сохранить'),
+                                        self)
         self.actionSave.triggered.connect(self.save)
         self.actionSave.setShortcut('Ctrl+S')
+        self.actionSaveAs.triggered.connect(self.save_as)
+        self.actionSaveAs.setShortcut('Ctrl+Shift+S')
         self.actionSetVerticalRuler.triggered.connect(
             self.set_vertical_ruler_state)
+        self.actionSetVerticalRuler.setShortcut('v')
         self.actionSetHorizontalRuler.triggered.connect(
             self.set_horizontal_ruler_state)
+        self.actionSetHorizontalRuler.setShortcut('h')
         self.actionPrev_page = QtGui.QAction(
             QtCore.QString.fromUtf8(u"Предыдущая страница"), self)
         self.actionNext_page = QtGui.QAction(
@@ -98,6 +106,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.menuFile.addAction(self.actionLoad_pdf)
         self.menuFile.addAction(self.actionLoad_markup)
         self.menuFile.addAction(self.actionSave)
+        self.menuFile.addAction(self.actionSaveAs)
         self.menuEdit.addAction(self.actionDelete_selection)
         self.menuTools.addAction(self.actionSetHorizontalRuler)
         self.menuTools.addAction(self.actionSetVerticalRuler)
@@ -162,7 +171,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # here come toolbuttons created in designer
         load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
         load_markup = self.toolBar.widgetForAction(self.actionLoad_markup)
-        save = self.toolBar.widgetForAction(self.actionSave)
+        save = self.toolBar.widgetForAction(self.actionSaveAs)
         hor_ruler = self.toolBar.widgetForAction(self.actionSetHorizontalRuler)
         vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
         appearance = { self.toolbarpart.nextPage_button: 'buttons/Page_down',
@@ -289,12 +298,21 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                             "Xml files (*.xml)")
         if not filename:
             return
+        self.last_open_doc_name = unicode(filename)
         # clear listView and fill again with appropriate for given course-id
         # data fetched from cas
         self._fill_listview()
-        self.controller.load_markup(unicode(filename), self.imageLabel)
+        self.controller.load_markup(self.last_open_doc_name, self.imageLabel)
 
     def save(self):
+        if not self.last_open_doc_name:
+            return
+        if not self.controller.verify_mark_pairs():
+            self.show_cant_save_dialog()
+            return False
+        self.controller.save(os.path.dirname(self.last_open_doc_name))
+
+    def save_as(self):
         # check that all marked paragraphs have both marks
         if not self.controller.verify_mark_pairs():
             self.show_cant_save_dialog()
@@ -304,12 +322,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                  QtCore.QString.fromUtf8(u'Сохранить разметку'))
         if not dir_name:
             return
-        self.controller.save(unicode(dir_name))
+        self.last_open_doc_name = self.controller.save(unicode(dir_name))
         return True
 
     # here 1st page has number 1
     def go_to_page(self, pagenum):
-        if self.controller.get_total_pages() == 0:
+        total_pages = self.controller.get_total_pages()
+        if total_pages == 0:
             return
         # hide selections on this page
         self.controller.hide_page_marks(self.pageNum)
@@ -317,6 +336,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.controller.show_page_marks(pagenum)
         if self.controller.go_to_page(pagenum - 1):
             self.pageNum = pagenum
+            self.nextPage_button.setEnabled(not self.pageNum == total_pages)
+            self.prevPage_button.setEnabled(not self.pageNum == 1)
             self.update()
 
     def navigate_to_first_error(self):
@@ -364,17 +385,14 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         nextNum = self.spinBox.value()
         self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (nextNum, total_pages))
-        self.nextPage_button.setEnabled(not nextNum == total_pages)
-        self.prevPage_button.setEnabled(not nextNum == 1)
 
     def prev_page(self):
         total_pages = self.controller.get_total_pages()
+        print total_pages
         self.spinBox.setValue(self.pageNum - 1)
         nextNum = self.spinBox.value()
         self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (nextNum, total_pages))
-        self.nextPage_button.setEnabled(not nextNum == total_pages)
-        self.prevPage_button.setEnabled(not nextNum == 1)
 
     def get_current_page_marks(self):
         return self.controller.get_page_marks(self.pageNum)
@@ -393,6 +411,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.console.set_first_error_data(
                 self.controller.get_total_error_count(), msg)
 
+    def wheelEvent(self, event):
+        if event.delta() > 0:
+            self.prev_page()
+        elif event.delta() < 0:
+            self.next_page()
+
     def update(self):
         super(BookViewerWidget, self).update()
         # update console data
@@ -401,6 +425,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # set actions enabled\disabled depending on current situation
         anything_selected = self.controller.selected_marks_and_rulers() != []
         self.actionDelete_selection.setEnabled(anything_selected)
+        self.actionSave.setEnabled(self.last_open_doc_name is not None)
 
     ## all possible dialogs go here
     # general politics: returns True if can proceed with anything after
@@ -418,7 +443,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.unsaved_changes_dialog.setDefaultButton(QtGui.QMessageBox.Save)
         result = self.unsaved_changes_dialog.exec_()
         if result == QtGui.QMessageBox.Save:
-            return self.save()
+            return self.save_as()
         elif result == QtGui.QMessageBox.Discard:
             return True
         elif result == QtGui.QMessageBox.Cancel:

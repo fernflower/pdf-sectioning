@@ -5,7 +5,12 @@ from tocelem import QTocElem
 
 
 class QConsole(QtGui.QWidget):
-    COUNT_ERRORS_TEXT = u"%d ошибок"
+    COUNT_ERRORS_TEXT = u"%d %s"
+    ENDINGS = {'1': u'ошибка',
+               '2': u'ошибки',
+               '3': u'ошибки',
+               '4': u'ошибки',
+               'default': u'ошибок'}
     # stylesheets section
     ERROR_COUNT_STYLESHEET_DFLT = \
         """
@@ -27,7 +32,8 @@ class QConsole(QtGui.QWidget):
         super(QConsole, self).__init__()
         self.bookviewer = bookviewer
         self.errors_count = QtGui.QPushButton(parent)
-        self.errors_count.setText(self.COUNT_ERRORS_TEXT % 0)
+        self.errors_count.setText(self.COUNT_ERRORS_TEXT % \
+                                  (0, self.ENDINGS['default']))
         self.errors_count.setMaximumSize(QtCore.QSize(70, 30))
         self.errors_count.clicked.connect(self.errors_clicked)
         self.errors_data = QtGui.QLabel(parent)
@@ -46,10 +52,16 @@ class QConsole(QtGui.QWidget):
 
     def set_first_error_data(self, total_errors, message):
         if total_errors == 0:
-            self.errors_count.setStyleSheet(self.ERROR_COUNT_STYLESHEET_DFLT)
+            self.errors_count.hide()
         else:
+            self.errors_count.show()
             self.errors_count.setStyleSheet(self.ERROR_COUNT_STYLESHEET_ERR)
-        self.errors_count.setText(self.COUNT_ERRORS_TEXT % total_errors)
+        try:
+            end = self.ENDINGS[str(total_errors)[-1]]
+        except KeyError:
+            end = self.ENDINGS['default']
+        errors = self.COUNT_ERRORS_TEXT % (total_errors, end)
+        self.errors_count.setText(errors)
         self.errors_data.setText(message)
 
     def update(self):

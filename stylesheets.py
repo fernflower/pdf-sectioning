@@ -7,6 +7,8 @@ GENERAL_STYLESHEET = \
 
     QToolBar { border: 1px solid rgb(58, 56, 56) }
     QMenu::item:!enabled::text { color: rgb(52, 51, 51) }
+    QMenuBar::item{ color: rgb(235, 235, 235);
+                    background-color: rgb(81, 81, 81)}
 
     QScrollArea { background-color: rgb(58, 56, 56);
                     border: 1px solid rgb(58, 56, 56) }

@@ -226,6 +226,7 @@ class BookController(object):
                 except KeyError:
                     self.paragraph_marks[mark.cas_id] = (mark, None)
 
+    # returns full file name (with path) to file with markup
     def save(self, dirname):
         # normalize to get pdf-coordinates (save with scale=1.0)
         pdf_paragraphs = {}
@@ -241,8 +242,8 @@ class BookController(object):
                     pdf_paragraphs[para_key] = [mark]
         if not self.dp:
             return
-        self.dp.save_all(dirname, pdf_paragraphs)
         self.any_unsaved_changes = False
+        return self.dp.save_all(dirname, pdf_paragraphs)
 
     # returns True if all marked paragraphs have both start and end marks in
     # the correct order (start mark goes first).
