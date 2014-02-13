@@ -467,6 +467,7 @@ class BookController(object):
                                    self.delete_ruler,
                                    self.mode)
             self.rulers.append(mark)
+        return mark
 
     # add mark to a correct place (start comes first, end - second)
     def add_mark(self, mark):

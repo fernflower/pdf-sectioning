@@ -74,7 +74,6 @@ class QImageLabel(QtGui.QLabel):
             # anything that has been selected earlier
             # if clicked with shift -> add to existing selection
         def process_selected(selected):
-            modifiers = QtGui.QApplication.keyboardModifiers()
             if modifiers != QtCore.Qt.ShiftModifier:
                 if not self.last_selected == selected:
                     selected.toggle_selected()
@@ -85,6 +84,7 @@ class QImageLabel(QtGui.QLabel):
                 selected.toggle_selected()
             self.last_selected = selected
 
+        modifiers = QtGui.QApplication.keyboardModifiers()
         # disable right mouse click as it shows context menu
         if event.buttons() == QtCore.Qt.RightButton:
             return super(QImageLabel, self).mousePressEvent(event)
@@ -92,10 +92,22 @@ class QImageLabel(QtGui.QLabel):
             selected = self.controller.find_any_at_point(event.pos())
             self.coordinates = event.pos()
             if selected:
-                process_selected(selected)
-                # TODO send signal or sth
-                toc_elem = self.parent.select_toc_elem(selected.cas_id)
-                self.controller.set_current_toc_elem(toc_elem)
+                print modifiers == QtCore.Qt.AltModifier
+                if modifiers == QtCore.Qt.AltModifier and isinstance(selected,
+                                                                     QRulerMark):
+                    print "sdfsdfsdf"
+                    # try to create new mark and bind it to ruler
+                    self.controller.deselect_all()
+                    mark = self.controller._create_mark_on_click(event.pos(),
+                                                                 self)
+                    mark.bind_to_ruler(selected)
+                else:
+                    process_selected(selected)
+                    # TODO send signal or sth
+                    if isinstance(selected, QParagraphMark):
+                        toc_elem = self.parent.select_toc_elem(
+                            selected.cas_id)
+                        self.controller.set_current_toc_elem(toc_elem)
             else:
                 # deselected everything selected earlier on page
                 self.controller.deselect_all()
