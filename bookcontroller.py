@@ -5,6 +5,7 @@ from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import make_paragraph_mark, make_ruler_mark, \
     QParagraphMark, QRulerMark, QEndParagraph, QStartParagraph
 from tocelem import QTocElem
+from markertocelem import QMarkerTocElem
 
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
@@ -32,6 +33,8 @@ class BookController(object):
         self.paragraphs = {}
         # a list of QTocElems as they appear in listView
         self.toc_elems = []
+        # a list of QMarkerTocElems (elem+objectlist) as they appear in treeView
+        self.marker_toc_elems = []
         self.create_toc_elems()
         # a list of all rulers present
         self.rulers = []
@@ -195,18 +198,18 @@ class BookController(object):
         filename = str(filename)
         paragraphs = self.dp.load_native_xml(filename)
         # generate start\end marks from paragraphs' data
-        for i, (cas_id, marks) in enumerate(paragraphs.items()):
+        for cas_id, marks in paragraphs.items():
             for m in marks:
-                str_page = m["page"]
+                page = int(m["page"])
                 mark = make_paragraph_mark(parent=marks_parent,
                                            cas_id=cas_id,
                                            name=m["name"],
                                            pos=QtCore.QPoint(0, float(m["y"])),
-                                           page=int(str_page),
-                                           toc_num=i,
+                                           page=page,
                                            delete_func=self.delete_mark,
                                            type=m["type"])
                 mark.adjust(self.scale)
+                print mark.parent()
                 # mark loaded paragraphs gray
                 # TODO think how to eliminate calling this func twice
                 elem = self.get_toc_elem(cas_id)
@@ -215,9 +218,9 @@ class BookController(object):
                 if mark.page != self.pagenum:
                     mark.hide()
                 try:
-                    self.paragraphs[str_page].append(mark)
+                    self.paragraphs[page].append(mark)
                 except KeyError:
-                    self.paragraphs[str_page] = [mark]
+                    self.paragraphs[page] = [mark]
         self._load_paragraph_marks(self.paragraphs)
 
     # here data is received from bookviewer as dict { page: list of marks }
@@ -461,7 +464,6 @@ class BookController(object):
                                        mark_parent,
                                        toc_elem.cas_id,
                                        toc_elem.name,
-                                       toc_elem.order_num,
                                        self.pagenum,
                                        self.delete_mark,
                                        mark_type[0])
@@ -505,6 +507,7 @@ class BookController(object):
     def find_at_point(self, point, among=None):
         def contains(mark, point):
             if mark is not None and mark.contains(point):
+                print "ex"
                 return mark
 
         def intersects(mark, rect):
@@ -532,9 +535,15 @@ class BookController(object):
     # by calling
     def create_toc_elems(self):
         self.toc_elems = \
-            [ QTocElem(elem["name"], elem["cas-id"], i) \
-             for (i, elem) in enumerate(self.course_toc) ]
+            [ QTocElem(elem["name"], elem["cas-id"]) \
+             for elem in self.course_toc ]
         return self.toc_elems
+
+    def create_marker_toc_elems(self):
+        self.marker_toc_elems = \
+            [ QMarkerTocElem(elem["name"], elem["cas-id"], elem["objects"]) \
+              for elem in self.course_toc ]
+        return self.marker_toc_elems
 
     # find any selected mark at point, either a paragraph mark or a ruler
     # point - in GLOBAL coordinates
