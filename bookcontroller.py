@@ -176,11 +176,17 @@ class BookController(object):
 
     ### different operations
     def open_file(self, filename):
+        # TODO check that file is truly a pdf file
         self._clear_paragraph_data()
         # deselect all in toc list
         for elem in self.toc_elems:
             elem.set_not_started()
-        self.dp = DocumentProcessor(filename)
+        try:
+            self.dp = DocumentProcessor(filename)
+            return True
+        except Exception:
+            # TODO eliminate catch them all
+            return False
 
     # here marks_parent is a parent widget to set at marks' creation
     def load_markup(self, filename, marks_parent):
@@ -436,12 +442,13 @@ class BookController(object):
     def delete_ruler(self, ruler):
         self.rulers.remove(ruler)
 
-    # Callback for on clock marl creation, either start\end or ruler
+    # Callback for on click marl creation, either start\end or ruler
     def _create_mark_on_click(self, pos, mark_parent):
         # else create new one if any TOC elem selected and free space for
         # start\end mark available
         if not self.is_in_viewport(pos):
-            return
+            return None
+        mark = None
         if self.is_normal_mode() and self.is_toc_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
@@ -449,7 +456,7 @@ class BookController(object):
             (start, end) = (None, None)
             mark_type = self.get_available_marks(key)
             if not mark_type:
-                return
+                return None
             mark = make_paragraph_mark(pos,
                                        mark_parent,
                                        toc_elem.cas_id,

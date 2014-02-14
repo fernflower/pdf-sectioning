@@ -26,10 +26,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # dialogs
         self.unsaved_changes_dialog = None
         self.cant_save_dialog = None
+        self.cant_open_dialog = None
         self.init_actions()
         self.init_widgets()
         self.init_menubar()
-        self._set_widgets_data_on_doc_load()
+        if self.controller.dp:
+            self._set_widgets_data_on_doc_load()
 
     # properties of most typically used child widgets in order to write less
     # code
@@ -77,6 +79,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionLoad_pdf.setShortcut('Ctrl+O')
         self.actionLoad_markup.triggered.connect(self.load_markup)
         self.actionLoad_markup.setShortcut('Ctrl+M')
+        self.actionLoad_markup.setEnabled(False)
         self.actionSave = QtGui.QAction(QtCore.QString.fromUtf8(u'Сохранить'),
                                         self)
         self.actionSave.triggered.connect(self.save)
@@ -102,6 +105,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             QtCore.QString.fromUtf8(u"Удалить объект"), self)
         self.actionDelete_selection.setShortcut('Delete')
         self.actionDelete_selection.triggered.connect(self.delete_marks)
+        self.actionClose = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Выход"), self)
+        self.actionClose.triggered.connect(self.close)
 
     # called after all actions and widgets are created
     def init_menubar(self):
@@ -110,6 +116,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.menuFile.addAction(self.actionLoad_markup)
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSaveAs)
+        self.menuFile.addAction(self.actionClose)
         self.menuEdit.addAction(self.actionDelete_selection)
         self.menuTools.addAction(self.actionSetHorizontalRuler)
         self.menuTools.addAction(self.actionSetVerticalRuler)
@@ -207,6 +214,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.spinBox.setValue(1)
         total_pages = self.controller.get_total_pages()
         self.spinBox.setRange(1, total_pages)
+        self.actionLoad_markup.setEnabled(True)
 
     def on_selection_change(self):
         # always set normal mode for marks' creation
@@ -274,12 +282,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 not self.show_unsaved_data_dialog():
             return
         filename = QtGui.QFileDialog.getOpenFileName(
-            self, QtCore.QString.fromUtf8(u'Загрузить учебник'), '.')
+            self, QtCore.QString.fromUtf8(u'Загрузить учебник'), '.',
+                                          'Pdf files (*.pdf)')
         if not filename:
             return
         # deselect all in listview
         self._fill_listview()
-        self.controller.open_file(unicode(filename))
+        result = self.controller.open_file(unicode(filename))
+        if not result:
+            self.show_cant_open_dialog()
+            return
         self._set_widgets_data_on_doc_load()
         # clear listView and fill again with appropriate for given course-id
         # data fetched from cas
@@ -431,7 +443,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.console.set_first_error_data(
                 self.controller.get_total_error_count(), msg)
 
-    def wheelEvent(self, event):
+    # only to be called from child
+    def call_wheelEvent(self, event):
         if event.delta() > 0:
             self.prev_page()
         elif event.delta() < 0:
@@ -478,3 +491,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 u"конца в правильном порядке.")
             self.cant_save_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
         self.cant_save_dialog.exec_()
+
+    def show_cant_open_dialog(self):
+        self.cant_open_dialog = QtGui.QMessageBox(self)
+        self.cant_open_dialog.setText(u"Невозможно открыть файл.")
+        self.cant_open_dialog.setInformativeText(
+            u"Проверьте, что заданный файл является pdf-файлом.")
+        self.cant_open_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
+        self.cant_open_dialog.exec_()

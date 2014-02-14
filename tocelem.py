@@ -27,6 +27,7 @@ class QTocElem(QtGui.QStandardItem):
         self.cas_id = cas_id
         self.order_num = order_num
         self.state = QTocElem.STATE_NOT_STARTED
+        self.setEditable(False)
         self.update()
 
     def update(self):

@@ -22,6 +22,7 @@ class QImageLabel(QtGui.QLabel):
         # keep it here on order to pass some keyPressEvents to parent
         self.parent = parent
         self.last_selected = None
+        self.cursor_overridden = False
         # for move event, to calculate delta
         # TODO there might be another way, perhaps to retrieve delta from move event
         self.coordinates = None
@@ -38,17 +39,19 @@ class QImageLabel(QtGui.QLabel):
             # updated with new value
             self.emit(self.zoomed_signal, scale)
         else:
-            self.parent.wheelEvent(event)
+            self.parent.call_wheelEvent(event)
 
     def _set_cursor(self, pos):
         # if over a ruler or mark - change cursor appropriately
         any_mark = self.controller.find_any_at_point(pos)
         if any_mark:
-            QtGui.QApplication.setOverrideCursor(
-                QtGui.QCursor(any_mark.cursor))
+            if not self.cursor_overridden:
+                QtGui.QApplication.setOverrideCursor(
+                    QtGui.QCursor(any_mark.cursor))
+            self.cursor_overridden = True
         else:
-            QtGui.QApplication.setOverrideCursor(
-                QtGui.QCursor(QtCore.Qt.ArrowCursor))
+            self.cursor_overridden = False
+            QtGui.QApplication.restoreOverrideCursor()
 
     # override paint event
     def paintEvent(self, event):
@@ -64,7 +67,7 @@ class QImageLabel(QtGui.QLabel):
             pixmap = QtGui.QPixmap.fromImage(img)
             self.setPixmap(pixmap)
             self.setFixedSize(pixmap.size())
-        self._set_cursor(self.mapFromGlobal(QtGui.QCursor.pos()))
+            self._set_cursor(self.mapFromGlobal(QtGui.QCursor.pos()))
         # update all necessary data in parent (bookviewer)
         self.parent.update()
 
@@ -95,7 +98,6 @@ class QImageLabel(QtGui.QLabel):
                 print modifiers == QtCore.Qt.AltModifier
                 if modifiers == QtCore.Qt.AltModifier and isinstance(selected,
                                                                      QRulerMark):
-                    print "sdfsdfsdf"
                     # try to create new mark and bind it to ruler
                     self.controller.deselect_all()
                     mark = self.controller._create_mark_on_click(event.pos(),
