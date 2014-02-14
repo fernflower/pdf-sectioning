@@ -78,9 +78,9 @@ class QImageLabel(QtGui.QLabel):
             # if clicked with shift -> add to existing selection
         def process_selected(selected):
             if modifiers != QtCore.Qt.ShiftModifier:
-                if not self.last_selected == selected:
+                if self.last_selected != selected:
                     selected.toggle_selected()
-                self.controller.deselect_all([selected])
+                    self.controller.deselect_all([selected])
             else:
                 # for group selection second click removes object from group
                 # selection
@@ -95,7 +95,6 @@ class QImageLabel(QtGui.QLabel):
             selected = self.controller.find_any_at_point(event.pos())
             self.coordinates = event.pos()
             if selected:
-                print modifiers == QtCore.Qt.AltModifier
                 if modifiers == QtCore.Qt.AltModifier and isinstance(selected,
                                                                      QRulerMark):
                     # try to create new mark and bind it to ruler
@@ -114,6 +113,7 @@ class QImageLabel(QtGui.QLabel):
                 # deselected everything selected earlier on page
                 self.controller.deselect_all()
                 self.controller._create_mark_on_click(event.pos(), self)
+                self.last_selected = None
         self.update()
 
     def mouseMoveEvent(self, event):

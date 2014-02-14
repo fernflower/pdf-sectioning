@@ -505,12 +505,10 @@ class BookController(object):
     def find_at_point(self, point, among=None):
         def contains(mark, point):
             if mark is not None and mark.contains(point):
-                #print "EXACT match for %s" % mark.name
                 return mark
 
         def intersects(mark, rect):
             if mark is not None and mark.intersects(rect):
-                #print "NON-EXACT match for %s" % mark.name
                 return mark
 
         # in order to be a bit more user-friendly, first search precisely at
