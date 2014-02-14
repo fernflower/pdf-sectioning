@@ -259,34 +259,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def delete_marks(self):
         self.controller.delete_marks()
 
-    # fill both listView (toc-only for section mode) and treeview (toc+objects
-    # for marker mode)
-    def _fill_treeview(self):
-        model = self.treeView.model()
-        if model:
-            model.clear()
-        else:
-            model = QtGui.QStandardItemModel()
-        for item in self.controller.create_marker_toc_elems():
-            model.appendRow(item)
-        self.treeView.header().hide()
-        self.treeView.setModel(model)
-        self.treeView.setUniformRowHeights(True)
-
-    def _fill_listview(self):
-        # show toc elems
-        model = self.listView.model()
-        if model:
-            model.clear()
-        else:
-            model = QtGui.QStandardItemModel()
-        # have to do this as when model is cleared all elems are deleted and
-        # will get deleted wrapped obj error
-        self.controller.set_current_toc_elem(None)
-        for item in self.controller.create_toc_elems():
-            model.appendRow(item)
-        self.listView.setModel(model)
-
     def fill_views(self):
         self._fill_listview()
         self._fill_treeview()
@@ -517,3 +489,32 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             u"Проверьте, что заданный файл является pdf-файлом.")
         self.cant_open_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
         self.cant_open_dialog.exec_()
+
+    ### helper functions
+    # fill both listView (toc-only for section mode) and treeview (toc+objects
+    # for marker mode)
+    def _fill_treeview(self):
+        model = self.treeView.model()
+        if model:
+            model.clear()
+        else:
+            model = QtGui.QStandardItemModel()
+        for item in self.controller.create_marker_toc_elems():
+            model.appendRow(item)
+        self.treeView.header().hide()
+        self.treeView.setModel(model)
+        self.treeView.setUniformRowHeights(True)
+
+    def _fill_listview(self):
+        # show toc elems
+        model = self.listView.model()
+        if model:
+            model.clear()
+        else:
+            model = QtGui.QStandardItemModel()
+        # have to do this as when model is cleared all elems are deleted and
+        # will get deleted wrapped obj error
+        self.controller.set_current_toc_elem(None)
+        for item in self.controller.create_toc_elems():
+            model.appendRow(item)
+        self.listView.setModel(model)

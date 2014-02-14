@@ -22,6 +22,7 @@ class BookController(object):
     ZOOM_DELTA = 0.5
     # viewport delta
     VIEWPORT_DELTA = 5
+    # auto
 
     def __init__(self, cms_course_toc, doc_processor=None):
         self.dp = doc_processor
@@ -35,6 +36,8 @@ class BookController(object):
         self.toc_elems = []
         # a list of QMarkerTocElems (elem+objectlist) as they appear in treeView
         self.marker_toc_elems = []
+        # dict of interactive objects per lesson: {paragraph_id: [objects]}
+        self.objects = {}
         self.create_toc_elems()
         # a list of all rulers present
         self.rulers = []

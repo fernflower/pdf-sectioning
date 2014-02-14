@@ -95,7 +95,7 @@ class SectionTool(object):
             tree = etree.fromstring(data)
             paragraphs = tree.xpath(PARAGRAPHS_XPATH,
                                     namespaces = {"is" : XHTML_NAMESPACE})
-            return [{"oid": p.get("objectid"), "id": p.get("id"),
+            return [{"oid": p.get("objectid"), "block-id": p.get("id"),
                      "type": p.get("erubric")}
                     for p in paragraphs]
         else:
