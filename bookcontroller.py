@@ -209,7 +209,6 @@ class BookController(object):
                                            delete_func=self.delete_mark,
                                            type=m["type"])
                 mark.adjust(self.scale)
-                print mark.parent()
                 # mark loaded paragraphs gray
                 # TODO think how to eliminate calling this func twice
                 elem = self.get_toc_elem(cas_id)
@@ -409,7 +408,6 @@ class BookController(object):
                 # delete ruler
                 r.delete()
                 r.destroy()
-                print self.rulers
 
     # delete currently selected marks on current page. Destroy
     # widget here as well, after removing from all parallel data structures
@@ -507,7 +505,6 @@ class BookController(object):
     def find_at_point(self, point, among=None):
         def contains(mark, point):
             if mark is not None and mark.contains(point):
-                print "ex"
                 return mark
 
         def intersects(mark, rect):

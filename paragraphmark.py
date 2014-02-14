@@ -113,14 +113,12 @@ class QMark(QtGui.QWidget):
         self.delete_func(self)
 
 class QParagraphMark(QMark):
-    def __init__(self,
-                 pos, parent, cas_id, name, toc_num, page, delete_func, type):
+    def __init__(self, pos, parent, cas_id, name, page, delete_func, type):
         super(QParagraphMark, self).__init__(QtCore.QPoint(0, pos.y()),
                                              parent,
                                              name, delete_func)
         self.cas_id = cas_id
         self.page = page
-        self.toc_num = toc_num
         self.ruler = None
         self.type = type
         self.label.setText("%s of paragraph %s" % (self.type, self.name))
@@ -203,23 +201,21 @@ class QVerticalRuler(QRulerMark):
 
 
 class QStartParagraph(QParagraphMark):
-    def __init__(self, pos, parent, cas_id, name, toc_num, page, delete_func):
+    def __init__(self, pos, parent, cas_id, name, page, delete_func):
         super(QStartParagraph, self).__init__(pos,
                                               parent,
                                               cas_id,
                                               name,
-                                              toc_num,
                                               page,
                                               delete_func,
                                               "start")
 
 class QEndParagraph(QParagraphMark):
-    def __init__(self, pos, parent, cas_id, name, toc_num, page, delete_func):
+    def __init__(self, pos, parent, cas_id, name, page, delete_func):
         super(QEndParagraph, self).__init__(pos,
                                             parent,
                                             cas_id,
                                             name,
-                                            toc_num,
                                             page,
                                             delete_func,
                                             "end")
@@ -229,9 +225,8 @@ MARKS_DICT = {"start": QStartParagraph,
               QRulerMark.ORIENT_HORIZONTAL: QHorizontalRuler,
               QRulerMark.ORIENT_VERTICAL: QVerticalRuler}
 
-def make_paragraph_mark(pos, parent, cas_id, name, toc_num, page, delete_func,
-                        type):
-    return MARKS_DICT[type](pos, parent, cas_id, name, toc_num, page, delete_func)
+def make_paragraph_mark(pos, parent, cas_id, name, page, delete_func, type):
+    return MARKS_DICT[type](pos, parent, cas_id, name, page, delete_func)
 
 def make_ruler_mark(pos, parent, name, delete_func, orientation):
     return MARKS_DICT[orientation](pos, parent, name, delete_func)

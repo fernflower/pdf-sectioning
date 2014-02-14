@@ -21,11 +21,10 @@ class QTocElem(QtGui.QStandardItem):
           STATE_WRONG_START_END: \
              u"Ошибка в разметке: конец параграфа стоит выше начала" }
 
-    def __init__(self, name, cas_id, order_num):
+    def __init__(self, name, cas_id):
         super(QTocElem, self).__init__(name)
         self.name = name
         self.cas_id = cas_id
-        self.order_num = order_num
         self.state = QTocElem.STATE_NOT_STARTED
         self.setEditable(False)
         self.update()

@@ -37,23 +37,33 @@ class SectionTool(object):
             raise SectionToolError(
             "Cms-course id should be set in config (cms-course field)!")
 
-    # returns a list of {name, cas-id} in order of appearance in TOC
-    def get_cms_course_toc(self):
-        course_id = self.config_data['cms-course']
-        course_url = self.config_data['url'].rstrip('/') + '/' + course_id
+    def _fetch_data(self, url):
         storage = StringIO()
         c = pycurl.Curl()
-        c.setopt(pycurl.URL, course_url)
+        c.setopt(pycurl.URL, url)
         c.setopt(c.WRITEFUNCTION, storage.write)
         c.setopt(pycurl.USERPWD,
-                 self.config_data['username'] + ":" + self.config_data["password"])
+                 self.config_data['username'] + ":" + \
+                 self.config_data["password"])
         # TODO find out how to use certificate
         c.setopt(pycurl.SSL_VERIFYPEER, 0)
         c.setopt(pycurl.SSL_VERIFYHOST, 0)
         c.perform()
-        if c.getinfo(pycurl.HTTP_CODE) == 200:
+        code = c.getinfo(pycurl.HTTP_CODE)
+        data = None
+        if code == 200:
+            data = storage.getvalue()
+        c.close()
+        return (code, data)
+
+    # returns a list of {name, cas-id} in order of appearance in TOC
+    def get_cms_course_toc(self):
+        course_id = self.config_data['cms-course']
+        course_url = self.config_data['url'].rstrip('/') + '/' + course_id
+        code, data = self._fetch_data(course_url)
+        if data:
             TOC_XPATH = "/is:course/is:lessons/is:lesson/@name"
-            tree = etree.fromstring(storage.getvalue())
+            tree = etree.fromstring(data)
             lesson_ids = tree.xpath(TOC_XPATH,
                                     namespaces = {"is" : XHTML_NAMESPACE})
             # resolve names
@@ -71,11 +81,26 @@ class SectionTool(object):
             if resp.status != 200:
                 raise SectionToolError("Could not resolve lesson names!")
             resolved = loads(content)
-            return [{"name": resolved[lesson_id], "cas-id": lesson_id} \
+            return [{"name": resolved[lesson_id], "cas-id": lesson_id,
+                     "objects": self.get_lesson_objects(lesson_id)} \
                     for lesson_id in ids_to_resolve]
         else:
             raise SectionToolError("Check your url and user\password settings")
-        c.close()
+
+    def get_lesson_objects(self, lesson_id):
+        lesson_url = self.config_data['url'].rstrip('/') + '/' + lesson_id
+        code, data = self._fetch_data(lesson_url)
+        if data:
+            PARAGRAPHS_XPATH = "/is:lesson/is:content/is:paragraph"
+            tree = etree.fromstring(data)
+            paragraphs = tree.xpath(PARAGRAPHS_XPATH,
+                                    namespaces = {"is" : XHTML_NAMESPACE})
+            return [{"oid": p.get("objectid"), "id": p.get("id"),
+                     "type": p.get("erubric")}
+                    for p in paragraphs]
+        else:
+            raise SectionToolError("Could not get lesson's {} object list!").\
+                format(lesson_id)
 
 
 def main():

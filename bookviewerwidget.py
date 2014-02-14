@@ -144,8 +144,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # add console
         self.console = QConsole(self.tab, self.verticalLayout, self)
         self.setFocus(True)
-        # show toc elems
-        self._fill_listview()
+        # fill tab1 and tab2 with data
+        self.fill_views()
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.listView.clicked.connect(self.on_selection_change)
         # context menu
@@ -162,7 +162,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # add all zoom values
         self.zoom_comboBox.addItems(self.controller.get_all_zoom_values())
         # TODO will be changed soon
-        self.tabWidget.setTabEnabled(1, False)
+        #self.tabWidget.setTabEnabled(1, False)
         self.toolbarpart.changeIcons_button.setEnabled(False)
         self.toolbarpart.autozone_button.setEnabled(False)
         # unfortunately could not assign actions as could not get rid of action
@@ -173,7 +173,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.nextPage_button.setShortcut(QtCore.Qt.Key_Right)
         self.toolbarpart.zoomIn_button.clicked.connect(self.zoom_in)
         self.toolbarpart.zoomOut_button.clicked.connect(self.zoom_out)
-        self.toolBar.addWidget(self.toolbarpart.widget)
+        self.toolBar.addWidget(self.toolbarpart.layoutWidget)
         self._set_appearance()
 
     # all work on colors and buttons' styles done here
@@ -259,6 +259,20 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def delete_marks(self):
         self.controller.delete_marks()
 
+    # fill both listView (toc-only for section mode) and treeview (toc+objects
+    # for marker mode)
+    def _fill_treeview(self):
+        model = self.treeView.model()
+        if model:
+            model.clear()
+        else:
+            model = QtGui.QStandardItemModel()
+        for item in self.controller.create_marker_toc_elems():
+            model.appendRow(item)
+        self.treeView.header().hide()
+        self.treeView.setModel(model)
+        self.treeView.setUniformRowHeights(True)
+
     def _fill_listview(self):
         # show toc elems
         model = self.listView.model()
@@ -272,6 +286,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         for item in self.controller.create_toc_elems():
             model.appendRow(item)
         self.listView.setModel(model)
+
+    def fill_views(self):
+        self._fill_listview()
+        self._fill_treeview()
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_toc_elem(self, cas_id):
@@ -287,7 +305,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not filename:
             return
         # deselect all in listview
-        self._fill_listview()
+        self.fill_views()
         result = self.controller.open_file(unicode(filename))
         if not result:
             self.show_cant_open_dialog()
@@ -311,7 +329,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.last_open_doc_name = unicode(filename)
         # clear listView and fill again with appropriate for given course-id
         # data fetched from cas
-        self._fill_listview()
+        self.fill_views()
         self.controller.load_markup(self.last_open_doc_name, self.imageLabel)
 
     def save(self):

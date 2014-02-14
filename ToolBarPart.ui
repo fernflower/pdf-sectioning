@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -42,7 +42,7 @@
     <item>
      <widget class="QPushButton" name="autozone_button">
       <property name="text">
-       <string>Autozone</string>
+       <string>Автозоны</string>
       </property>
       <property name="flat">
        <bool>true</bool>
