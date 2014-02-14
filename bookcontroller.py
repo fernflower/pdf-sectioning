@@ -96,6 +96,11 @@ class BookController(object):
             return self.dp.totalPages
         return 0
 
+    def get_image(self):
+        if not self.dp:
+            return None
+        return self.dp.curr_page(self.scale)
+
     def get_toc_elems(self):
         return self.toc_elems
 
@@ -167,16 +172,6 @@ class BookController(object):
         except KeyError:
             return both
 
-    def _clear_paragraph_data(self):
-        # destroy previous marks
-        for page, marks in self.paragraphs.items():
-            map(lambda m: m.destroy(), marks)
-        self.paragraphs = {}
-        # destroy previous rulers
-        for r in self.rulers:
-            r.destroy()
-        self.rulers = []
-
     ### different operations
     def open_file(self, filename):
         # TODO check that file is truly a pdf file
@@ -222,18 +217,6 @@ class BookController(object):
                     self.paragraphs[page] = [mark]
         self._load_paragraph_marks(self.paragraphs)
 
-    # here data is received from bookviewer as dict { page: list of marks }
-    # (useful when loading markup)
-    def _load_paragraph_marks(self, book_viewer_paragraphs):
-        self.paragraph_marks = {}
-        for pagenum, marks in book_viewer_paragraphs.items():
-            for mark in marks:
-                try:
-                    (start, no_end) = self.paragraph_marks[mark.cas_id]
-                    self.paragraph_marks[mark.cas_id] = (start, mark)
-                except KeyError:
-                    self.paragraph_marks[mark.cas_id] = (mark, None)
-
     # returns full file name (with path) to file with markup
     def save(self, dirname):
         # normalize to get pdf-coordinates (save with scale=1.0)
@@ -254,30 +237,6 @@ class BookController(object):
         # if not all paragraphs have been marked -> add unfinished_ to filename
         finished = len(pdf_paragraphs) == len(self.toc_elems)
         return self.dp.save_all(dirname, pdf_paragraphs, finished=finished)
-
-    # returns True if all marked paragraphs have both start and end marks in
-    # the correct order (start mark goes first).
-    # Useful when saving result
-    def verify_mark_pairs(self):
-        paired = all(map(lambda (x, y): y is not None and x is not None,
-                         self.paragraph_marks.values()))
-        if not paired:
-            return False
-        return all(map(lambda (x, y): self.verify_start_end(x, y),
-                       self.paragraph_marks.values()))
-
-    def verify_start_end(self, start, end):
-        # marks are on the same page, compare y coordinate
-        if start.page == end.page and start.y() >= end.y():
-            return False
-        elif start.page > end.page:
-            return False
-        return True
-
-    def get_image(self):
-        if not self.dp:
-            return None
-        return self.dp.curr_page(self.scale)
 
     def selected_marks(self):
         return [m for m in self.get_current_page_marks() if m.is_selected]
@@ -314,16 +273,6 @@ class BookController(object):
         except KeyError:
             self.paragraphs[mark.page] = [mark]
 
-    def transform_to_pdf_coords(self, rect):
-        img = self.dp.curr_page()
-        if img is None:
-            return QtCore.QRectF(0, 0, 0, 0)
-        return QtCore.QRectF(
-                      rect.x() / self.scale,
-                      rect.y() / self.scale,
-                      rect.width() / self.scale,
-                      rect.height() / self.scale)
-
     # if step_by_step is True then scale will be either increased or decreased
     # by 1. Otherwise - scale will be taken from delta: delta + old if delta in [MIN,
     # MAX], or not taken if out of bounds
@@ -357,6 +306,16 @@ class BookController(object):
     def hide_page_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
             map(lambda m: m.hide(), self.paragraphs[pagenum])
+
+    def transform_to_pdf_coords(self, rect):
+        img = self.dp.curr_page()
+        if img is None:
+            return QtCore.QRectF(0, 0, 0, 0)
+        return QtCore.QRectF(
+                      rect.x() / self.scale,
+                      rect.y() / self.scale,
+                      rect.width() / self.scale,
+                      rect.height() / self.scale)
 
     def show_page_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
@@ -443,39 +402,6 @@ class BookController(object):
     def delete_ruler(self, ruler):
         self.rulers.remove(ruler)
 
-    # Callback for on click marl creation, either start\end or ruler
-    def _create_mark_on_click(self, pos, mark_parent):
-        # else create new one if any TOC elem selected and free space for
-        # start\end mark available
-        if not self.is_in_viewport(pos):
-            return None
-        mark = None
-        if self.is_normal_mode() and self.is_toc_selected:
-            self.any_unsaved_changes = True
-            toc_elem = self.current_toc_elem
-            key = toc_elem.cas_id
-            (start, end) = (None, None)
-            mark_type = self.get_available_marks(key)
-            if not mark_type:
-                return None
-            mark = make_paragraph_mark(pos,
-                                       mark_parent,
-                                       toc_elem.cas_id,
-                                       toc_elem.name,
-                                       self.pagenum,
-                                       self.delete_mark,
-                                       mark_type[0])
-            self.add_mark(mark)
-            self.add_paragraph_mark(mark)
-        elif self.is_ruler_mode():
-            mark = make_ruler_mark(pos,
-                                   mark_parent,
-                                   "",
-                                   self.delete_ruler,
-                                   self.mode)
-            self.rulers.append(mark)
-        return mark
-
     # add mark to a correct place (start comes first, end - second)
     def add_mark(self, mark):
         toc_elem = self.get_toc_elem(mark.cas_id)
@@ -550,3 +476,78 @@ class BookController(object):
             return selected_mark
         else:
             return self.find_at_point(point, self.rulers)
+
+    # returns True if all marked paragraphs have both start and end marks in
+    # the correct order (start mark goes first).
+    # Useful when saving result
+    def verify_mark_pairs(self):
+        paired = all(map(lambda (x, y): y is not None and x is not None,
+                         self.paragraph_marks.values()))
+        if not paired:
+            return False
+        return all(map(lambda (x, y): self.verify_start_end(x, y),
+                       self.paragraph_marks.values()))
+
+    def verify_start_end(self, start, end):
+        # marks are on the same page, compare y coordinate
+        if start.page == end.page and start.y() >= end.y():
+            return False
+        elif start.page > end.page:
+            return False
+        return True
+
+    ### helper functions
+    def _clear_paragraph_data(self):
+        # destroy previous marks
+        for page, marks in self.paragraphs.items():
+            map(lambda m: m.destroy(), marks)
+        self.paragraphs = {}
+        # destroy previous rulers
+        for r in self.rulers:
+            r.destroy()
+        self.rulers = []
+
+    # Callback for on click marl creation, either start\end or ruler
+    def _create_mark_on_click(self, pos, mark_parent):
+        # else create new one if any TOC elem selected and free space for
+        # start\end mark available
+        if not self.is_in_viewport(pos):
+            return None
+        mark = None
+        if self.is_normal_mode() and self.is_toc_selected:
+            self.any_unsaved_changes = True
+            toc_elem = self.current_toc_elem
+            key = toc_elem.cas_id
+            (start, end) = (None, None)
+            mark_type = self.get_available_marks(key)
+            if not mark_type:
+                return None
+            mark = make_paragraph_mark(pos,
+                                       mark_parent,
+                                       toc_elem.cas_id,
+                                       toc_elem.name,
+                                       self.pagenum,
+                                       self.delete_mark,
+                                       mark_type[0])
+            self.add_mark(mark)
+            self.add_paragraph_mark(mark)
+        elif self.is_ruler_mode():
+            mark = make_ruler_mark(pos,
+                                   mark_parent,
+                                   "",
+                                   self.delete_ruler,
+                                   self.mode)
+            self.rulers.append(mark)
+        return mark
+
+    # here data is received from bookviewer as dict { page: list of marks }
+    # (useful when loading markup)
+    def _load_paragraph_marks(self, book_viewer_paragraphs):
+        self.paragraph_marks = {}
+        for pagenum, marks in book_viewer_paragraphs.items():
+            for mark in marks:
+                try:
+                    (start, no_end) = self.paragraph_marks[mark.cas_id]
+                    self.paragraph_marks[mark.cas_id] = (start, mark)
+                except KeyError:
+                    self.paragraph_marks[mark.cas_id] = (mark, None)
