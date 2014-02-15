@@ -420,10 +420,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         return self.controller.get_page_marks(self.pageNum)
 
     def closeEvent(self, event):
-        if self.controller.any_unsaved_changes and \
-                not self.show_unsaved_data_dialog():
-            event.ignore()
-        else:
+        #if self.controller.any_unsaved_changes and \
+                #not self.show_unsaved_data_dialog():
+            #event.ignore()
+        #else:
             event.accept()
 
     def update_console_data(self):

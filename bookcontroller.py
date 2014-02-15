@@ -27,10 +27,11 @@ class BookController(object):
     def __init__(self, cms_course_toc, doc_processor=None):
         self.dp = doc_processor
         self.course_toc = cms_course_toc
-        # marks per paragraph. { paragraph_id: (start, end) }
+        # marks per paragraph.
+        # { paragraph_id: { marks: (start, end) }, zones: [] }
         self.paragraph_marks = {}
         # first page has number 1.
-        # Paragraph per page. {pagenum : [marks]}
+        # Paragraph per page. {pagenum : {marks: [], zones: []}
         self.paragraphs = {}
         # a list of QTocElems as they appear in listView
         self.toc_elems = []
@@ -109,7 +110,7 @@ class BookController(object):
 
     def get_page_marks(self, page_num):
         try:
-            return self.paragraphs[page_num]
+            return self.paragraphs[page_num]["marks"]
         except KeyError:
             return []
 
@@ -127,7 +128,7 @@ class BookController(object):
     # no mark given means that we should take first paragraph mark found
     def get_next_paragraph_mark(self, cas_id, mark=None):
         try:
-            (start, end) = self.paragraph_marks[cas_id]
+            (start, end) = self.paragraph_marks[cas_id]["marks"]
             return next(
                 (m for m in [start, end] if m != mark and m is not None), mark)
         except KeyError:
@@ -164,7 +165,7 @@ class BookController(object):
         end_only = ["end"]
         start_only = ["start"]
         try:
-            (start, end) = self.paragraph_marks[cas_id]
+            (start, end) = self.paragraph_marks[cas_id]["marks"]
             if not start and not end:
                 return both
             if not start:
@@ -215,17 +216,19 @@ class BookController(object):
                 if mark.page != self.pagenum:
                     mark.hide()
                 try:
-                    self.paragraphs[page].append(mark)
+                    self.paragraphs[page]["marks"].append(mark)
                 except KeyError:
-                    self.paragraphs[page] = [mark]
-        self._load_paragraph_marks(self.paragraphs)
+                    self.paragraphs[page] = {"marks" : [],
+                                             "zones": []}
+                    self.paragraphs[page]["marks"] = [mark]
+        self._load_paragraph_marks()
 
     # returns full file name (with path) to file with markup
     def save(self, dirname):
         # normalize to get pdf-coordinates (save with scale=1.0)
         pdf_paragraphs = {}
         for pagenum in sorted(self.paragraphs.keys()):
-            for m in self.paragraphs[pagenum]:
+            for m in self.paragraphs[pagenum]["marks"]:
                 para_key = m.cas_id
                 mark = {"page" : m.page,
                         "name" : m.name,
@@ -271,10 +274,12 @@ class BookController(object):
     # add paragraph mark to paragraph_marks (without duplicates)
     def add_paragraph_mark(self, mark):
         try:
-            if mark not in self.paragraphs[mark.page]:
-                self.paragraphs[mark.page].append(mark)
+            if mark not in self.paragraphs[mark.page]["marks"]:
+                self.paragraphs[mark.page]["marks"].append(mark)
         except KeyError:
-            self.paragraphs[mark.page] = [mark]
+            self.paragraphs[mark.page] = {"marks": [],
+                                          "zones": []}
+            self.paragraphs[mark.page]["marks"] = [mark]
 
     # if step_by_step is True then scale will be either increased or decreased
     # by 1. Otherwise - scale will be taken from delta: delta + old if delta in [MIN,
@@ -291,7 +296,8 @@ class BookController(object):
             self.scale = new_scale
             coeff = new_scale / old_scale
             # have to adjust ALL items including rulers
-            for page_key, markslist in self.paragraphs.items():
+            for page_key in self.paragraphs.keys():
+                markslist = self.paragraphs[page_key]["marks"]
                 for m in markslist:
                     m.adjust(coeff)
             # now rulers
@@ -308,7 +314,7 @@ class BookController(object):
 
     def hide_page_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
-            map(lambda m: m.hide(), self.paragraphs[pagenum])
+            map(lambda m: m.hide(), self.paragraphs[pagenum]["marks"])
 
     def transform_to_pdf_coords(self, rect):
         img = self.dp.curr_page()
@@ -322,7 +328,7 @@ class BookController(object):
 
     def show_page_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
-            map(lambda m: m.show(), self.paragraphs[pagenum])
+            map(lambda m: m.show(), self.paragraphs[pagenum]["marks"])
 
     def go_to_page(self, pagenum):
         return self.dp.go_to_page(pagenum)
@@ -381,7 +387,7 @@ class BookController(object):
         for m in selected:
             #TODO BAD, figure out how to do it better
             if isinstance(m, QParagraphMark):
-                self.paragraphs[self.pagenum].remove(m)
+                self.paragraphs[self.pagenum]["marks"].remove(m)
             m.delete()
             m.destroy()
 
@@ -392,13 +398,13 @@ class BookController(object):
     def delete_mark(self, mark):
         toc_elem = self.get_toc_elem(mark.cas_id)
         if mark.cas_id in self.paragraph_marks.keys():
-            (start, end) = self.paragraph_marks[mark.cas_id]
+            (start, end) = self.paragraph_marks[mark.cas_id]["marks"]
             if start == mark:
-                self.paragraph_marks[mark.cas_id] = (None, end)
+                self.paragraph_marks[mark.cas_id]["marks"] = (None, end)
             elif end == mark:
-                self.paragraph_marks[mark.cas_id] = (start, None)
+                self.paragraph_marks[mark.cas_id]["marks"] = (start, None)
             toc_elem.set_not_finished()
-        if self.paragraph_marks[mark.cas_id] == (None, None):
+        if self.paragraph_marks[mark.cas_id]["marks"] == (None, None):
             del self.paragraph_marks[mark.cas_id]
             toc_elem.set_not_started()
 
@@ -409,7 +415,7 @@ class BookController(object):
     def add_mark(self, mark):
         toc_elem = self.get_toc_elem(mark.cas_id)
         try:
-            (start, end) = self.paragraph_marks[mark.cas_id]
+            (start, end) = self.paragraph_marks[mark.cas_id]["marks"]
             if start and end:
                # already have paragraph start and paragraph end
                 return
@@ -417,7 +423,7 @@ class BookController(object):
                 start = mark
             elif not end and isinstance(mark, QEndParagraph):
                 end = mark
-            self.paragraph_marks[mark.cas_id] = (start, end)
+            self.paragraph_marks[mark.cas_id]["marks"] = (start, end)
             # set correct states
             if not end or not start:
                 toc_elem.set_not_finished()
@@ -428,7 +434,9 @@ class BookController(object):
                 else:
                     toc_elem.set_mixed_up_marks()
         except KeyError:
-            self.paragraph_marks[mark.cas_id] = (mark, None)
+            self.paragraph_marks[mark.cas_id] = {"marks": None,
+                                                 "zones": []}
+            self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
             toc_elem.set_not_finished()
 
     def find_at_point(self, point, among=None):
@@ -485,11 +493,11 @@ class BookController(object):
     # Useful when saving result
     def verify_mark_pairs(self):
         paired = all(map(lambda (x, y): y is not None and x is not None,
-                         self.paragraph_marks.values()))
+                         [data["marks"] for data in self.paragraph_marks.values()]))
         if not paired:
             return False
         return all(map(lambda (x, y): self.verify_start_end(x, y),
-                       self.paragraph_marks.values()))
+                       [data["marks"] for data in self.paragraph_marks.values()]))
 
     def verify_start_end(self, start, end):
         # marks are on the same page, compare y coordinate
@@ -502,7 +510,8 @@ class BookController(object):
     ### helper functions
     def _clear_paragraph_data(self):
         # destroy previous marks
-        for page, marks in self.paragraphs.items():
+        for page in self.paragraphs.keys():
+            marks = self.paragraphs[page]["marks"]
             map(lambda m: m.destroy(), marks)
         self.paragraphs = {}
         # destroy previous rulers
@@ -545,12 +554,15 @@ class BookController(object):
 
     # here data is received from bookviewer as dict { page: list of marks }
     # (useful when loading markup)
-    def _load_paragraph_marks(self, book_viewer_paragraphs):
+    def _load_paragraph_marks(self):
         self.paragraph_marks = {}
-        for pagenum, marks in book_viewer_paragraphs.items():
+        for pagenum in self.paragraphs.keys():
+            marks = self.paragraphs[pagenum]["marks"]
             for mark in marks:
                 try:
-                    (start, no_end) = self.paragraph_marks[mark.cas_id]
-                    self.paragraph_marks[mark.cas_id] = (start, mark)
+                    (start, no_end) = self.paragraph_marks[mark.cas_id]["marks"]
+                    self.paragraph_marks[mark.cas_id]["marks"] = (start, mark)
                 except KeyError:
-                    self.paragraph_marks[mark.cas_id] = (mark, None)
+                    self.paragraph_marks[mark.cas_id] = {"marks" : None,
+                                                         "zones": []}
+                    self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
