@@ -30,7 +30,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.init_actions()
         self.init_widgets()
         self.init_menubar()
-        if self.controller.dp:
+        if self.controller.is_file_given():
             self._set_widgets_data_on_doc_load()
 
     # properties of most typically used child widgets in order to write less
@@ -446,7 +446,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # TODO it might not be here, think of a better place
         self.update_console_data()
         # set actions enabled\disabled depending on current situation
-        anything_selected = self.controller.selected_marks_and_rulers() != []
+        anything_selected = self.controller.selected_marks_and_rulers != []
         self.actionDelete_selection.setEnabled(anything_selected)
         self.actionSave.setEnabled(self.last_open_doc_name is not None)
 

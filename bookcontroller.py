@@ -64,6 +64,18 @@ class BookController(object):
             return 0
         return self.dp.curr_page_number + 1
 
+    @property
+    def selected_marks(self):
+        return [m for m in self.get_current_page_marks() if m.is_selected]
+
+    @property
+    def selected_rulers(self):
+        return [r for r in self.rulers if r.is_selected]
+
+    @property
+    def selected_marks_and_rulers(self):
+        return self.selected_marks + self.selected_rulers
+
     ### setters section
     def set_horizontal_ruler_mode(self):
         self.mode = self.MODE_RULER_HOR
@@ -78,6 +90,25 @@ class BookController(object):
         self.current_toc_elem = elem
 
     ### predicates section
+
+    # validate that selection is in pdf's viewport
+    def is_in_viewport(self, pos):
+        img = self.get_image()
+        if not img:
+            return
+        img = img.rect()
+        viewport = QtCore.QRect(img.x(),
+                               img.y() + self.VIEWPORT_DELTA,
+                               img.width(),
+                               img.height() - self.VIEWPORT_DELTA)
+        if type(pos) == QtCore.QPoint:
+            return viewport.contains(pos)
+        elif type(pos) == QtCore.QRect:
+            return viewport.intersects(pos)
+        else:
+            print "Damn it"
+            return False
+
     def is_ruler_mode(self):
         return self.mode == self.MODE_RULER_HOR or \
             self.mode == self.MODE_RULER_VERT
@@ -89,9 +120,6 @@ class BookController(object):
         return self.dp is not None
 
     ### getters section
-    def get_selected_rulers(self):
-        return [r for r in self.rulers if r.is_selected]
-
     def get_rulers(self):
         return self.rulers
 
@@ -244,33 +272,6 @@ class BookController(object):
         finished = len(pdf_paragraphs) == len(self.toc_elems)
         return self.dp.save_all(dirname, pdf_paragraphs, finished=finished)
 
-    def selected_marks(self):
-        return [m for m in self.get_current_page_marks() if m.is_selected]
-
-    def selected_rulers(self):
-        return [r for r in self.rulers if r.is_selected]
-
-    def selected_marks_and_rulers(self):
-        return self.selected_marks() + self.selected_rulers()
-
-    # validate that selection is in pdf's viewport
-    def is_in_viewport(self, pos):
-        img = self.get_image()
-        if not img:
-            return
-        img = img.rect()
-        viewport = QtCore.QRect(img.x(),
-                               img.y() + self.VIEWPORT_DELTA,
-                               img.width(),
-                               img.height() - self.VIEWPORT_DELTA)
-        if type(pos) == QtCore.QPoint:
-            return viewport.contains(pos)
-        elif type(pos) == QtCore.QRect:
-            return viewport.intersects(pos)
-        else:
-            print "Damn it"
-            return False
-
     # add paragraph mark to paragraph_marks (without duplicates)
     def add_paragraph_mark(self, mark):
         try:
@@ -310,7 +311,7 @@ class BookController(object):
     def deselect_all(self, keep_selections = []):
         map(lambda x: x.set_selected(False),
             filter(lambda x: x not in keep_selections,
-                   self.selected_marks_and_rulers()))
+                   self.selected_marks_and_rulers))
 
     def hide_page_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
@@ -337,11 +338,11 @@ class BookController(object):
     def move(self, delta, point):
         # if only one mark is selected at a time, the check whether we want to
         # bind it to a ruler
-        if len(self.selected_marks()) == 1:
+        if len(self.selected_marks) == 1:
             if not self.is_in_viewport(point):
                 return
             # check if there are any rulers at point
-            mark = self.selected_marks()[0]
+            mark = self.selected_marks[0]
             ruler = self.find_at_point(point, self.rulers)
             self.any_unsaved_changes = True
             if ruler:
@@ -365,12 +366,12 @@ class BookController(object):
             return
         # else move as usual
         if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
-                   self.selected_marks())):
+                   self.selected_marks)):
             self.any_unsaved_changes = True
-            for m in self.selected_marks():
+            for m in self.selected_marks:
                 m.move(delta)
         # if rulers become invisible after move -> delete them
-        for r in self.selected_rulers():
+        for r in self.selected_rulers:
             r.move(delta)
             if not self.is_in_viewport(r.geometry()):
                 # delete ruler
@@ -380,7 +381,7 @@ class BookController(object):
     # delete currently selected marks on current page. Destroy
     # widget here as well, after removing from all parallel data structures
     def delete_marks(self):
-        selected = self.selected_marks_and_rulers()
+        selected = self.selected_marks_and_rulers
         # maybe should delete things as well when right clicked on non-selected
         # area with sth present? Sth like the following:
         #self.imageLabel.find_any_at_point(self.last_right_click)

@@ -124,7 +124,7 @@ class QImageLabel(QtGui.QLabel):
         self.update()
 
     def keyPressEvent(self, event):
-        if self.controller.selected_marks_and_rulers() != [] and \
+        if self.controller.selected_marks_and_rulers != [] and \
                 event.key() in self.MOVE_KEYS_DELTA.keys():
             delta = self.MOVE_KEYS_DELTA[event.key()]
             self.coordinates = self.coordinates + delta
