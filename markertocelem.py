@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
+from tocelem import QTocElem
 
 
 class QObjectElem(QtGui.QStandardItem):
@@ -23,7 +24,7 @@ class QObjectElem(QtGui.QStandardItem):
         return self.zone_num == '00'
 
     @property
-    def zone_name(self):
+    def zone_id(self):
         if self.is_autoplaced:
             return self.type
         else:
@@ -35,8 +36,9 @@ class QZone(QtGui.QStandardItem):
     AUTO_TRA = "tra"
     AUTO_CON = "con"
 
-    def __init__(self, type, objects, name=""):
+    def __init__(self, parent, type, objects, name=""):
         super(QZone, self).__init__()
+        self.parent = parent
         self.type = type
         self.name = name
         # a list of child objects
@@ -46,15 +48,26 @@ class QZone(QtGui.QStandardItem):
         for obj in self.objects:
             self.appendRow(obj)
 
+    @property
+    def cas_id(self):
+        return self.parent.cas_id
+
+    @property
+    def zone_id(self):
+        if len(self.objects) == 0:
+            return ""
+        else:
+            return self.objects[0].zone_id
+
 
 class QMarkerTocElem(QtGui.QStandardItem):
     # TODO perhaps make dependant on pic's height
     AUTOZONE_HEIGHT = 20
 
-    def __init__(self, name, lesson_id, objects):
+    def __init__(self, name, cas_id, objects):
         super(QMarkerTocElem, self).__init__()
         self.name = name
-        self.lesson_id = lesson_id
+        self.cas_id = cas_id
         self.setText(name)
         self.setEditable(False)
         self.auto_groups = {}
@@ -67,9 +80,9 @@ class QMarkerTocElem(QtGui.QStandardItem):
             # be placed automatically
             def _add_obj(groups):
                 try:
-                    groups[child.zone_name].append(child)
+                    groups[child.zone_id].append(child)
                 except KeyError:
-                    groups[child.zone_name] = [child]
+                    groups[child.zone_id] = [child]
 
             if child.is_autoplaced:
                 _add_obj(self.auto_groups)
@@ -79,13 +92,13 @@ class QMarkerTocElem(QtGui.QStandardItem):
         # now add all elems in correct order: DIC, ...  any other... , TRA, CON
         self._process_zone(QZone.AUTO_DIC)
         for zone in self.groups.keys():
-            self.appendRow(QZone(zone, self.groups[zone]))
+            self.appendRow(QZone(self, zone, self.groups[zone]))
         self._process_zone(QZone.AUTO_TRA)
         self._process_zone(QZone.AUTO_CON)
 
     def _process_zone(self, zone):
         if zone in self.auto_groups.keys():
-            self.appendRow(QZone(zone, self.auto_groups[zone]))
+            self.appendRow(QZone(self, zone, self.auto_groups[zone]))
 
     def get_autozones_as_dict(self):
         result = []

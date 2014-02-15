@@ -3,9 +3,9 @@
 from PyQt4 import QtGui, QtCore
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import make_paragraph_mark, make_ruler_mark, \
-    QParagraphMark, QRulerMark, QEndParagraph, QStartParagraph
+    QParagraphMark, QRulerMark, QEndParagraph, QStartParagraph, QZoneMark
 from tocelem import QTocElem
-from markertocelem import QMarkerTocElem
+from markertocelem import QMarkerTocElem, QZone
 
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
@@ -13,7 +13,9 @@ from markertocelem import QMarkerTocElem
 # paragraph marks (total marks per paragraph)
 class BookController(object):
     # selection creation mode
-    MODE_NORMAL = "normal"
+    MODE_SECTIONS = "normal_sections"
+    MODE_MARKER = "normal_marker"
+    MODE_MARK = "mark"
     MODE_RULER_HOR = QRulerMark.ORIENT_HORIZONTAL
     MODE_RULER_VERT = QRulerMark.ORIENT_VERTICAL
     # zooming
@@ -46,8 +48,10 @@ class BookController(object):
         self.scale = 1.0
         # QTocElem currently selected
         self.current_toc_elem = None
+        # adding start\end or zones
+        self.operational_mode = self.MODE_SECTIONS
         # add mark mode (adding paragraph marks or rulers)
-        self.mode = self.MODE_NORMAL
+        self.mark_mode = self.MODE_MARK
         # only for start\end marks, not rulers
         self.any_unsaved_changes = False
 
@@ -78,13 +82,16 @@ class BookController(object):
 
     ### setters section
     def set_horizontal_ruler_mode(self):
-        self.mode = self.MODE_RULER_HOR
+        self.mark_mode = self.MODE_RULER_HOR
 
     def set_vertical_ruler_mode(self):
-        self.mode = self.MODE_RULER_VERT
+        self.mark_mode = self.MODE_RULER_VERT
 
-    def set_normal_mode(self):
-        self.mode = self.MODE_NORMAL
+    def set_normal_section_mode(self):
+        self.operational_mode = self.MODE_SECTIONS
+
+    def set_normal_marker_mode(self):
+        self.operational_mode = self.MODE_MARKER
 
     def set_current_toc_elem(self, elem):
         self.current_toc_elem = elem
@@ -109,12 +116,18 @@ class BookController(object):
             print "Damn it"
             return False
 
+    def is_section_mode(self):
+        return self.operational_mode == self.MODE_SECTIONS
+
+    def is_markup_mode(self):
+        return self.operational_mode == self.MODE_MARKER
+
     def is_ruler_mode(self):
-        return self.mode == self.MODE_RULER_HOR or \
-            self.mode == self.MODE_RULER_VERT
+        return self.mark_mode == self.MODE_RULER_HOR or \
+            self.mark_mode == self.MODE_RULER_VERT
 
     def is_normal_mode(self):
-        return self.mode == self.MODE_NORMAL
+        return self.mark_mode == self.MODE_MARK
 
     def is_file_given(self):
         return self.dp is not None
@@ -520,13 +533,26 @@ class BookController(object):
             r.destroy()
         self.rulers = []
 
-    # Callback for on click marl creation, either start\end or ruler
-    def _create_mark_on_click(self, pos, mark_parent):
-        # else create new one if any TOC elem selected and free space for
-        # start\end mark available
-        if not self.is_in_viewport(pos):
-            return None
+    # add zone to zones on page zone.page AND to paragraph's zones
+    def add_zone(self, zone):
+        try:
+            self.paragraphs[zone.page]["zones"].append(zone)
+        except KeyError:
+            self.paragraphs[zone.page]["zones"] = [zone]
+        try:
+            self.paragraph_marks[zone.cas_id]["zones"].append(zone)
+        except KeyError:
+            self.paragraph_marks[zone.cas_id]["zones"] = [zone]
+
+    def is_zone_placed(self, cas_id, zone_id):
+        if cas_id in self.paragraph_marks.keys():
+            return zone_id in \
+                [z.zone_id for z in self.paragraph_marks[cas_id]["zones"]]
+        return False
+
+    def _create_mark_section_mode(self, pos, mark_parent):
         mark = None
+        print "SECTION MODE"
         if self.is_normal_mode() and self.is_toc_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
@@ -551,6 +577,48 @@ class BookController(object):
                                    self.delete_ruler,
                                    self.mode)
             self.rulers.append(mark)
+        return mark
+
+    def _create_mark_marker_mode(self, pos, mark_parent):
+        mark = None
+        print "MARKER MODE"
+        if self.is_normal_mode() and self.is_toc_selected:
+            self.any_unsaved_changes = True
+            toc_elem = self.current_toc_elem
+            # TODO think of making it better
+            if not isinstance(toc_elem, QZone):
+                return None
+            if self.is_zone_placed(toc_elem.cas_id, toc_elem.zone_id):
+                return None
+            zone = QZoneMark(pos,
+                             mark_parent,
+                             toc_elem.cas_id,
+                             toc_elem.zone_id,
+                             self.pagenum,
+                             self.delete_mark,
+                             toc_elem.type,
+                             toc_elem.objects)
+            self.add_zone(zone)
+            print self.paragraphs
+        elif self.is_ruler_mode():
+            mark = make_ruler_mark(pos,
+                                   mark_parent,
+                                   "",
+                                   self.delete_ruler,
+                                   self.mode)
+            self.rulers.append(mark)
+        return mark
+
+    # Callback for on click marl creation, either start\end or ruler in SECTION
+    # mode or a zone in MARKUP
+    def _create_mark_on_click(self, pos, mark_parent):
+        # else create new one if any TOC elem selected and free space for
+        # start\end mark available
+        if not self.is_in_viewport(pos):
+            return None
+        mark = self._create_mark_section_mode(pos, mark_parent) \
+                    if self.is_section_mode() \
+                    else self._create_mark_marker_mode(pos, mark_parent)
         return mark
 
     # here data is received from bookviewer as dict { page: list of marks }

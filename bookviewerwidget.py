@@ -11,6 +11,8 @@ from stylesheets import GENERAL_STYLESHEET, BLACK_LABEL_STYLESHEET
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     TOTAL_PAGES_TEXT = u"%d из %d"
+    SECTION_MODE = "section_mode"
+    MARKUP_MODE = "markup_mode"
 
     def __init__(self, controller):
         super(BookViewerWidget, self).__init__()
@@ -141,6 +143,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.zoom_comboBox.connect(self.zoom_comboBox,
                                    QtCore.SIGNAL("currentIndexChanged(int)"),
                                    self.on_zoom_value_change)
+        self.tabWidget.connect(self.tabWidget,
+                               QtCore.SIGNAL("currentChanged(int)"),
+                               self.on_tab_switched)
         # add console
         self.console = QConsole(self.tab, self.verticalLayout, self)
         self.setFocus(True)
@@ -148,6 +153,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.fill_views()
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.listView.clicked.connect(self.on_selection_change)
+        self.treeView.clicked.connect(self.on_selection_change)
         # context menu
         self.cmenu = QtGui.QMenu()
         self.cmenu.addAction(self.actionDelete_selection)
@@ -216,22 +222,46 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.spinBox.setRange(1, total_pages)
         self.actionLoad_markup.setEnabled(True)
 
+    @property
+    def mode(self):
+        if self.tabWidget.currentIndex() == 0:
+            return self.SECTION_MODE
+        else:
+            return self.MARKUP_MODE
+
+    def get_current_toc_widget(self):
+        if self.mode == self.SECTION_MODE:
+            return self.listView
+        else:
+            return self.treeView
+
     def on_selection_change(self):
         # always set normal mode for marks' creation
-        self.listView.setStyleSheet(GENERAL_STYLESHEET)
+        toc_widget = self.get_current_toc_widget()
+        toc_widget.setStyleSheet(GENERAL_STYLESHEET)
         self.set_normal_state()
-        selected_idx = self.listView.currentIndex()
+        selected_idx = toc_widget.currentIndex()
         if not selected_idx:
             return
-        current = self.listView.model().itemFromIndex(selected_idx)
+        current = toc_widget.model().itemFromIndex(selected_idx)
         self.controller.set_current_toc_elem(current)
-        if current and not current.is_not_started():
+        # TODO temporary in section-mode only
+        if self.mode == self.SECTION_MODE and current and \
+                not current.is_not_started():
             self.mark_to_navigate = self.controller.\
                 get_next_paragraph_mark(current.cas_id, self.mark_to_navigate)
             # only have to change spinbox value: the connected signal will
             # do all work automatically
             if self.mark_to_navigate:
                 self.spinBox.setValue(self.mark_to_navigate.page)
+
+    def on_tab_switched(self, new_tab):
+        if new_tab == 0:
+            self.controller.set_normal_section_mode()
+        else:
+            self.controller.set_normal_marker_mode()
+        # TODO figure out how to remove selection
+        self.controller.set_current_toc_elem(None)
 
     # mind that every time currentIndex is changed on_zoom_value_changed is
     # called, so to eliminate double work have to check that delta is not 0
@@ -357,12 +387,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.highlight_selected_readonly()
         else:
             # set normal selection color-scheme
-            self.listView.setStyleSheet(GENERAL_STYLESHEET)
+            self.get_current_toc_widget().setStyleSheet(GENERAL_STYLESHEET)
 
     # draw nice violet selection on toc-elem with id
     # elem as current so that it can't be modified
     def highlight_selected_readonly(self):
-        self.listView.setStyleSheet(
+        self.get_current_toc_widget().setStyleSheet(
             """ QListView::item:selected{ background-color: rgb(100, 149, 237) }
             """)
 
@@ -377,8 +407,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         toc_elem = self.get_toc_elem(cas_id)
         if not toc_elem:
             return
-        self.listView.scrollTo(toc_elem.index())
-        self.listView.setCurrentIndex(toc_elem.index())
+        self.get_current_toc_widget().scrollTo(toc_elem.index())
+        self.get_current_toc_widget().setCurrentIndex(toc_elem.index())
         return toc_elem
 
     def zoom_in(self):
@@ -392,7 +422,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def set_normal_state(self):
         self.actionSetVerticalRuler.setChecked(False)
         self.actionSetHorizontalRuler.setChecked(False)
-        self.controller.set_normal_mode()
+        # set normal state depending on current tab index
+        if self.mode == self.SECTION_MODE:
+            self.controller.set_normal_section_mode()
+        else:
+            self.controller.set_normal_marker_mode()
 
     def set_horizontal_ruler_state(self):
         self.actionSetVerticalRuler.setChecked(False)

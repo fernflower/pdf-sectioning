@@ -230,3 +230,20 @@ def make_paragraph_mark(pos, parent, cas_id, name, page, delete_func, type):
 
 def make_ruler_mark(pos, parent, name, delete_func, orientation):
     return MARKS_DICT[orientation](pos, parent, name, delete_func)
+
+
+class QZoneMark(QParagraphMark):
+    def __init__(self, pos, parent, lesson_id, zone_id, page,
+                 delete_func, type, objects):
+        super(QZoneMark, self).__init__(pos, parent, lesson_id, zone_id, page,
+                                        delete_func, type)
+        self.objects = objects
+        self.zone_id = zone_id
+        # destroy unnecessary rubberband
+        self.mark.hide()
+        self.mark.setParent(None)
+        self.mark = QtGui.QPushButton(parent)
+        self.mark.setFlat(True)
+        self.mark.setObjectName(self.name)
+        self.mark.show()
+        print "a am a zone!"

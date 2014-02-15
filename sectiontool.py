@@ -99,8 +99,8 @@ class SectionTool(object):
                      "type": p.get("erubric")}
                     for p in paragraphs]
         else:
-            raise SectionToolError("Could not get lesson's {} object list!").\
-                format(lesson_id)
+            raise SectionToolError("Could not get lesson's {} object list!".\
+                                   format(lesson_id))
 
 
 def main():
