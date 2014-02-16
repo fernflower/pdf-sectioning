@@ -99,7 +99,7 @@ class BookController(object):
     ### predicates section
 
     # validate that selection is in pdf's viewport
-    def is_in_viewport(self, pos):
+    def _is_in_pdf_bounds(self, pos):
         img = self.get_image()
         if not img:
             return
@@ -115,6 +115,36 @@ class BookController(object):
         else:
             print "Damn it"
             return False
+
+    #FIXME
+    def is_in_viewport(self, pos):
+        if self.is_section_mode():
+            return self._is_in_pdf_bounds(pos)
+        else:
+            # get mark's start\end and calculate available viewport
+            if not self.current_toc_elem:
+                return False
+            (start, end) = \
+                self.paragraph_marks[self.current_toc_elem.cas_id]["marks"]
+            if start.page == end.page and end.page == self.pagenum:
+                if pos.y() < start.y() or pos.y() > end.y():
+                    return False
+            else:
+                if end.page < self.pagenum or start.page > self.pagenum:
+                    print "pages"
+                    return False
+                current = filter(lambda m: m not in [start, end],
+                                 self.get_start_end_marks(self.pagenum))
+                # no marks -> in between pages, True
+                if len(current) == 0:
+                    return True
+                if current[0] == start and pos.y() < start.y():
+                    print "high "
+                    return False
+                if current[0] == end and pos.y() > end.y():
+                    print "low "
+                    return False
+            return True
 
     def is_section_mode(self):
         return self.operational_mode == self.MODE_SECTIONS
@@ -151,6 +181,15 @@ class BookController(object):
 
     def get_page_marks(self, page_num):
         try:
+            if self.is_section_mode():
+                return self.paragraphs[page_num]["marks"]
+            else:
+                return self.paragraphs[page_num]["zones"]
+        except KeyError:
+            return []
+
+    def get_start_end_marks(self, page_num):
+        try:
             return self.paragraphs[page_num]["marks"]
         except KeyError:
             return []
@@ -161,6 +200,11 @@ class BookController(object):
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_toc_elem(self, cas_id):
         return next((elem for (i, elem) in enumerate(self.toc_elems) \
+                     if elem.cas_id == cas_id), None)
+
+    # finds toc elem ordernum by cas_id and returns corresponding QTocElem
+    def get_marker_toc_elem(self, cas_id):
+        return next((elem for elem in self.marker_toc_elems \
                      if elem.cas_id == cas_id), None)
 
     # returns mark following given mark for toc elem with given cas-id. Used in
@@ -328,7 +372,8 @@ class BookController(object):
 
     def hide_page_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
-            map(lambda m: m.hide(), self.paragraphs[pagenum]["marks"])
+            map(lambda m: m.hide(), self.paragraphs[pagenum]["marks"] + \
+                                    self.paragraphs[pagenum]["zones"])
 
     def transform_to_pdf_coords(self, rect):
         img = self.dp.curr_page()
@@ -342,9 +387,14 @@ class BookController(object):
 
     def show_page_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
-            map(lambda m: m.show(), self.paragraphs[pagenum]["marks"])
+            map(lambda m: m.show(), self.paragraphs[pagenum]["marks"] + \
+                                    self.paragraphs[pagenum]["zones"])
 
     def go_to_page(self, pagenum):
+        # hide selections on this page
+        self.hide_page_marks(self.pagenum)
+        # show selections on page we are switching to
+        self.show_page_marks(pagenum + 1)
         return self.dp.go_to_page(pagenum)
 
     # move all currently selected elems
@@ -374,8 +424,10 @@ class BookController(object):
                     toc_elem = self.get_toc_elem(mark.cas_id)
                     if self.verify_start_end(start, end):
                         toc_elem.set_finished()
+                        self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(True)
                     else:
                         toc_elem.set_mixed_up_marks()
+                        self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
             return
         # else move as usual
         if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
@@ -395,13 +447,12 @@ class BookController(object):
     # widget here as well, after removing from all parallel data structures
     def delete_marks(self):
         selected = self.selected_marks_and_rulers
-        # maybe should delete things as well when right clicked on non-selected
-        # area with sth present? Sth like the following:
-        #self.imageLabel.find_any_at_point(self.last_right_click)
         for m in selected:
             #TODO BAD, figure out how to do it better
-            if isinstance(m, QParagraphMark):
+            if self.is_section_mode() and isinstance(m, QParagraphMark):
                 self.paragraphs[self.pagenum]["marks"].remove(m)
+            elif self.is_markup_mode() and isinstance(m, QZoneMark):
+                self.paragraphs[self.pagenum]["zones"].remove(m)
             m.delete()
             m.destroy()
 
@@ -418,9 +469,16 @@ class BookController(object):
             elif end == mark:
                 self.paragraph_marks[mark.cas_id]["marks"] = (start, None)
             toc_elem.set_not_finished()
+            self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
         if self.paragraph_marks[mark.cas_id]["marks"] == (None, None):
             del self.paragraph_marks[mark.cas_id]
             toc_elem.set_not_started()
+            self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
+
+    def delete_zone(self, zone):
+        toc_elem = self.get_toc_elem(zone.cas_id)
+        if zone.cas_id in self.paragraph_marks.keys():
+            self.paragraph_marks[zone.cas_id]["zones"].remove(zone)
 
     def delete_ruler(self, ruler):
         self.rulers.remove(ruler)
@@ -441,17 +499,21 @@ class BookController(object):
             # set correct states
             if not end or not start:
                 toc_elem.set_not_finished()
+                self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
             else:
                 # check that end and start mark come in correct order
                 if self.verify_start_end(start, end):
                     toc_elem.set_finished()
+                    self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(True)
                 else:
                     toc_elem.set_mixed_up_marks()
+                    self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
         except KeyError:
             self.paragraph_marks[mark.cas_id] = {"marks": None,
                                                  "zones": []}
             self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
             toc_elem.set_not_finished()
+            self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
 
     def find_at_point(self, point, among=None):
         def contains(mark, point):
@@ -494,7 +556,7 @@ class BookController(object):
         return self.marker_toc_elems
 
     # find any selected mark at point, either a paragraph mark or a ruler
-    # point - in GLOBAL coordinates
+    # point (section mode) or any zone (marker mode)
     def find_any_at_point(self, point):
         selected_mark = self.find_at_point(point)
         if selected_mark:
@@ -595,7 +657,7 @@ class BookController(object):
                              toc_elem.cas_id,
                              toc_elem.zone_id,
                              self.pagenum,
-                             self.delete_mark,
+                             self.delete_zone,
                              toc_elem.type,
                              toc_elem.objects)
             self.add_zone(zone)

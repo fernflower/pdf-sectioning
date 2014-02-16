@@ -16,6 +16,7 @@ class QObjectElem(QtGui.QStandardItem):
         self.name = name
         self.setText(oid)
         self.setEditable(False)
+        self.setSelectable(False)
 
     # if oid's third position consists of 00, then this object can be placed
     # automatically
@@ -29,6 +30,10 @@ class QObjectElem(QtGui.QStandardItem):
             return self.type
         else:
             return self.zone_num + self.type
+
+    @property
+    def display_name(self):
+        return self.block_id
 
 # creates an item with objects as it's children
 class QZone(QtGui.QStandardItem):
@@ -70,9 +75,12 @@ class QMarkerTocElem(QtGui.QStandardItem):
         self.cas_id = cas_id
         self.setText(name)
         self.setEditable(False)
+        # will be changed later as start\end marks appear
+        self.expandable = False
         self.auto_groups = {}
         # objects NOT automatically grouped
         self.groups = {}
+        self.zones = []
         # now group automatically placed objects. Types can be Dic, Tra, Con
         for obj in objects:
             child = QObjectElem(obj["oid"], obj["block-id"])
@@ -92,13 +100,19 @@ class QMarkerTocElem(QtGui.QStandardItem):
         # now add all elems in correct order: DIC, ...  any other... , TRA, CON
         self._process_zone(QZone.AUTO_DIC)
         for zone in self.groups.keys():
-            self.appendRow(QZone(self, zone, self.groups[zone]))
+            zone = QZone(self, zone, self.groups[zone])
+            self.appendRow(zone)
+            self.zones.append(zone)
         self._process_zone(QZone.AUTO_TRA)
         self._process_zone(QZone.AUTO_CON)
+        # no modifications unless filled-in!
+        self.set_selectable(False)
 
     def _process_zone(self, zone):
         if zone in self.auto_groups.keys():
-            self.appendRow(QZone(self, zone, self.auto_groups[zone]))
+            new_zone = QZone(self, zone, self.auto_groups[zone])
+            self.appendRow(new_zone)
+            self.zones.append(new_zone)
 
     def get_autozones_as_dict(self):
         result = []
@@ -110,6 +124,11 @@ class QMarkerTocElem(QtGui.QStandardItem):
                     }
             result.append(zone)
         return result
+
+    def set_selectable(self, value):
+        self.setSelectable(value)
+        for zone in self.zones:
+            zone.setSelectable(value)
 
     def get_start(self, zone):
         if zone == QZone.AUTO_DIC:

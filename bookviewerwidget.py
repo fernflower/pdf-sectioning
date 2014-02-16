@@ -7,6 +7,7 @@ from toolbarpart import Ui_ToolBarPart
 from imagelabel import QImageLabel
 from console import QConsole
 from stylesheets import GENERAL_STYLESHEET, BLACK_LABEL_STYLESHEET
+from markertocelem import QMarkerTocElem, QZone
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
@@ -152,8 +153,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # fill tab1 and tab2 with data
         self.fill_views()
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.listView.clicked.connect(self.on_selection_change)
-        self.treeView.clicked.connect(self.on_selection_change)
+        self.listView.selectionModel().currentChanged.connect(
+            self.on_selection_change)
+        self.treeView.selectionModel().currentChanged.connect(
+            self.on_selection_change)
         # context menu
         self.cmenu = QtGui.QMenu()
         self.cmenu.addAction(self.actionDelete_selection)
@@ -235,33 +238,42 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         else:
             return self.treeView
 
-    def on_selection_change(self):
+    def on_selection_change(self, new, old):
+        print "affff"
         # always set normal mode for marks' creation
         toc_widget = self.get_current_toc_widget()
         toc_widget.setStyleSheet(GENERAL_STYLESHEET)
         self.set_normal_state()
-        selected_idx = toc_widget.currentIndex()
-        if not selected_idx:
-            return
-        current = toc_widget.model().itemFromIndex(selected_idx)
-        self.controller.set_current_toc_elem(current)
+        current = toc_widget.model().itemFromIndex(new)
         # TODO temporary in section-mode only
-        if self.mode == self.SECTION_MODE and current and \
-                not current.is_not_started():
-            self.mark_to_navigate = self.controller.\
-                get_next_paragraph_mark(current.cas_id, self.mark_to_navigate)
-            # only have to change spinbox value: the connected signal will
-            # do all work automatically
-            if self.mark_to_navigate:
-                self.spinBox.setValue(self.mark_to_navigate.page)
+        if self.mode == self.SECTION_MODE:
+            if current and not current.is_not_started():
+                self.mark_to_navigate = self.controller.\
+                    get_next_paragraph_mark(current.cas_id, self.mark_to_navigate)
+                # only have to change spinbox value: the connected signal will
+                # do all work automatically
+                if self.mark_to_navigate:
+                    self.spinBox.setValue(self.mark_to_navigate.page)
+            self.controller.set_current_toc_elem(current)
+        elif self.mode == self.MARKUP_MODE:
+            if isinstance(current, QMarkerTocElem):
+                # disable other elems and open-up toc-elem list
+                toc_widget.collapseAll()
+                toc_widget.expand(new)
+            if current.isSelectable():
+                self.controller.set_current_toc_elem(current)
 
     def on_tab_switched(self, new_tab):
         if new_tab == 0:
             self.controller.set_normal_section_mode()
         else:
             self.controller.set_normal_marker_mode()
-        # TODO figure out how to remove selection
         self.controller.set_current_toc_elem(None)
+        # if any marks on page -> highlight corresp. elem in toc
+        mark = self.controller.get_start_end_marks(self.pageNum)
+        if mark != []:
+            toc_elem = self.get_toc_elem(mark[0].cas_id)
+            self.get_current_toc_widget().setCurrentIndex(toc_elem.index())
 
     # mind that every time currentIndex is changed on_zoom_value_changed is
     # called, so to eliminate double work have to check that delta is not 0
@@ -366,10 +378,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         total_pages = self.controller.get_total_pages()
         if total_pages == 0:
             return
-        # hide selections on this page
-        self.controller.hide_page_marks(self.pageNum)
-        # show selections on page we are switching to
-        self.controller.show_page_marks(pagenum)
         if self.controller.go_to_page(pagenum - 1):
             self.pageNum = pagenum
             self.nextPage_button.setEnabled(not self.pageNum == total_pages)

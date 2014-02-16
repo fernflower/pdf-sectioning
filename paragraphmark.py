@@ -18,12 +18,11 @@ class QMark(QtGui.QWidget):
         self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
                                            QtCore.QSize(parent.width(),
                                                         self.WIDTH)))
-        self.mark.show()
         self.name = name
         self.label = QtGui.QLabel(self.name, parent)
         self._adjust_to_mark()
+        self.mark.show()
         self.label.show()
-        # repaint newly created as unselected
         self.update()
 
     def hide(self):
@@ -122,6 +121,7 @@ class QParagraphMark(QMark):
         self.ruler = None
         self.type = type
         self.label.setText("%s of paragraph %s" % (self.type, self.name))
+        self._adjust_to_mark()
 
     def bind_to_ruler(self, ruler):
         self.ruler = ruler
@@ -233,6 +233,9 @@ def make_ruler_mark(pos, parent, name, delete_func, orientation):
 
 
 class QZoneMark(QParagraphMark):
+    ICON_HEIGHT = 40
+    ICON_WIDTH  = 30
+
     def __init__(self, pos, parent, lesson_id, zone_id, page,
                  delete_func, type, objects):
         super(QZoneMark, self).__init__(pos, parent, lesson_id, zone_id, page,
@@ -240,11 +243,22 @@ class QZoneMark(QParagraphMark):
         self.objects = objects
         self.zone_id = zone_id
         # destroy unnecessary rubberband
-        geometry = self.mark.geometry()
+        mark_pos = self.mark.pos()
         self.mark.hide()
         self.mark.setParent(None)
-        self.mark = QtGui.QPushButton(parent)
-        self.mark.setObjectName(zone_id)
+        geometry = QtCore.QRect(mark_pos.x(), mark_pos.y(),
+                                self.ICON_WIDTH,
+                                self.ICON_HEIGHT)
+        self.mark = QtGui.QLabel(zone_id, parent)
+        #self.mark = QtGui.QPushButton(parent)
+        #icon = QtGui.QIcon()
+        #icon.addPixmap(QtGui.QPixmap("buttons/Choose_icons.png"))
+        #self.mark.setIcon(icon)
+        #self.mark.clicked.connect(self.on_zone_click)
+        #self.mark.setObjectName(zone_id)
         self.mark.setGeometry(geometry)
         self.mark.show()
-        print "a am a zone!"
+
+    def on_zone_click(self):
+        for obj in self.objects:
+            print obj.display_name
