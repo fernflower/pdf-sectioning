@@ -240,10 +240,11 @@ class QZoneMark(QParagraphMark):
         self.objects = objects
         self.zone_id = zone_id
         # destroy unnecessary rubberband
+        geometry = self.mark.geometry()
         self.mark.hide()
         self.mark.setParent(None)
         self.mark = QtGui.QPushButton(parent)
-        self.mark.setFlat(True)
-        self.mark.setObjectName(self.name)
+        self.mark.setObjectName(zone_id)
+        self.mark.setGeometry(geometry)
         self.mark.show()
         print "a am a zone!"
