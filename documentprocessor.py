@@ -104,7 +104,7 @@ class DocumentProcessor(object):
         paragraphs = tree.xpath(PARAGRAPHS_XPATH,
                            namespaces = { "is" : XHTML_NAMESPACE})
         out_paragraphs = {}
-        for i, paragraph in enumerate(paragraphs):
+        for paragraph in paragraphs:
             cas_id = paragraph.get("id")
             name = paragraph.get("name")
             start_y = paragraph.get("start-y")
@@ -121,7 +121,24 @@ class DocumentProcessor(object):
                    "y": end_y,
                    "page": end_page,
                    "type": "end"}
-            out_paragraphs[cas_id] = [start, end]
+            zones = []
+            for zone in paragraph.xpath("is:ebook-zone",
+                                        namespaces = { "is" : XHTML_NAMESPACE}):
+                objects = [{"oid": o.get("oid"),
+                            "block-id": o.get("block-id")}
+                           for o in zone.xpath("is:ebook-object",
+                                               namespaces = { "is" : XHTML_NAMESPACE})]
+                new_zone = {"cas-id": cas_id,
+                            "zone-id": "fffii",
+                            "page": zone.get("page"),
+                            "type": zone.get("type"),
+                            "rubric": zone.get("rubric"),
+                            "number": zone.get("n"),
+                            "y": zone.get("y"),
+                            "objects": objects }
+                zones.append(new_zone)
+            out_paragraphs[cas_id] = { "marks": [start, end],
+                                       "zones": zones }
         return out_paragraphs
 
     # Paragraphs - a dict {cas-id : dict with all paragraph data}
@@ -130,17 +147,30 @@ class DocumentProcessor(object):
         ICON_SET = E("ebook-icon-set")
         PAGES.append(ICON_SET)
         # add paragraphs info
-        for cas_id, marks in paragraphs.items():
+        for cas_id, data in paragraphs.items():
             # make sure that no paragraphs are saved without end mark
+            marks = data["marks"]
+            zones = data["zones"]
             assert len(marks) == 2, \
                 "Some paragraphs don't have end marks, can't save that way!"
-            PAGE = E("ebook-para", id=str(cas_id),
+            PARA = E("ebook-para", id=str(cas_id),
                      **{ "start-page": str(marks[0]["page"]),
                          "start-y": str(marks[0]["y"]),
                          "name": marks[0]["name"],
                          "end-page": str(marks[1]["page"]),
                          "end-y": str(marks[1]["y"]) })
-            PAGES.append(PAGE)
+            for zone in zones:
+                ZONE = E("ebook-zone", type="single",
+                        **{ "n": str(zone["n"]),
+                            "page": str(zone["page"]),
+                            "y": str(zone["y"]),
+                            "rubric": zone["rubric"]})
+                for obj in zone["objects"]:
+                    ZONE.append(E("ebook-object",
+                                  **{ "oid": obj["oid"],
+                                     "block-id": obj["block-id"] }))
+                PARA.append(ZONE)
+            PAGES.append(PARA)
         root = E.object(E.text(PAGES), display_name=self.filename)
         result = etree.tostring(root, pretty_print=True, encoding="utf-8")
         return result

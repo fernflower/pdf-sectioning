@@ -237,10 +237,13 @@ class QZoneMark(QParagraphMark):
     ICON_WIDTH  = 30
 
     def __init__(self, pos, parent, lesson_id, zone_id, page,
-                 delete_func, type, objects):
+                 delete_func, type, objects, number, rubric):
         super(QZoneMark, self).__init__(pos, parent, lesson_id, zone_id, page,
                                         delete_func, type)
+        self.rubric = rubric
+        # just a list of dicts [ {oid, block-id, rubric} ]
         self.objects = objects
+        self.number = number
         self.zone_id = zone_id
         # destroy unnecessary rubberband
         mark_pos = self.mark.pos()

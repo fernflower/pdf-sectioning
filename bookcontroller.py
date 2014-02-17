@@ -283,7 +283,9 @@ class BookController(object):
         filename = str(filename)
         paragraphs = self.dp.load_native_xml(filename)
         # generate start\end marks from paragraphs' data
-        for cas_id, marks in paragraphs.items():
+        for cas_id, data in paragraphs.items():
+            marks = data["marks"]
+            zones = data["zones"]
             for m in marks:
                 page = int(m["page"])
                 mark = make_paragraph_mark(parent=marks_parent,
@@ -307,12 +309,30 @@ class BookController(object):
                     self.paragraphs[page] = {"marks" : [],
                                              "zones": []}
                     self.paragraphs[page]["marks"] = [mark]
+            for z in zones:
+                page = int(z["page"])
+                zone = QZoneMark(parent=marks_parent,
+                                 pos=QtCore.QPoint(0, float(z["y"])),
+                                 lesson_id=cas_id,
+                                 zone_id="what????",
+                                 page=page,
+                                 delete_func=self.delete_zone,
+                                 type=z["type"],
+                                 number=z["number"],
+                                 rubric=z["rubric"],
+                                 objects=z["objects"])
+                if page not in self.paragraphs.keys():
+                    self._add_new_page(page)
+                self.paragraphs[page]["zones"].append(zone)
+        # fill parallel structure
         self._load_paragraph_marks()
 
     # returns full file name (with path) to file with markup
     def save(self, dirname):
         # normalize to get pdf-coordinates (save with scale=1.0)
         pdf_paragraphs = {}
+        # have to iterate over paragraphs (not paragraph_marks) to ensure
+        # correct page order
         for pagenum in sorted(self.paragraphs.keys()):
             for m in self.paragraphs[pagenum]["marks"]:
                 para_key = m.cas_id
@@ -320,9 +340,20 @@ class BookController(object):
                         "name" : m.name,
                         "y": self.transform_to_pdf_coords(m.geometry()).y()}
                 try:
-                    pdf_paragraphs[para_key].append(mark)
+                    pdf_paragraphs[para_key]["marks"].append(mark)
                 except KeyError:
-                    pdf_paragraphs[para_key] = [mark]
+                    pdf_paragraphs[para_key] = {"marks": [mark],
+                                                "zones": []}
+            for cas_id in self.paragraph_marks.keys():
+                for z in self.paragraph_marks[cas_id]["zones"]:
+                    zone = {"n": z.number,
+                            "type": z.type,
+                            "page": z.page,
+                            "y": self.transform_to_pdf_coords(z.geometry()).y(),
+                            "rubric": z.rubric,
+                            "objects": z.objects
+                            }
+                    pdf_paragraphs[cas_id]["zones"].append(zone)
         if not self.dp:
             return
         self.any_unsaved_changes = False
@@ -356,7 +387,8 @@ class BookController(object):
             coeff = new_scale / old_scale
             # have to adjust ALL items including rulers
             for page_key in self.paragraphs.keys():
-                markslist = self.paragraphs[page_key]["marks"]
+                markslist = self.paragraphs[page_key]["marks"] + \
+                            self.paragraphs[page_key]["zones"]
                 for m in markslist:
                     m.adjust(coeff)
             # now rulers
@@ -595,7 +627,9 @@ class BookController(object):
         # destroy previous marks
         for page in self.paragraphs.keys():
             marks = self.paragraphs[page]["marks"]
+            zones = self.paragraphs[page]["zones"]
             map(lambda m: m.destroy(), marks)
+            map(lambda z: z.destroy(), zones)
         self.paragraphs = {}
         # destroy previous rulers
         for r in self.rulers:
@@ -666,7 +700,9 @@ class BookController(object):
                              self.pagenum,
                              self.delete_zone,
                              toc_elem.type,
-                             toc_elem.objects)
+                             toc_elem.objects_as_dictslist(),
+                             toc_elem.number,
+                             toc_elem.rubric)
             self.add_zone(zone)
             print self.paragraphs
         elif self.is_ruler_mode():
@@ -690,12 +726,14 @@ class BookController(object):
                     else self._create_mark_marker_mode(pos, mark_parent)
         return mark
 
-    # here data is received from bookviewer as dict { page: list of marks }
+    # here data is received from bookviewer as dict
+    # { page: { marks: [], zones: [] }}
     # (useful when loading markup)
     def _load_paragraph_marks(self):
         self.paragraph_marks = {}
         for pagenum in self.paragraphs.keys():
             marks = self.paragraphs[pagenum]["marks"]
+            zones = self.paragraphs[pagenum]["zones"]
             for mark in marks:
                 try:
                     (start, no_end) = self.paragraph_marks[mark.cas_id]["marks"]
@@ -703,3 +741,6 @@ class BookController(object):
                 except KeyError:
                     self._add_new_paragraph(mark.cas_id)
                     self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
+            # no KeyError: cas-id already added
+            map(lambda z: self.paragraph_marks[mark.cas_id]["zones"].append(z),
+                zones)

@@ -267,7 +267,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 # disable other elems and open-up toc-elem list
                 toc_widget.collapseAll()
                 toc_widget.expand(new)
-            if current.isSelectable():
+            if current and current.isSelectable():
                 self.controller.set_current_toc_elem(current)
 
     def on_tab_switched(self, new_tab):

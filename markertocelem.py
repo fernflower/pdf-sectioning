@@ -5,7 +5,7 @@ from tocelem import QTocElem
 
 
 class QObjectElem(QtGui.QStandardItem):
-    def __init__(self, oid, block_id, name=None):
+    def __init__(self, oid, block_id, rubric, name=None):
         super(QObjectElem, self).__init__()
         self.oid = oid
         self.block_id = block_id
@@ -14,6 +14,7 @@ class QObjectElem(QtGui.QStandardItem):
         self.zone_num = oid_parts[2]
         self.page = int(oid_parts[1])
         self.name = name
+        self.rubric = rubric
         self.setText(oid)
         self.setEditable(False)
         self.setSelectable(False)
@@ -46,6 +47,8 @@ class QZone(QtGui.QStandardItem):
         self.parent = parent
         self.type = type
         self.name = name
+        self.rubric = objects[0].rubric if len(objects) > 0 else ""
+        self.number = objects[0].zone_num if len(objects) > 0 else ""
         # a list of child objects
         self.objects = objects
         self.setText(type + name)
@@ -64,11 +67,16 @@ class QZone(QtGui.QStandardItem):
         else:
             return self.objects[0].zone_id
 
+    def objects_as_dictslist(self):
+        return [{"oid": o.oid,
+                 "block-id": o.block_id } for o in self.objects]
+
 
 class QMarkerTocElem(QtGui.QStandardItem):
     # TODO perhaps make dependant on pic's height
     AUTOZONE_HEIGHT = 20
 
+    # objects = {oid, block-id, rubric}
     def __init__(self, name, cas_id, objects):
         super(QMarkerTocElem, self).__init__()
         self.name = name
@@ -76,14 +84,13 @@ class QMarkerTocElem(QtGui.QStandardItem):
         self.setText(name)
         self.setEditable(False)
         # will be changed later as start\end marks appear
-        self.expandable = False
         self.auto_groups = {}
         # objects NOT automatically grouped
         self.groups = {}
         self.zones = []
         # now group automatically placed objects. Types can be Dic, Tra, Con
         for obj in objects:
-            child = QObjectElem(obj["oid"], obj["block-id"])
+            child = QObjectElem(obj["oid"], obj["block-id"], obj["rubric"])
             # 00type marks autogroup, type - groups objects by type which can't
             # be placed automatically
             def _add_obj(groups):
