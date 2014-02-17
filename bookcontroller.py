@@ -133,8 +133,9 @@ class BookController(object):
                 if end.page < self.pagenum or start.page > self.pagenum:
                     print "pages"
                     return False
-                current = filter(lambda m: m not in [start, end],
+                current = filter(lambda m: m in [start, end],
                                  self.get_start_end_marks(self.pagenum))
+                print current
                 # no marks -> in between pages, True
                 if len(current) == 0:
                     return True
@@ -483,6 +484,13 @@ class BookController(object):
     def delete_ruler(self, ruler):
         self.rulers.remove(ruler)
 
+    def _add_new_paragraph(self, cas_id):
+        self.paragraph_marks[cas_id] = {"marks": None,
+                                        "zones": []}
+    def _add_new_page(self, pagenum):
+        self.paragraphs[pagenum] = {"marks": [],
+                                    "zones": []}
+
     # add mark to a correct place (start comes first, end - second)
     def add_mark(self, mark):
         toc_elem = self.get_toc_elem(mark.cas_id)
@@ -509,8 +517,7 @@ class BookController(object):
                     toc_elem.set_mixed_up_marks()
                     self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
         except KeyError:
-            self.paragraph_marks[mark.cas_id] = {"marks": None,
-                                                 "zones": []}
+            self._add_new_paragraph(mark.cas_id)
             self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
             toc_elem.set_not_finished()
             self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
@@ -596,15 +603,15 @@ class BookController(object):
         self.rulers = []
 
     # add zone to zones on page zone.page AND to paragraph's zones
+    # There might be no marks on pages, so have to check on pagenum's presence
+    # in self.paragraphs' keys
     def add_zone(self, zone):
-        try:
-            self.paragraphs[zone.page]["zones"].append(zone)
-        except KeyError:
-            self.paragraphs[zone.page]["zones"] = [zone]
-        try:
-            self.paragraph_marks[zone.cas_id]["zones"].append(zone)
-        except KeyError:
-            self.paragraph_marks[zone.cas_id]["zones"] = [zone]
+        if zone.page not in self.paragraphs.keys():
+            self._add_new_page(zone.page)
+        self.paragraphs[zone.page]["zones"].append(zone)
+        # situation with paragraph_marks is different: zones can't be placed
+        # unless paragraph has start and end mark -> no check here
+        self.paragraph_marks[zone.cas_id]["zones"].append(zone)
 
     def is_zone_placed(self, cas_id, zone_id):
         if cas_id in self.paragraph_marks.keys():
@@ -694,6 +701,5 @@ class BookController(object):
                     (start, no_end) = self.paragraph_marks[mark.cas_id]["marks"]
                     self.paragraph_marks[mark.cas_id]["marks"] = (start, mark)
                 except KeyError:
-                    self.paragraph_marks[mark.cas_id] = {"marks" : None,
-                                                         "zones": []}
+                    self._add_new_paragraph(mark.cas_id)
                     self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)

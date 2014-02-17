@@ -238,6 +238,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         else:
             return self.treeView
 
+    def selected_toc_on_tab(self, tabnum):
+        idx = self.listView.selectedIndexes() if tabnum == 0 else \
+            self.treeView.selectedIndexes()
+        if len(idx) > 0:
+            return self.get_current_toc_widget().model().itemFromIndex(idx)
+        return None
+
     def on_selection_change(self, new, old):
         print "affff"
         # always set normal mode for marks' creation
@@ -269,10 +276,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         else:
             self.controller.set_normal_marker_mode()
         self.controller.set_current_toc_elem(None)
-        # if any marks on page -> highlight corresp. elem in toc
-        mark = self.controller.get_start_end_marks(self.pageNum)
-        if mark != []:
-            toc_elem = self.get_toc_elem(mark[0].cas_id)
+        # highlight corresponding elem according to last selection in prev.tab
+        old_toc = self.selected_toc_on_tab(~new_tab)
+        if old_toc:
+            toc_elem = self.get_toc_elem(old_toc.cas_id)
             self.get_current_toc_widget().setCurrentIndex(toc_elem.index())
 
     # mind that every time currentIndex is changed on_zoom_value_changed is
