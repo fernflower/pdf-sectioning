@@ -156,8 +156,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
         # clicked, not any other event as click on already selected has it's
         # own special meaning (navigation to page with next elem)
-        self.listView.clicked.connect(self.on_selection_change)
-        self.treeView.clicked.connect(self.on_selection_change)
+        self.listView.clicked.connect(self.process_selection_change)
+        self.treeView.clicked.connect(self.process_selection_change)
         # context menu
         self.cmenu = QtGui.QMenu()
         self.cmenu.addAction(self.actionDelete_selection)
@@ -234,45 +234,45 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         else:
             return self.MARKUP_MODE
 
+    def get_toc_widget(self, tabnum):
+        return self.listView if tabnum == 0 else self.treeView
+
     def get_current_toc_widget(self):
-        if self.mode == self.SECTION_MODE:
-            return self.listView
-        else:
-            return self.treeView
+        return self.get_toc_widget(self.tabWidget.currentIndex())
 
     def selected_toc_on_tab(self, tabnum):
         idx = self.listView.selectedIndexes() if tabnum == 0 else \
             self.treeView.selectedIndexes()
         if len(idx) > 0:
-            return self.get_current_toc_widget().model().itemFromIndex(idx[0])
+            return self.get_toc_widget(tabnum).model().itemFromIndex(idx[0])
         return None
 
     def autozones(self):
         self.controller.autozones(self.imageLabel)
 
-    def on_selection_change(self):
+    def process_selection_change(self):
         # always set normal mode for marks' creation
         toc_widget = self.get_current_toc_widget()
         toc_widget.setStyleSheet(GENERAL_STYLESHEET)
         self.set_normal_state()
         current = self.selected_toc_on_tab(self.tabWidget.currentIndex())
-        # TODO temporary in section-mode only
-        if self.mode == self.SECTION_MODE:
-            if current and not current.is_not_started():
-                self.mark_to_navigate = self.controller.\
-                    get_next_paragraph_mark(current.cas_id, self.mark_to_navigate)
-                # only have to change spinbox value: the connected signal will
-                # do all work automatically
-                if self.mark_to_navigate:
-                    self.spinBox.setValue(self.mark_to_navigate.page)
-            self.controller.set_current_toc_elem(current)
-        elif self.mode == self.MARKUP_MODE:
+        if current:
+            self.mark_to_navigate = self.controller.\
+                get_next_paragraph_mark(current.cas_id, self.mark_to_navigate)
+            # only have to change spinbox value: the connected signal will
+            # do all work automatically
+            if self.mark_to_navigate:
+                self.spinBox.setValue(self.mark_to_navigate.page)
+        self.controller.set_current_toc_elem(current)
+        if self.mode == self.MARKUP_MODE:
             if isinstance(current, QMarkerTocElem):
                 # disable other elems and open-up toc-elem list
                 toc_widget.collapseAll()
                 toc_widget.expand(current.index())
-            if current and current.isSelectable():
+            elif isinstance(current, QZone) and current.isSelectable():
                 self.controller.set_current_toc_elem(current)
+            else:
+                self.controller.set_current_toc_elem(None)
 
     def on_tab_switched(self, new_tab):
         if new_tab == 0:
@@ -281,12 +281,14 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         else:
             self.controller.set_normal_marker_mode()
             self.toolbarpart.autozone_button.setEnabled(True)
+        self.mark_to_navigate = None
         self.controller.set_current_toc_elem(None)
+        old_toc = self.selected_toc_on_tab((new_tab + 1) % 2)
         # highlight corresponding elem according to last selection in prev.tab
-        old_toc = self.selected_toc_on_tab(~new_tab)
         if old_toc:
             toc_elem = self.get_toc_elem(old_toc.cas_id)
             self.get_current_toc_widget().setCurrentIndex(toc_elem.index())
+            self.process_selection_change()
 
     # mind that every time currentIndex is changed on_zoom_value_changed is
     # called, so to eliminate double work have to check that delta is not 0
@@ -320,7 +322,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_toc_elem(self, cas_id):
-        return self.controller.get_toc_elem(cas_id)
+        if self.tabWidget.currentIndex() == 0:
+            return self.controller.get_toc_elem(cas_id)
+        else:
+            return self.controller.get_marker_toc_elem(cas_id)
 
     def open_file(self):
         if self.controller.any_unsaved_changes and \

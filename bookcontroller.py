@@ -212,12 +212,24 @@ class BookController(object):
     # marks when clicked on toc elem
     # no mark given means that we should take first paragraph mark found
     def get_next_paragraph_mark(self, cas_id, mark=None):
-        try:
-            (start, end) = self.paragraph_marks[cas_id]["marks"]
-            return next(
-                (m for m in [start, end] if m != mark and m is not None), mark)
-        except KeyError:
-            return mark
+        if self.operational_mode == self.MODE_SECTIONS:
+            try:
+                (start, end) = self.paragraph_marks[cas_id]["marks"]
+                return next(
+                    (m for m in [start, end] if m != mark and m is not None),
+                    mark)
+            except KeyError:
+                return mark
+        elif self.operational_mode == self.MODE_MARKER:
+            try:
+                # navigate exactly to object clicked_on
+                # FIXME
+                zones = self.paragraph_marks[cas_id]["zones"]
+                for z in filter(lambda x:x.cas_id == cas_id, []):
+                    print "found!"
+                    return z
+            except KeyError:
+                return None
 
     # returns zoom's order num in list to set up in combo box
     def get_current_zoom_index(self):
