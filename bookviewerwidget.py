@@ -125,6 +125,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.menuTools.addAction(self.actionSetVerticalRuler)
 
     def init_widgets(self):
+        self.showMaximized()
         self.imageLabel = QImageLabel(self, self.controller)
         self.imageLabel.setScaledContents(True)
         self.scrollArea.setWidget(self.imageLabel)
@@ -153,10 +154,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # fill tab1 and tab2 with data
         self.fill_views()
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.listView.selectionModel().currentChanged.connect(
-            self.on_selection_change)
-        self.treeView.selectionModel().currentChanged.connect(
-            self.on_selection_change)
+        # clicked, not any other event as click on already selected has it's
+        # own special meaning (navigation to page with next elem)
+        self.listView.clicked.connect(self.on_selection_change)
+        self.treeView.clicked.connect(self.on_selection_change)
         # context menu
         self.cmenu = QtGui.QMenu()
         self.cmenu.addAction(self.actionDelete_selection)
@@ -243,18 +244,18 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         idx = self.listView.selectedIndexes() if tabnum == 0 else \
             self.treeView.selectedIndexes()
         if len(idx) > 0:
-            return self.get_current_toc_widget().model().itemFromIndex(idx)
+            return self.get_current_toc_widget().model().itemFromIndex(idx[0])
         return None
 
     def autozones(self):
         self.controller.autozones(self.imageLabel)
 
-    def on_selection_change(self, new, old):
+    def on_selection_change(self):
         # always set normal mode for marks' creation
         toc_widget = self.get_current_toc_widget()
         toc_widget.setStyleSheet(GENERAL_STYLESHEET)
         self.set_normal_state()
-        current = toc_widget.model().itemFromIndex(new)
+        current = self.selected_toc_on_tab(self.tabWidget.currentIndex())
         # TODO temporary in section-mode only
         if self.mode == self.SECTION_MODE:
             if current and not current.is_not_started():
@@ -269,7 +270,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             if isinstance(current, QMarkerTocElem):
                 # disable other elems and open-up toc-elem list
                 toc_widget.collapseAll()
-                toc_widget.expand(new)
+                toc_widget.expand(current.index())
             if current and current.isSelectable():
                 self.controller.set_current_toc_elem(current)
 

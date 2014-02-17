@@ -64,6 +64,8 @@ class SectionTool(object):
         if data:
             TOC_XPATH = "/is:course/is:lessons/is:lesson/@name"
             tree = etree.fromstring(data)
+            display_name = tree.xpath("/is:course/@display-name",
+                                      namespaces = {"is" : XHTML_NAMESPACE})[0]
             lesson_ids = tree.xpath(TOC_XPATH,
                                     namespaces = {"is" : XHTML_NAMESPACE})
             # resolve names
@@ -81,9 +83,10 @@ class SectionTool(object):
             if resp.status != 200:
                 raise SectionToolError("Could not resolve lesson names!")
             resolved = loads(content)
-            return [{"name": resolved[lesson_id], "cas-id": lesson_id,
-                     "objects": self.get_lesson_objects(lesson_id)} \
-                    for lesson_id in ids_to_resolve]
+            objects =  [{"name": resolved[lesson_id], "cas-id": lesson_id,
+                         "objects": self.get_lesson_objects(lesson_id)} \
+                        for lesson_id in ids_to_resolve]
+            return (objects, display_name)
         else:
             raise SectionToolError("Check your url and user\password settings")
 
@@ -123,12 +126,13 @@ def main():
 
     filename, width, height, save_dir = parse_args()
     st = SectionTool("config")
-    toc = st.get_cms_course_toc()
+    toc, display_name = st.get_cms_course_toc()
+    print display_name
 
     # show window
     app = QtGui.QApplication(sys.argv)
     # if no filename given: construct controller without docprocessor
-    dp = DocumentProcessor(filename) if filename else None
+    dp = DocumentProcessor(filename, display_name) if filename else None
     controller = BookController(toc, dp)
     ui_mw = BookViewerWidget(controller)
     ui_mw.show()

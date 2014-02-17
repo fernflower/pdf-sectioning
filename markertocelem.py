@@ -61,6 +61,12 @@ class QZone(QtGui.QStandardItem):
         return self.parent.cas_id
 
     @property
+    def pdf_rubric(self):
+        if len(self.objects) > 0:
+            return self.objects[0].type
+        return ""
+
+    @property
     def zone_id(self):
         if len(self.objects) == 0:
             return ""
@@ -87,7 +93,7 @@ class QZone(QtGui.QStandardItem):
 
 class QMarkerTocElem(QtGui.QStandardItem):
     # TODO perhaps make dependant on pic's height
-    AUTOZONE_HEIGHT = 20
+    AUTOZONE_HEIGHT = 30
 
     # objects = {oid, block-id, rubric}
     def __init__(self, name, cas_id, objects):
@@ -146,7 +152,7 @@ class QMarkerTocElem(QtGui.QStandardItem):
                      "rel-start": self.get_start(key_type),
                      "rel-end": self.get_end(key_type),
                      "type": auto.type,
-                     "rubric": auto.rubric,
+                     "rubric": auto.pdf_rubric,
                      "zone-id": auto.zone_id,
                      "number": auto.number,
                      "page": auto.page,

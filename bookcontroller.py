@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from collections import OrderedDict
 from PyQt4 import QtGui, QtCore
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import make_paragraph_mark, make_ruler_mark, \
@@ -311,7 +312,7 @@ class BookController(object):
                 zone = QZoneMark(parent=marks_parent,
                                  pos=QtCore.QPoint(0, float(z["y"])),
                                  lesson_id=cas_id,
-                                 zone_id="what????",
+                                 zone_id=z["zone-id"],
                                  page=page,
                                  delete_func=self.delete_zone,
                                  type=z["type"],
@@ -329,15 +330,16 @@ class BookController(object):
     # returns full file name (with path) to file with markup
     def save(self, dirname):
         # normalize to get pdf-coordinates (save with scale=1.0)
-        pdf_paragraphs = {}
+        pdf_paragraphs = OrderedDict()
         # have to iterate over paragraphs (not paragraph_marks) to ensure
         # correct page order
         for pagenum in sorted(self.paragraphs.keys()):
             for m in self.paragraphs[pagenum]["marks"]:
                 para_key = m.cas_id
+                y = self.transform_to_pdf_coords(m.geometry()).y()
                 mark = {"page" : m.page,
                         "name" : m.name,
-                        "y": self.transform_to_pdf_coords(m.geometry()).y()}
+                        "y": y}
                 try:
                     pdf_paragraphs[para_key]["marks"].append(mark)
                 except KeyError:
@@ -345,10 +347,11 @@ class BookController(object):
                                                 "zones": []}
         for cas_id in self.paragraph_marks.keys():
             for z in self.paragraph_marks[cas_id]["zones"]:
+                y = self.transform_to_pdf_coords(z.geometry()).y()
                 zone = {"n": z.number,
                         "type": z.type,
                         "page": z.page,
-                        "y": self.transform_to_pdf_coords(z.geometry()).y(),
+                        "y": y,
                         "rubric": z.rubric,
                         "objects": z.objects
                         }
@@ -684,7 +687,6 @@ class BookController(object):
 
     def _create_mark_section_mode(self, pos, mark_parent):
         mark = None
-        print "SECTION MODE"
         if self.is_normal_mode() and self.is_toc_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
@@ -713,7 +715,6 @@ class BookController(object):
 
     def _create_mark_marker_mode(self, pos, mark_parent):
         mark = None
-        print "MARKER MODE"
         if self.is_normal_mode() and self.is_toc_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
@@ -731,7 +732,7 @@ class BookController(object):
                              toc_elem.type,
                              toc_elem.objects_as_dictslist(),
                              toc_elem.number,
-                             toc_elem.rubric)
+                             toc_elem.pdf_rubric)
             self.add_zone(zone)
             print self.paragraphs
         elif self.is_ruler_mode():

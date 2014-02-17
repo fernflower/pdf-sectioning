@@ -4,7 +4,8 @@ from popplerqt4 import Poppler
 from lxml import etree
 from lxml.builder import ElementMaker
 
-XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml"
+XHTML_NAMESPACE = "http://internet-school.ru/abc"
+
 E = ElementMaker(namespace=XHTML_NAMESPACE,
                  nsmap={'is' : XHTML_NAMESPACE})
 
@@ -17,8 +18,9 @@ class DocumentProcessor(object):
     result_file_name = 'native.xml'
     toc_file_name = 'toc.xml'
 
-    def __init__(self, filename):
+    def __init__(self, filename, display_name):
         self.filename = filename
+        self.display_name = display_name
         print "filename is %s" % filename
         try:
             self.doc = Poppler.Document.load(filename)
@@ -46,6 +48,12 @@ class DocumentProcessor(object):
         if not self.doc:
             return 0
         return self.doc.numPages()
+
+    def width(self, scale=1):
+        return self.render_page(self.curr_page_num, scale).width()
+
+    def height(self, scale=1):
+        return self.render_page(self.curr_page_num, scale).height()
 
     # returns a QImage
     def render_page(self, num, scale):
@@ -128,8 +136,11 @@ class DocumentProcessor(object):
                             "block-id": o.get("block-id")}
                            for o in zone.xpath("is:ebook-object",
                                                namespaces = { "is" : XHTML_NAMESPACE})]
+                def _get_zone_id():
+                    return zone.get("rubric") if zone.get("n") == "00" \
+                        else zone.get("n") + zone.get("rubric")
                 new_zone = {"cas-id": cas_id,
-                            "zone-id": "fffii",
+                            "zone-id": _get_zone_id(),
                             "page": zone.get("page"),
                             "type": zone.get("type"),
                             "rubric": zone.get("rubric"),
@@ -160,11 +171,14 @@ class DocumentProcessor(object):
                          "end-page": str(marks[1]["page"]),
                          "end-y": str(marks[1]["y"]) })
             for zone in zones:
+                # TODO FIXME
+                margin = "r" if zone["page"] % 2 == 1 else "l"
                 ZONE = E("ebook-zone", type="single",
                         **{ "n": str(zone["n"]),
                             "page": str(zone["page"]),
                             "y": str(zone["y"]),
-                            "rubric": zone["rubric"]})
+                            "rubric": zone["rubric"],
+                            "at": margin})
                 print zone["objects"]
                 for obj in zone["objects"]:
                     ZONE.append(E("ebook-object",
@@ -172,7 +186,21 @@ class DocumentProcessor(object):
                                      "block-id": obj["block-id"] }))
                 PARA.append(ZONE)
             PAGES.append(PARA)
-        root = E.object(E.text(PAGES), display_name=self.filename)
+        def _get_page_preview_str(page):
+            return "page-" + "0"*(3-len(str(page))) + str(page) + ".png"
+        for page in range(1, self.totalPages):
+            # TODO FIXME
+            margin = "r" if page % 2 == 1 else "l"
+            PAGE = E("ebook-page",
+                     **{ "preview": _get_page_preview_str(page),
+                         "n": str(page),
+                         "width": str(self.width()),
+                         "height": str(self.height()),
+                         "hide": "false",
+                         "zone-margins": margin,
+                         "fold": margin })
+            PAGES.append(PAGE)
+        root = E.object(E.text(PAGES), **{"display-name": self.display_name})
         result = etree.tostring(root, pretty_print=True, encoding="utf-8")
         return result
 
