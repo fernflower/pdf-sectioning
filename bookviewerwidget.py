@@ -174,6 +174,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         #self.tabWidget.setTabEnabled(1, False)
         self.toolbarpart.changeIcons_button.setEnabled(False)
         self.toolbarpart.autozone_button.setEnabled(False)
+        self.toolbarpart.autozone_button.clicked.connect(self.autozones)
         # unfortunately could not assign actions as could not get rid of action
         # text displayed
         self.prevPage_button.clicked.connect(self.prev_page)
@@ -245,8 +246,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             return self.get_current_toc_widget().model().itemFromIndex(idx)
         return None
 
+    def autozones(self):
+        self.controller.autozones(self.imageLabel)
+
     def on_selection_change(self, new, old):
-        print "affff"
         # always set normal mode for marks' creation
         toc_widget = self.get_current_toc_widget()
         toc_widget.setStyleSheet(GENERAL_STYLESHEET)
@@ -273,8 +276,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def on_tab_switched(self, new_tab):
         if new_tab == 0:
             self.controller.set_normal_section_mode()
+            self.toolbarpart.autozone_button.setEnabled(False)
         else:
             self.controller.set_normal_marker_mode()
+            self.toolbarpart.autozone_button.setEnabled(True)
         self.controller.set_current_toc_elem(None)
         # highlight corresponding elem according to last selection in prev.tab
         old_toc = self.selected_toc_on_tab(~new_tab)

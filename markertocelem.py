@@ -67,9 +67,22 @@ class QZone(QtGui.QStandardItem):
         else:
             return self.objects[0].zone_id
 
+    @property
+    def is_autoplaced(self):
+        if len(self.objects) > 0:
+            return self.objects[0].is_autoplaced
+        return False
+
     def objects_as_dictslist(self):
         return [{"oid": o.oid,
                  "block-id": o.block_id } for o in self.objects]
+
+    @property
+    def page(self):
+        if len(self.objects) == 0:
+            return 0
+        else:
+            return self.objects[0].page
 
 
 class QMarkerTocElem(QtGui.QStandardItem):
@@ -115,6 +128,10 @@ class QMarkerTocElem(QtGui.QStandardItem):
         # no modifications unless filled-in!
         self.set_selectable(False)
 
+    @property
+    def autozones(self):
+        return [z for z in self.zones if z.is_autoplaced]
+
     def _process_zone(self, zone):
         if zone in self.auto_groups.keys():
             new_zone = QZone(self, zone, self.auto_groups[zone])
@@ -123,11 +140,17 @@ class QMarkerTocElem(QtGui.QStandardItem):
 
     def get_autozones_as_dict(self):
         result = []
-        for auto, objects in self.auto_groups.items():
-            zone = { "type": auto,
-                     "rel-start": self.get_start(auto),
-                     "rel-end": self.get_end(auto),
-                     "objects": objects
+        for auto in self.autozones:
+            key_type = auto.zone_id
+            zone = { "type": key_type,
+                     "rel-start": self.get_start(key_type),
+                     "rel-end": self.get_end(key_type),
+                     "type": auto.type,
+                     "rubric": auto.rubric,
+                     "zone-id": auto.zone_id,
+                     "number": auto.number,
+                     "page": auto.page,
+                     "objects": auto.objects_as_dictslist()
                     }
             result.append(zone)
         return result
@@ -140,11 +163,15 @@ class QMarkerTocElem(QtGui.QStandardItem):
     def get_start(self, zone):
         if zone == QZone.AUTO_DIC:
             return 0
-        else: None
+        return None
 
     def get_end(self, zone):
         if zone == QZone.AUTO_CON:
-            return - self.AUTOZONE_HEIGHT
+            return -self.AUTOZONE_HEIGHT
         elif zone == QZone.AUTO_CON:
             mult = 2 if QZone.AUTO_TRA in self.auto_groups.keys() else 1
             return -self.AUTOZONE_HEIGHT * mult
+        elif zone == QZone.AUTO_TRA:
+            mult = 3 if QZone.AUTO_TRA in self.auto_groups.keys() else 2
+            return -self.AUTOZONE_HEIGHT * mult
+        return None

@@ -91,7 +91,7 @@ class SectionTool(object):
         lesson_url = self.config_data['url'].rstrip('/') + '/' + lesson_id
         code, data = self._fetch_data(lesson_url)
         if data:
-            PARAGRAPHS_XPATH = "/is:lesson/is:content/is:paragraph"
+            PARAGRAPHS_XPATH = "/is:lesson/is:content/is:paragraph | /is:lesson/is:content/is:test"
             tree = etree.fromstring(data)
             paragraphs = tree.xpath(PARAGRAPHS_XPATH,
                                     namespaces = {"is" : XHTML_NAMESPACE})

@@ -113,10 +113,8 @@ class BookController(object):
         elif type(pos) == QtCore.QRect:
             return viewport.intersects(pos)
         else:
-            print "Damn it"
             return False
 
-    #FIXME
     def is_in_viewport(self, pos):
         if self.is_section_mode():
             return self._is_in_pdf_bounds(pos)
@@ -306,9 +304,8 @@ class BookController(object):
                 try:
                     self.paragraphs[page]["marks"].append(mark)
                 except KeyError:
-                    self.paragraphs[page] = {"marks" : [],
+                    self.paragraphs[page] = {"marks" : [mark],
                                              "zones": []}
-                    self.paragraphs[page]["marks"] = [mark]
             for z in zones:
                 page = int(z["page"])
                 zone = QZoneMark(parent=marks_parent,
@@ -324,6 +321,8 @@ class BookController(object):
                 if page not in self.paragraphs.keys():
                     self._add_new_page(page)
                 self.paragraphs[page]["zones"].append(zone)
+                if zone.page != self.pagenum:
+                    zone.hide()
         # fill parallel structure
         self._load_paragraph_marks()
 
@@ -344,16 +343,16 @@ class BookController(object):
                 except KeyError:
                     pdf_paragraphs[para_key] = {"marks": [mark],
                                                 "zones": []}
-            for cas_id in self.paragraph_marks.keys():
-                for z in self.paragraph_marks[cas_id]["zones"]:
-                    zone = {"n": z.number,
-                            "type": z.type,
-                            "page": z.page,
-                            "y": self.transform_to_pdf_coords(z.geometry()).y(),
-                            "rubric": z.rubric,
-                            "objects": z.objects
-                            }
-                    pdf_paragraphs[cas_id]["zones"].append(zone)
+        for cas_id in self.paragraph_marks.keys():
+            for z in self.paragraph_marks[cas_id]["zones"]:
+                zone = {"n": z.number,
+                        "type": z.type,
+                        "page": z.page,
+                        "y": self.transform_to_pdf_coords(z.geometry()).y(),
+                        "rubric": z.rubric,
+                        "objects": z.objects
+                        }
+                pdf_paragraphs[cas_id]["zones"].append(zone)
         if not self.dp:
             return
         self.any_unsaved_changes = False
@@ -395,6 +394,36 @@ class BookController(object):
             for r in self.rulers:
                 r.adjust(coeff)
         return self.scale
+
+    def autozones(self, zone_parent):
+        # auto place ALL autozones in ALL paragraphs that have start\end marks
+        print "autozones clicked"
+        for cas_id in self.paragraph_marks.keys():
+            autozones = self._get_autoplaced_zones(cas_id)
+            (start, end) = self.paragraph_marks[cas_id]["marks"]
+            for az in autozones:
+                # no autoplacement if zone already placed
+                if self.is_zone_placed(cas_id, az["zone-id"]):
+                    continue
+                pos = QtCore.QPoint(0, start.y())
+                if az["rel-start"]:
+                    pos = QtCore.QPoint(0, az["rel-start"] * self.scale + start.y())
+                elif az["rel-end"]:
+                    # substract relative end from end-of-page y
+                    pos = QtCore.QPoint(0, end.y() + az["rel-end"] * self.scale)
+                zone = QZoneMark(pos,
+                                 zone_parent,
+                                 cas_id,
+                                 az["zone-id"],
+                                 az["page"],
+                                 self.delete_zone,
+                                 az["type"],
+                                 az["objects"],
+                                 az["number"],
+                                 az["rubric"])
+                self.add_zone(zone)
+                if zone.page != self.pagenum:
+                    zone.hide()
 
     # deselect all elems on page (both marks and rulers) if not in
     # keep_selections list
@@ -726,6 +755,13 @@ class BookController(object):
                     else self._create_mark_marker_mode(pos, mark_parent)
         return mark
 
+    def _get_autoplaced_zones(self, cas_id):
+        # verify that everything ok with start\end
+        if self.get_toc_elem(cas_id).is_finished():
+            toc_elem = self.get_marker_toc_elem(cas_id)
+            return toc_elem.get_autozones_as_dict()
+        return []
+
     # here data is received from bookviewer as dict
     # { page: { marks: [], zones: [] }}
     # (useful when loading markup)
@@ -744,3 +780,4 @@ class BookController(object):
             # no KeyError: cas-id already added
             map(lambda z: self.paragraph_marks[mark.cas_id]["zones"].append(z),
                 zones)
+        print self.paragraph_marks

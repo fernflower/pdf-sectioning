@@ -165,6 +165,7 @@ class DocumentProcessor(object):
                             "page": str(zone["page"]),
                             "y": str(zone["y"]),
                             "rubric": zone["rubric"]})
+                print zone["objects"]
                 for obj in zone["objects"]:
                     ZONE.append(E("ebook-object",
                                   **{ "oid": obj["oid"],
