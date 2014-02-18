@@ -14,8 +14,8 @@ from markertocelem import QMarkerTocElem, QZone
 # paragraph marks (total marks per paragraph)
 class BookController(object):
     # selection creation mode
-    MODE_SECTIONS = "normal_sections"
-    MODE_MARKER = "normal_marker"
+    MODE_SECTIONS = "section_mode"
+    MODE_MARKER = "markup_mode"
     MODE_MARK = "mark"
     MODE_RULER_HOR = QRulerMark.ORIENT_HORIZONTAL
     MODE_RULER_VERT = QRulerMark.ORIENT_VERTICAL
@@ -42,7 +42,6 @@ class BookController(object):
         self.marker_toc_elems = []
         # dict of interactive objects per lesson: {paragraph_id: [objects]}
         self.objects = {}
-        self.create_toc_elems()
         # a list of all rulers present
         self.rulers = []
         # zoom scale
@@ -96,6 +95,7 @@ class BookController(object):
 
     def set_current_toc_elem(self, elem):
         self.current_toc_elem = elem
+        print self.current_toc_elem
 
     ### predicates section
 
@@ -179,9 +179,9 @@ class BookController(object):
     def get_toc_elems(self):
         return self.toc_elems
 
-    def get_page_marks(self, page_num):
+    def get_page_marks(self, page_num, mode):
         try:
-            if self.is_section_mode():
+            if mode == self.MODE_SECTIONS:
                 return self.paragraphs[page_num]["marks"]
             else:
                 return self.paragraphs[page_num]["zones"]
@@ -195,7 +195,7 @@ class BookController(object):
             return []
 
     def get_current_page_marks(self):
-        return self.get_page_marks(self.pagenum)
+        return self.get_page_marks(self.pagenum, self.operational_mode)
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_toc_elem(self, cas_id):
@@ -272,6 +272,11 @@ class BookController(object):
 
     def get_total_error_count(self):
         return len(filter(lambda e:e.is_error(), self.toc_elems))
+
+    def get_first_error_msg(self):
+        error_elem =  next((e for e in self.toc_elems if e.is_error()),
+                           None)
+        return u"" if not error_elem else error_elem.get_message()
 
     def get_available_marks(self, cas_id):
         both = ["start", "end"]
@@ -509,7 +514,7 @@ class BookController(object):
                 mark.move(delta)
                 # after mark is moved verify that start comes before end,
                 # otherwise set error state
-                other_mark = self.get_next_paragraph_mark(mark.cas_id, mark)
+                other_mark = self.get_next_paragraph_mark(mark, mark)
                 if other_mark and other_mark != mark:
                     start = mark if isinstance(mark, QStartParagraph) \
                                  else other_mark
@@ -642,17 +647,17 @@ class BookController(object):
     # returns a list of QTocElems (to fill a listView, for example)
     # has to return a new list all the time as items are owned by a model and
     # by calling
-    def create_toc_elems(self):
-        self.toc_elems = \
-            [ QTocElem(elem["name"], elem["cas-id"]) \
-             for elem in self.course_toc ]
-        return self.toc_elems
-
-    def create_marker_toc_elems(self):
-        self.marker_toc_elems = \
-            [ QMarkerTocElem(elem["name"], elem["cas-id"], elem["objects"]) \
-              for elem in self.course_toc ]
-        return self.marker_toc_elems
+    def create_toc_elems(self, mode):
+        if mode == self.MODE_SECTIONS:
+            self.toc_elems = \
+                [ QTocElem(elem["name"], elem["cas-id"]) \
+                for elem in self.course_toc ]
+            return self.toc_elems
+        else:
+            self.marker_toc_elems = \
+                [ QMarkerTocElem(elem["name"], elem["cas-id"], elem["objects"]) \
+                for elem in self.course_toc ]
+            return self.marker_toc_elems
 
     # find any selected mark at point, either a paragraph mark or a ruler
     # point (section mode) or any zone (marker mode)
@@ -807,6 +812,7 @@ class BookController(object):
                     self._add_new_paragraph(mark.cas_id)
                     self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
             # no KeyError: cas-id already added
-            map(lambda z: self.paragraph_marks[mark.cas_id]["zones"].append(z),
-                zones)
+            for z in zones:
+                map(lambda z:
+                    self.paragraph_marks[z.cas_id]["zones"].append(z), zones)
         print self.paragraph_marks

@@ -104,11 +104,6 @@ class QImageLabel(QtGui.QLabel):
                     mark.bind_to_ruler(selected)
                 else:
                     process_selected(selected)
-                    # TODO send signal or sth
-                    if isinstance(selected, QParagraphMark):
-                        toc_elem = self.parent.select_toc_elem(
-                            selected.cas_id)
-                        self.controller.set_current_toc_elem(toc_elem)
             else:
                 # deselected everything selected earlier on page
                 self.controller.deselect_all()

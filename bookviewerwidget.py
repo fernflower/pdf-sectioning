@@ -8,12 +8,16 @@ from imagelabel import QImageLabel
 from console import QConsole
 from stylesheets import GENERAL_STYLESHEET, BLACK_LABEL_STYLESHEET
 from markertocelem import QMarkerTocElem, QZone
+from selectionviewcontroller import SelectionViewController
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     TOTAL_PAGES_TEXT = u"%d из %d"
+    # TODO modes must match those in bookcontroller!
     SECTION_MODE = "section_mode"
     MARKUP_MODE = "markup_mode"
+    TAB_MODE = { 0: SECTION_MODE,
+                 1: MARKUP_MODE }
 
     def __init__(self, controller):
         super(BookViewerWidget, self).__init__()
@@ -25,12 +29,15 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.pageNum = 1
         # in order to implement navigation on toc-elem click. Store last mark
         # navigated to here
-        self.mark_to_navigate = None
         # dialogs
         self.unsaved_changes_dialog = None
         self.cant_save_dialog = None
         self.cant_open_dialog = None
         self.init_actions()
+        self.selection_controller = \
+            SelectionViewController({self.SECTION_MODE: self.listView,
+                                     self.MARKUP_MODE: self.treeView},
+                                    controller)
         self.init_widgets()
         self.init_menubar()
         if self.controller.is_file_given():
@@ -152,12 +159,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.console = QConsole(self.tab, self.verticalLayout, self)
         self.setFocus(True)
         # fill tab1 and tab2 with data
-        self.fill_views()
+        self._fill_views()
         self.listView.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.treeView.header().hide()
         # clicked, not any other event as click on already selected has it's
         # own special meaning (navigation to page with next elem)
-        self.listView.clicked.connect(self.process_selection_change)
-        self.treeView.clicked.connect(self.process_selection_change)
+        self.listView.clicked.connect(self.on_selected)
+        self.treeView.clicked.connect(self.on_selected)
         # context menu
         self.cmenu = QtGui.QMenu()
         self.cmenu.addAction(self.actionDelete_selection)
@@ -186,6 +194,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.toolbarpart.zoomOut_button.clicked.connect(self.zoom_out)
         self.toolBar.addWidget(self.toolbarpart.layoutWidget)
         self._set_appearance()
+
+    def _fill_views(self):
+        for mode in [self.SECTION_MODE, self.MARKUP_MODE]:
+            self.selection_controller.fill_with_data(mode)
 
     # all work on colors and buttons' styles done here
     def _set_appearance(self):
@@ -234,45 +246,15 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         else:
             return self.MARKUP_MODE
 
-    def get_toc_widget(self, tabnum):
-        return self.listView if tabnum == 0 else self.treeView
-
-    def get_current_toc_widget(self):
-        return self.get_toc_widget(self.tabWidget.currentIndex())
-
-    def selected_toc_on_tab(self, tabnum):
-        idx = self.listView.selectedIndexes() if tabnum == 0 else \
-            self.treeView.selectedIndexes()
-        if len(idx) > 0:
-            return self.get_toc_widget(tabnum).model().itemFromIndex(idx[0])
-        return None
-
     def autozones(self):
         self.controller.autozones(self.imageLabel)
 
-    def process_selection_change(self):
+    def on_selected(self):
         # always set normal mode for marks' creation
-        toc_widget = self.get_current_toc_widget()
-        toc_widget.setStyleSheet(GENERAL_STYLESHEET)
         self.set_normal_state()
-        current = self.selected_toc_on_tab(self.tabWidget.currentIndex())
-        if current:
-            self.mark_to_navigate = self.controller.\
-                get_next_paragraph_mark(current, self.mark_to_navigate)
-            # only have to change spinbox value: the connected signal will
-            # do all work automatically
-            if self.mark_to_navigate:
-                self.spinBox.setValue(self.mark_to_navigate.page)
-        self.controller.set_current_toc_elem(current)
-        if self.mode == self.MARKUP_MODE:
-            if isinstance(current, QMarkerTocElem):
-                # disable other elems and open-up toc-elem list
-                toc_widget.collapseAll()
-                toc_widget.expand(current.index())
-            elif isinstance(current, QZone) and current.isSelectable():
-                self.controller.set_current_toc_elem(current)
-            else:
-                self.controller.set_current_toc_elem(None)
+        navigate_to = self.selection_controller.process_selected(self.mode)
+        if navigate_to:
+            self.spinBox.setValue(navigate_to.page)
 
     def on_tab_switched(self, new_tab):
         if new_tab == 0:
@@ -281,14 +263,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         else:
             self.controller.set_normal_marker_mode()
             self.toolbarpart.autozone_button.setEnabled(True)
-        self.mark_to_navigate = None
-        self.controller.set_current_toc_elem(None)
-        old_toc = self.selected_toc_on_tab((new_tab + 1) % 2)
-        # highlight corresponding elem according to last selection in prev.tab
-        if old_toc:
-            toc_elem = self.get_toc_elem(old_toc.cas_id)
-            self.get_current_toc_widget().setCurrentIndex(toc_elem.index())
-            self.process_selection_change()
+        old_tab = (new_tab + 1) % 2
+        self.selection_controller.process_mode_switch(self.TAB_MODE[old_tab],
+                                                      self.TAB_MODE[new_tab])
 
     # mind that every time currentIndex is changed on_zoom_value_changed is
     # called, so to eliminate double work have to check that delta is not 0
@@ -316,17 +293,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def delete_marks(self):
         self.controller.delete_marks()
 
-    def fill_views(self):
-        self._fill_listview()
-        self._fill_treeview()
-
-    # finds toc elem ordernum by unique id and returns corresponding QTocElem
-    def get_toc_elem(self, id):
-        if self.tabWidget.currentIndex() == 0:
-            return self.controller.get_toc_elem(id)
-        else:
-            return self.controller.get_marker_toc_elem(id)
-
     def open_file(self):
         if self.controller.any_unsaved_changes and \
                 not self.show_unsaved_data_dialog():
@@ -336,8 +302,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                           'Pdf files (*.pdf)')
         if not filename:
             return
-        # deselect all in listview
-        self.fill_views()
+        self._fill_views()
         result = self.controller.open_file(unicode(filename))
         if not result:
             self.show_cant_open_dialog()
@@ -361,7 +326,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.last_open_doc_name = unicode(filename)
         # clear listView and fill again with appropriate for given course-id
         # data fetched from cas
-        self.fill_views()
+        self._fill_views()
         self.controller.load_markup(self.last_open_doc_name, self.imageLabel)
 
     def save(self):
@@ -404,48 +369,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # set total pages label text
         self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (self.pageNum, total_pages))
-        # now highlight first met marks' toc-elem
-        # TODO NO DAMNED PARAGRAPHS HIGHLIGHTING WITHOUT THOROUGH THINKING
-        # OVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # first search among zone-marks, then among start/end
-        marks = self.controller.get_page_marks(self.pageNum)
-        if marks != []:
-            toc_elem = self.get_toc_elem_for_mark(marks[0])
-            self._select_toc_elem(toc_elem)
-            self.highlight_selected_readonly()
-        else:
-            # set normal selection color-scheme
-            self.dehighlight()
-
-    # draw nice violet selection on toc-elem with id
-    # elem as current so that it can't be modified
-    def highlight_selected_readonly(self):
-        self.get_current_toc_widget().setStyleSheet(
-            """ QListView::item:selected{ background-color: rgb(100, 149, 237) }
-            """)
-
-    def dehighlight(self):
-        self.get_current_toc_widget().setStyleSheet(GENERAL_STYLESHEET)
+        self.selection_controller.process_go_to_page(pagenum, self.mode)
 
     def navigate_to_first_error(self):
-        error = self.controller.get_first_error_mark()
+        error = self.selection_controller.process_navigate_to_error(self.mode)
         if error:
-            toc_elem = self.get_toc_elem_for_mark(error)
-            self._select_toc_elem(toc_elem)
-            self.controller.set_current_toc_elem(toc_elem)
             self.go_to_page(error.page)
-
-    def get_toc_elem_for_mark(self, mark):
-        # if mark is a QStart\QEndParagraph mark -> return QTocElem,
-        # else return QZone
-        if isinstance(mark, QZone):
-            return self.controller.get_zone_toc_elem(mark.cas_id, mark.zone_id)
-        else:
-            return self.controller.get_toc_elem(mark.cas_id)
-
-    def _select_toc_elem(self, toc_elem):
-        self.get_current_toc_widget().scrollTo(toc_elem.index())
-        self.get_current_toc_widget().setCurrentIndex(toc_elem.index())
 
     def zoom_in(self):
         value = self.controller.zoom(self.controller.ZOOM_DELTA)
@@ -486,9 +415,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def prev_page(self):
         self.spinBox.setValue(self.pageNum - 1)
 
-    def get_current_page_marks(self):
-        return self.controller.get_page_marks(self.pageNum)
-
     def closeEvent(self, event):
         #if self.controller.any_unsaved_changes and \
                 #not self.show_unsaved_data_dialog():
@@ -497,9 +423,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             event.accept()
 
     def update_console_data(self):
-        first_error = self.controller.get_first_error_mark()
-        msg = self.get_toc_elem(first_error.cas_id).get_message() \
-            if first_error else u""
+        msg = self.controller.get_first_error_msg()
         self.console.set_first_error_data(
                 self.controller.get_total_error_count(), msg)
 
@@ -559,31 +483,3 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             u"Проверьте, что заданный файл является pdf-файлом.")
         self.cant_open_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
         self.cant_open_dialog.exec_()
-
-    ### helper functions
-    # fill both listView (toc-only for section mode) and treeview (toc+objects
-    # for marker mode)
-    def _fill_treeview(self):
-        model = self.treeView.model()
-        if model:
-            model.clear()
-        else:
-            model = QtGui.QStandardItemModel()
-        for item in self.controller.create_marker_toc_elems():
-            model.appendRow(item)
-        self.treeView.header().hide()
-        self.treeView.setModel(model)
-
-    def _fill_listview(self):
-        # show toc elems
-        model = self.listView.model()
-        if model:
-            model.clear()
-        else:
-            model = QtGui.QStandardItemModel()
-        # have to do this as when model is cleared all elems are deleted and
-        # will get deleted wrapped obj error
-        self.controller.set_current_toc_elem(None)
-        for item in self.controller.create_toc_elems():
-            model.appendRow(item)
-        self.listView.setModel(model)
