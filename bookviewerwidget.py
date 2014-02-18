@@ -258,7 +258,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         current = self.selected_toc_on_tab(self.tabWidget.currentIndex())
         if current:
             self.mark_to_navigate = self.controller.\
-                get_next_paragraph_mark(current.cas_id, self.mark_to_navigate)
+                get_next_paragraph_mark(current, self.mark_to_navigate)
             # only have to change spinbox value: the connected signal will
             # do all work automatically
             if self.mark_to_navigate:
@@ -320,12 +320,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._fill_listview()
         self._fill_treeview()
 
-    # finds toc elem ordernum by cas_id and returns corresponding QTocElem
-    def get_toc_elem(self, cas_id):
+    # finds toc elem ordernum by unique id and returns corresponding QTocElem
+    def get_toc_elem(self, id):
         if self.tabWidget.currentIndex() == 0:
-            return self.controller.get_toc_elem(cas_id)
+            return self.controller.get_toc_elem(id)
         else:
-            return self.controller.get_marker_toc_elem(cas_id)
+            return self.controller.get_marker_toc_elem(id)
 
     def open_file(self):
         if self.controller.any_unsaved_changes and \
@@ -407,13 +407,15 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # now highlight first met marks' toc-elem
         # TODO NO DAMNED PARAGRAPHS HIGHLIGHTING WITHOUT THOROUGH THINKING
         # OVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # first search among zone-marks, then among start/end
         marks = self.controller.get_page_marks(self.pageNum)
         if marks != []:
-            toc_elem = self.select_toc_elem(marks[0].cas_id)
+            toc_elem = self.get_toc_elem_for_mark(marks[0])
+            self._select_toc_elem(toc_elem)
             self.highlight_selected_readonly()
         else:
             # set normal selection color-scheme
-            self.get_current_toc_widget().setStyleSheet(GENERAL_STYLESHEET)
+            self.dehighlight()
 
     # draw nice violet selection on toc-elem with id
     # elem as current so that it can't be modified
@@ -422,20 +424,28 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             """ QListView::item:selected{ background-color: rgb(100, 149, 237) }
             """)
 
+    def dehighlight(self):
+        self.get_current_toc_widget().setStyleSheet(GENERAL_STYLESHEET)
+
     def navigate_to_first_error(self):
         error = self.controller.get_first_error_mark()
         if error:
-            toc_elem = self.select_toc_elem(error.cas_id)
+            toc_elem = self.get_toc_elem_for_mark(error)
+            self._select_toc_elem(toc_elem)
             self.controller.set_current_toc_elem(toc_elem)
             self.go_to_page(error.page)
 
-    def select_toc_elem(self, cas_id):
-        toc_elem = self.get_toc_elem(cas_id)
-        if not toc_elem:
-            return
+    def get_toc_elem_for_mark(self, mark):
+        # if mark is a QStart\QEndParagraph mark -> return QTocElem,
+        # else return QZone
+        if isinstance(mark, QZone):
+            return self.controller.get_zone_toc_elem(mark.cas_id, mark.zone_id)
+        else:
+            return self.controller.get_toc_elem(mark.cas_id)
+
+    def _select_toc_elem(self, toc_elem):
         self.get_current_toc_widget().scrollTo(toc_elem.index())
         self.get_current_toc_widget().setCurrentIndex(toc_elem.index())
-        return toc_elem
 
     def zoom_in(self):
         value = self.controller.zoom(self.controller.ZOOM_DELTA)
@@ -563,7 +573,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             model.appendRow(item)
         self.treeView.header().hide()
         self.treeView.setModel(model)
-        self.treeView.setUniformRowHeights(True)
 
     def _fill_listview(self):
         # show toc elems

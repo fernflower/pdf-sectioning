@@ -60,6 +60,7 @@ class QZone(QtGui.QStandardItem):
     def cas_id(self):
         return self.parent.cas_id
 
+    # last 3 symbols of objects' oid
     @property
     def pdf_rubric(self):
         if len(self.objects) > 0:
@@ -160,6 +161,10 @@ class QMarkerTocElem(QtGui.QStandardItem):
                     }
             result.append(zone)
         return result
+
+    # return QZone elem with corr. zone_id
+    def get_zone(self, zone_id):
+        return next((z for z in self.zones if z.zone_id == zone_id), None)
 
     def set_selectable(self, value):
         self.setSelectable(value)

@@ -202,32 +202,48 @@ class BookController(object):
         return next((elem for (i, elem) in enumerate(self.toc_elems) \
                      if elem.cas_id == cas_id), None)
 
-    # finds toc elem ordernum by cas_id and returns corresponding QTocElem
+    # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
     def get_marker_toc_elem(self, cas_id):
         return next((elem for elem in self.marker_toc_elems \
                      if elem.cas_id == cas_id), None)
 
+    def get_zone_toc_elem(self, cas_id, zone_id):
+        toc_elem = self.get_marker_toc_elem(cas_id)
+        if toc_elem:
+            return toc_elem.get_zone(zone_id)
     # returns mark following given mark for toc elem with given cas-id. Used in
     # bookviewer in order to implement human-friendly navigation to start\end
     # marks when clicked on toc elem
     # no mark given means that we should take first paragraph mark found
-    def get_next_paragraph_mark(self, cas_id, mark=None):
+    def _get_next_start_end(self, cas_id, mark):
+        try:
+            (start, end) = self.paragraph_marks[cas_id]["marks"]
+            return next(
+                (m for m in [start, end] if m != mark and m is not None),
+                mark)
+        except KeyError:
+            return mark
+
+    def _get_zone(self, cas_id, zone_id):
+        try:
+            return next(
+                 (z for z in self.paragraph_marks[cas_id]["zones"] \
+                  if z.zone_id == zone_id),
+                 None)
+        except KeyError:
+            return None
+
+    def get_next_paragraph_mark(self, toc_elem, mark=None):
         if self.operational_mode == self.MODE_SECTIONS:
-            try:
-                (start, end) = self.paragraph_marks[cas_id]["marks"]
-                return next(
-                    (m for m in [start, end] if m != mark and m is not None),
-                    mark)
-            except KeyError:
-                return mark
+            return self._get_next_start_end(toc_elem.cas_id, mark)
         elif self.operational_mode == self.MODE_MARKER:
             try:
+                # if clicked on marker toc -> navigate to start\end
+                if isinstance(toc_elem, QMarkerTocElem):
+                    return self._get_next_start_end(toc_elem.cas_id, mark)
                 # navigate exactly to object clicked_on
-                # FIXME
-                zones = self.paragraph_marks[cas_id]["zones"]
-                for z in filter(lambda x:x.cas_id == cas_id, []):
-                    print "found!"
-                    return z
+                elif isinstance(toc_elem, QZone):
+                    return self._get_zone(toc_elem.cas_id, toc_elem.zone_id)
             except KeyError:
                 return None
 
@@ -252,7 +268,7 @@ class BookController(object):
                            None)
         if not error_elem:
             return None
-        return self.get_next_paragraph_mark(error_elem.cas_id)
+        return self.get_next_paragraph_mark(error_elem)
 
     def get_total_error_count(self):
         return len(filter(lambda e:e.is_error(), self.toc_elems))
