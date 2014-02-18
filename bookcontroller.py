@@ -100,6 +100,12 @@ class BookController(object):
     ### predicates section
 
     # validate that selection is in pdf's viewport
+    def is_zone_placed(self, cas_id, zone_id):
+        if cas_id in self.paragraph_marks.keys():
+            return zone_id in \
+                [z.zone_id for z in self.paragraph_marks[cas_id]["zones"]]
+        return False
+
     def _is_in_pdf_bounds(self, pos):
         img = self.get_image()
         if not img:
@@ -176,9 +182,6 @@ class BookController(object):
             return None
         return self.dp.curr_page(self.scale)
 
-    def get_toc_elems(self):
-        return self.toc_elems
-
     def get_page_marks(self, page_num, mode):
         try:
             if mode == self.MODE_SECTIONS:
@@ -198,15 +201,20 @@ class BookController(object):
         return self.get_page_marks(self.pagenum, self.operational_mode)
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
-    def get_toc_elem(self, cas_id):
-        return next((elem for (i, elem) in enumerate(self.toc_elems) \
-                     if elem.cas_id == cas_id), None)
+    def get_toc_elem(self, cas_id, mode):
+        if mode == self.MODE_SECTIONS:
+            return next((elem for (i, elem) in enumerate(self.toc_elems) \
+                        if elem.cas_id == cas_id), None)
+        else:
+            return next((elem for elem in self.marker_toc_elems \
+                        if elem.cas_id == cas_id), None)
 
     # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
     def get_marker_toc_elem(self, cas_id):
         return next((elem for elem in self.marker_toc_elems \
-                     if elem.cas_id == cas_id), None)
+                    if elem.cas_id == cas_id), None)
 
+    # finds zone in given lesson (cas_id) with given zone_id
     def get_zone_toc_elem(self, cas_id, zone_id):
         toc_elem = self.get_marker_toc_elem(cas_id)
         if toc_elem:
@@ -330,7 +338,7 @@ class BookController(object):
                 mark.adjust(self.scale)
                 # mark loaded paragraphs gray
                 # TODO think how to eliminate calling this func twice
-                elem = self.get_toc_elem(cas_id)
+                elem = self.get_toc_elem(cas_id, self.operational_mode)
                 if elem:
                     elem.set_finished()
                 if mark.page != self.pagenum:
@@ -405,6 +413,17 @@ class BookController(object):
             self.paragraphs[mark.page] = {"marks": [],
                                           "zones": []}
             self.paragraphs[mark.page]["marks"] = [mark]
+
+    # add zone to zones on page zone.page AND to paragraph's zones
+    # There might be no marks on pages, so have to check on pagenum's presence
+    # in self.paragraphs' keys
+    def add_zone(self, zone):
+        if zone.page not in self.paragraphs.keys():
+            self._add_new_page(zone.page)
+        self.paragraphs[zone.page]["zones"].append(zone)
+        # situation with paragraph_marks is different: zones can't be placed
+        # unless paragraph has start and end mark -> no check here
+        self.paragraph_marks[zone.cas_id]["zones"].append(zone)
 
     # if step_by_step is True then scale will be either increased or decreased
     # by 1. Otherwise - scale will be taken from delta: delta + old if delta in [MIN,
@@ -519,7 +538,8 @@ class BookController(object):
                     start = mark if isinstance(mark, QStartParagraph) \
                                  else other_mark
                     end = other_mark if start == mark else mark
-                    toc_elem = self.get_toc_elem(mark.cas_id)
+                    toc_elem = self.get_toc_elem(mark.cas_id,
+                                                 self.operational_mode)
                     if self.verify_start_end(start, end):
                         toc_elem.set_finished()
                         self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(True)
@@ -559,7 +579,7 @@ class BookController(object):
     # delete mark from a tuple. if all marks have been deleted, remove that key
     # from paragraps_marks
     def delete_mark(self, mark):
-        toc_elem = self.get_toc_elem(mark.cas_id)
+        toc_elem = self.get_toc_elem(mark.cas_id, self.operational_mode)
         if mark.cas_id in self.paragraph_marks.keys():
             (start, end) = self.paragraph_marks[mark.cas_id]["marks"]
             if start == mark:
@@ -574,23 +594,16 @@ class BookController(object):
             self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
 
     def delete_zone(self, zone):
-        toc_elem = self.get_toc_elem(zone.cas_id)
+        toc_elem = self.get_toc_elem(zone.cas_id, self.operational_mode)
         if zone.cas_id in self.paragraph_marks.keys():
             self.paragraph_marks[zone.cas_id]["zones"].remove(zone)
 
     def delete_ruler(self, ruler):
         self.rulers.remove(ruler)
 
-    def _add_new_paragraph(self, cas_id):
-        self.paragraph_marks[cas_id] = {"marks": None,
-                                        "zones": []}
-    def _add_new_page(self, pagenum):
-        self.paragraphs[pagenum] = {"marks": [],
-                                    "zones": []}
-
     # add mark to a correct place (start comes first, end - second)
     def add_mark(self, mark):
-        toc_elem = self.get_toc_elem(mark.cas_id)
+        toc_elem = self.get_toc_elem(mark.cas_id, self.operational_mode)
         try:
             (start, end) = self.paragraph_marks[mark.cas_id]["marks"]
             if start and end:
@@ -688,6 +701,13 @@ class BookController(object):
         return True
 
     ### helper functions
+    def _add_new_paragraph(self, cas_id):
+        self.paragraph_marks[cas_id] = {"marks": None,
+                                        "zones": []}
+    def _add_new_page(self, pagenum):
+        self.paragraphs[pagenum] = {"marks": [],
+                                    "zones": []}
+
     def _clear_paragraph_data(self):
         # destroy previous marks
         for page in self.paragraphs.keys():
@@ -700,23 +720,6 @@ class BookController(object):
         for r in self.rulers:
             r.destroy()
         self.rulers = []
-
-    # add zone to zones on page zone.page AND to paragraph's zones
-    # There might be no marks on pages, so have to check on pagenum's presence
-    # in self.paragraphs' keys
-    def add_zone(self, zone):
-        if zone.page not in self.paragraphs.keys():
-            self._add_new_page(zone.page)
-        self.paragraphs[zone.page]["zones"].append(zone)
-        # situation with paragraph_marks is different: zones can't be placed
-        # unless paragraph has start and end mark -> no check here
-        self.paragraph_marks[zone.cas_id]["zones"].append(zone)
-
-    def is_zone_placed(self, cas_id, zone_id):
-        if cas_id in self.paragraph_marks.keys():
-            return zone_id in \
-                [z.zone_id for z in self.paragraph_marks[cas_id]["zones"]]
-        return False
 
     def _create_mark_section_mode(self, pos, mark_parent):
         mark = None
@@ -791,7 +794,7 @@ class BookController(object):
 
     def _get_autoplaced_zones(self, cas_id):
         # verify that everything ok with start\end
-        if self.get_toc_elem(cas_id).is_finished():
+        if self.get_toc_elem(cas_id, self.operational_mode).is_finished():
             toc_elem = self.get_marker_toc_elem(cas_id)
             return toc_elem.get_autozones_as_dict()
         return []

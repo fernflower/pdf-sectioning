@@ -23,6 +23,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         super(BookViewerWidget, self).__init__()
         self.setupUi(self)
         self.controller = controller
+        self.selection_controller = \
+            SelectionViewController({self.SECTION_MODE: self.listView,
+                                     self.MARKUP_MODE: self.treeView},
+                                    controller)
         self.last_right_click = None
         self.last_zoom_index = 0
         self.last_open_doc_name = None
@@ -34,10 +38,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.cant_save_dialog = None
         self.cant_open_dialog = None
         self.init_actions()
-        self.selection_controller = \
-            SelectionViewController({self.SECTION_MODE: self.listView,
-                                     self.MARKUP_MODE: self.treeView},
-                                    controller)
         self.init_widgets()
         self.init_menubar()
         if self.controller.is_file_given():

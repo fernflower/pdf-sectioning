@@ -5,6 +5,8 @@ from markertocelem import QZone, QMarkerTocElem
 from stylesheets import GENERAL_STYLESHEET
 
 
+# this controller deals with proper selection handling (highlight, list\tree
+# view navigation) depending on state
 class SelectionViewController(object):
     def __init__(self, views_dict, controller):
         self.views_dict = views_dict
@@ -23,14 +25,8 @@ class SelectionViewController(object):
             return self.get_view_widget(mode).model().itemFromIndex(idx[0])
         return None
 
-    # returns either QTocElem or QMarkerTocElem depend. on mode
-    # FIXME no info about mode types here!
     def get_toc_elem(self, cas_id, mode):
-        print mode
-        if mode == "section_mode":
-            return self.controller.get_toc_elem(cas_id)
-        else:
-            return self.controller.get_marker_toc_elem(cas_id)
+        return self.controller.get_toc_elem(cas_id, mode)
 
     def fill_with_data(self, mode):
         view = self.get_view_widget(mode)
@@ -80,7 +76,7 @@ class SelectionViewController(object):
         view = self.get_view_widget(mode)
         marks = self.controller.get_page_marks(pagenum, mode)
         if marks != []:
-            toc_elem = self.get_toc_elem_for_mark(marks[0])
+            toc_elem = self.get_toc_elem_for_mark(marks[0], mode)
             view.scrollTo(toc_elem.index())
             view.setCurrentIndex(toc_elem.index())
             self.highlight_selected_readonly(mode)
@@ -91,7 +87,7 @@ class SelectionViewController(object):
         view = self.get_view_widget(mode)
         error = self.controller.get_first_error_mark()
         if error:
-            toc_elem = self.get_toc_elem_for_mark(error)
+            toc_elem = self.get_toc_elem_for_mark(error, mode)
             view.scrollTo(toc_elem.index())
             view.setCurrentIndex(toc_elem.index())
             self.controller.set_current_toc_elem(toc_elem)
@@ -111,13 +107,13 @@ class SelectionViewController(object):
         view = self.get_view_widget(mode)
         view.setStyleSheet(GENERAL_STYLESHEET)
 
-    def get_toc_elem_for_mark(self, mark):
+    def get_toc_elem_for_mark(self, mark, mode):
         # if mark is a QStart\QEndParagraph mark -> return QTocElem,
         # else return QZone
         if isinstance(mark, QZone):
             return self.controller.get_zone_toc_elem(mark.cas_id, mark.zone_id)
         else:
-            return self.controller.get_toc_elem(mark.cas_id)
+            return self.controller.get_toc_elem(mark.cas_id, mode)
 
     #def select(self, pagenum):
         #marks = self.controller.get_page_marks(pagenum)
