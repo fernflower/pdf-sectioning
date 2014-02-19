@@ -19,18 +19,19 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     TAB_MODE = { 0: SECTION_MODE,
                  1: MARKUP_MODE }
 
-    def __init__(self, controller):
+    def __init__(self, controller, toc_controller):
         super(BookViewerWidget, self).__init__()
         self.setupUi(self)
+        # after widgets initiation pass view's name to toccontroller
+        self.toc_controller = toc_controller
+        self.toc_controller.set_views(self.listView, self.treeView)
         self.controller = controller
-        self.selection_controller = \
-            SelectionViewController({self.SECTION_MODE: self.listView,
-                                     self.MARKUP_MODE: self.treeView},
-                                    controller)
         self.last_right_click = None
         self.last_zoom_index = 0
         self.last_open_doc_name = None
         self.pageNum = 1
+        # mark to navigate (useful in errors navigation)
+        self.mark_to_navigate = None
         # in order to implement navigation on toc-elem click. Store last mark
         # navigated to here
         # dialogs
@@ -197,7 +198,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def _fill_views(self):
         for mode in [self.SECTION_MODE, self.MARKUP_MODE]:
-            self.selection_controller.fill_with_data(mode)
+            self.toc_controller.fill_with_data(mode)
 
     # all work on colors and buttons' styles done here
     def _set_appearance(self):
@@ -249,12 +250,18 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def autozones(self):
         self.controller.autozones(self.imageLabel)
 
+    # mind that this is called every time a view is clicked, not only on
+    # selection
     def on_selected(self):
         # always set normal mode for marks' creation
         self.set_normal_state()
-        navigate_to = self.selection_controller.process_selected(self.mode)
-        if navigate_to:
-            self.spinBox.setValue(navigate_to.page)
+        current = self.toc_controller.get_selected(self.mode)
+        if current:
+            self.mark_to_navigate = self.controller.\
+                get_next_paragraph_mark(current, self.mark_to_navigate)
+            self.toc_controller.process_selected(self.mode)
+        if self.mark_to_navigate:
+            self.spinBox.setValue(self.mark_to_navigate.page)
 
     def on_tab_switched(self, new_tab):
         if new_tab == 0:
@@ -264,7 +271,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.controller.set_normal_marker_mode()
             self.toolbarpart.autozone_button.setEnabled(True)
         old_tab = (new_tab + 1) % 2
-        self.selection_controller.process_mode_switch(self.TAB_MODE[old_tab],
+        self.toc_controller.process_mode_switch(self.TAB_MODE[old_tab],
                                                       self.TAB_MODE[new_tab])
 
     # mind that every time currentIndex is changed on_zoom_value_changed is
@@ -369,11 +376,15 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # set total pages label text
         self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (self.pageNum, total_pages))
-        self.selection_controller.process_go_to_page(pagenum, self.mode)
+        marks = self.controller.get_page_marks(pagenum, self.mode)
+        if marks != []:
+            self.toc_controller.process_go_to_page(marks[0], self.mode)
 
     def navigate_to_first_error(self):
-        error = self.selection_controller.process_navigate_to_error(self.mode)
+        error = self.controller.get_first_error_mark(self.mode)
         if error:
+            error_page = self.toc_controller.\
+                process_navigate_to_error(error, self.mode)
             self.go_to_page(error.page)
 
     def zoom_in(self):
@@ -423,9 +434,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             event.accept()
 
     def update_console_data(self):
-        msg = self.controller.get_first_error_msg()
+        msg = self.toc_controller.get_first_error_msg(self.mode)
         self.console.set_first_error_data(
-                self.controller.get_total_error_count(), msg)
+                self.toc_controller.get_total_error_count(self.mode), msg)
 
     # only to be called from child
     def call_wheelEvent(self, event):

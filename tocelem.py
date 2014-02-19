@@ -33,12 +33,11 @@ class QTocElem(QtGui.QStandardItem):
         # set widget design according to it's state
         self.setIcon(QtGui.QIcon(self.ICONS[self.state]))
 
-    def set_finished(self):
-        self.state = QTocElem.STATE_FINISHED
-        self.update()
-
-    def set_not_finished(self):
-        self.state = QTocElem.STATE_NOT_FINISHED
+    def set_finished(self, value):
+        if value:
+            self.state = QTocElem.STATE_FINISHED
+        else:
+            self.state = QTocElem.STATE_NOT_FINISHED
         self.update()
 
     def set_not_started(self):

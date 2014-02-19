@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
-from markertocelem import QZone, QMarkerTocElem
-from stylesheets import GENERAL_STYLESHEET
 
 
 # this controller deals with proper selection handling (highlight, list\tree
 # view navigation) depending on state
 class SelectionViewController(object):
-    def __init__(self, views_dict, controller):
+    def __init__(self, views_dict, controller, toc_controller):
         self.views_dict = views_dict
         self.controller = controller
+        self.toc_controller = toc_controller
         self.mark_to_navigate = None
 
     def get_view_widget(self, mode):
@@ -26,7 +25,7 @@ class SelectionViewController(object):
         return None
 
     def get_toc_elem(self, cas_id, mode):
-        return self.controller.get_toc_elem(cas_id, mode)
+        return self.toc_controller.get_elem(cas_id, mode)
 
     def fill_with_data(self, mode):
         view = self.get_view_widget(mode)
@@ -35,10 +34,10 @@ class SelectionViewController(object):
             model.clear()
         else:
             model = QtGui.QStandardItemModel()
-        for item in self.controller.create_toc_elems(mode):
+        for item in self.toc_controller.create_toc_elems(mode):
             model.appendRow(item)
         view.setModel(model)
-        self.controller.set_current_toc_elem(None)
+        self.toc_controller.set_current_toc_elem(None)
 
     def process_selected(self, mode):
         view = self.get_view_widget(mode)
@@ -52,16 +51,16 @@ class SelectionViewController(object):
             view.collapseAll()
             view.expand(current.index())
         elif isinstance(current, QZone) and current.isSelectable():
-            self.controller.set_current_toc_elem(current)
+            self.toc_controller.set_current_toc_elem(current)
         else:
             # if current is None then None will be set
-            self.controller.set_current_toc_elem(current)
+            self.toc_controller.set_current_toc_elem(current)
         return self.mark_to_navigate
 
     def process_mode_switch(self, old_mode, new_mode):
         old_toc = self.get_selected(old_mode)
         new_view = self.get_view_widget(new_mode)
-        self.controller.set_current_toc_elem(None)
+        self.toc_controller.set_current_toc_elem(None)
         # highlight corresponding elem according to last selection in prev.tab
         if old_toc:
             toc_elem = self.get_toc_elem(old_toc.cas_id, new_mode)
@@ -76,7 +75,7 @@ class SelectionViewController(object):
         view = self.get_view_widget(mode)
         marks = self.controller.get_page_marks(pagenum, mode)
         if marks != []:
-            toc_elem = self.get_toc_elem_for_mark(marks[0], mode)
+            toc_elem = self.toc_controller.get_elem_for_mark(marks[0], mode)
             view.scrollTo(toc_elem.index())
             view.setCurrentIndex(toc_elem.index())
             self.highlight_selected_readonly(mode)
@@ -85,12 +84,12 @@ class SelectionViewController(object):
 
     def process_navigate_to_error(self, mode):
         view = self.get_view_widget(mode)
-        error = self.controller.get_first_error_mark()
+        error = self.controller.get_first_error_mark(mode)
         if error:
-            toc_elem = self.get_toc_elem_for_mark(error, mode)
+            toc_elem = self.toc_controller.get_elem_for_mark(error, mode)
             view.scrollTo(toc_elem.index())
             view.setCurrentIndex(toc_elem.index())
-            self.controller.set_current_toc_elem(toc_elem)
+            self.toc_controller.set_current_toc_elem(toc_elem)
         return error
 
     # draw nice violet selection on toc-elem with id
@@ -106,19 +105,3 @@ class SelectionViewController(object):
     def dehighlight(self, mode):
         view = self.get_view_widget(mode)
         view.setStyleSheet(GENERAL_STYLESHEET)
-
-    def get_toc_elem_for_mark(self, mark, mode):
-        # if mark is a QStart\QEndParagraph mark -> return QTocElem,
-        # else return QZone
-        if isinstance(mark, QZone):
-            return self.controller.get_zone_toc_elem(mark.cas_id, mark.zone_id)
-        else:
-            return self.controller.get_toc_elem(mark.cas_id, mode)
-
-    #def select(self, pagenum):
-        #marks = self.controller.get_page_marks(pagenum)
-
-    #def _select_toc_elem(self, toc_elem, mode):
-        #view = self.get_view_widget(mode)
-        #view.scrollTo(toc_elem.index())
-        #view.setCurrentIndex(toc_elem.index())

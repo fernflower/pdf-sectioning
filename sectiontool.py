@@ -9,6 +9,7 @@ from lxml.builder import ElementMaker
 from bookviewerwidget import BookViewerWidget
 from documentprocessor import DocumentProcessor, LoaderError
 from bookcontroller import BookController
+from toccontroller import TocController
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
 E = ElementMaker(namespace=XHTML_NAMESPACE,
@@ -133,8 +134,9 @@ def main():
     app = QtGui.QApplication(sys.argv)
     # if no filename given: construct controller without docprocessor
     dp = DocumentProcessor(filename, display_name) if filename else None
-    controller = BookController(toc, dp)
-    ui_mw = BookViewerWidget(controller)
+    toc_controller = TocController(toc)
+    controller = BookController(toc_controller, dp)
+    ui_mw = BookViewerWidget(controller, toc_controller)
     ui_mw.show()
     if not dp:
         ui_mw.open_file()

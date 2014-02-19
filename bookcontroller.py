@@ -27,27 +27,21 @@ class BookController(object):
     VIEWPORT_DELTA = 5
     # auto
 
-    def __init__(self, cms_course_toc, doc_processor=None):
+    def __init__(self, toc_controller, doc_processor=None):
         self.dp = doc_processor
-        self.course_toc = cms_course_toc
+        self.toc_controller = toc_controller
         # marks per paragraph.
         # { paragraph_id: { marks: (start, end) }, zones: [] }
         self.paragraph_marks = {}
         # first page has number 1.
         # Paragraph per page. {pagenum : {marks: [], zones: []}
         self.paragraphs = {}
-        # a list of QTocElems as they appear in listView
-        self.toc_elems = []
-        # a list of QMarkerTocElems (elem+objectlist) as they appear in treeView
-        self.marker_toc_elems = []
         # dict of interactive objects per lesson: {paragraph_id: [objects]}
         self.objects = {}
         # a list of all rulers present
         self.rulers = []
         # zoom scale
         self.scale = 1.0
-        # QTocElem currently selected
-        self.current_toc_elem = None
         # adding start\end or zones
         self.operational_mode = self.MODE_SECTIONS
         # add mark mode (adding paragraph marks or rulers)
@@ -57,8 +51,8 @@ class BookController(object):
 
     ### properties section
     @property
-    def is_toc_selected(self):
-        return self.current_toc_elem is not None
+    def current_toc_elem(self):
+        return self.toc_controller.current_toc_elem
 
     # returns current page number + 1, as poppler ordering starts from 0, but
     # our first page has number 1
@@ -92,10 +86,6 @@ class BookController(object):
 
     def set_normal_marker_mode(self):
         self.operational_mode = self.MODE_MARKER
-
-    def set_current_toc_elem(self, elem):
-        self.current_toc_elem = elem
-        print self.current_toc_elem
 
     ### predicates section
 
@@ -200,25 +190,6 @@ class BookController(object):
     def get_current_page_marks(self):
         return self.get_page_marks(self.pagenum, self.operational_mode)
 
-    # finds toc elem ordernum by cas_id and returns corresponding QTocElem
-    def get_toc_elem(self, cas_id, mode):
-        if mode == self.MODE_SECTIONS:
-            return next((elem for (i, elem) in enumerate(self.toc_elems) \
-                        if elem.cas_id == cas_id), None)
-        else:
-            return next((elem for elem in self.marker_toc_elems \
-                        if elem.cas_id == cas_id), None)
-
-    # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
-    def get_marker_toc_elem(self, cas_id):
-        return next((elem for elem in self.marker_toc_elems \
-                    if elem.cas_id == cas_id), None)
-
-    # finds zone in given lesson (cas_id) with given zone_id
-    def get_zone_toc_elem(self, cas_id, zone_id):
-        toc_elem = self.get_marker_toc_elem(cas_id)
-        if toc_elem:
-            return toc_elem.get_zone(zone_id)
     # returns mark following given mark for toc elem with given cas-id. Used in
     # bookviewer in order to implement human-friendly navigation to start\end
     # marks when clicked on toc elem
@@ -271,20 +242,9 @@ class BookController(object):
                       self.MAX_SCALE * 2,
                       int(self.ZOOM_DELTA * 2)) ]
 
-    def get_first_error_mark(self):
-        error_elem =  next((e for e in self.toc_elems if e.is_error()),
-                           None)
-        if not error_elem:
-            return None
+    def get_first_error_mark(self, mode):
+        error_elem = self.toc_controller.get_first_error_elem(mode)
         return self.get_next_paragraph_mark(error_elem)
-
-    def get_total_error_count(self):
-        return len(filter(lambda e:e.is_error(), self.toc_elems))
-
-    def get_first_error_msg(self):
-        error_elem =  next((e for e in self.toc_elems if e.is_error()),
-                           None)
-        return u"" if not error_elem else error_elem.get_message()
 
     def get_available_marks(self, cas_id):
         both = ["start", "end"]
@@ -307,8 +267,7 @@ class BookController(object):
         # TODO check that file is truly a pdf file
         self._clear_paragraph_data()
         # deselect all in toc list
-        for elem in self.toc_elems:
-            elem.set_not_started()
+        self.toc_controller.set_default_style()
         try:
             self.dp = DocumentProcessor(filename)
             return True
@@ -338,9 +297,7 @@ class BookController(object):
                 mark.adjust(self.scale)
                 # mark loaded paragraphs gray
                 # TODO think how to eliminate calling this func twice
-                elem = self.get_toc_elem(cas_id, self.operational_mode)
-                if elem:
-                    elem.set_finished()
+                self.toc_controller.set_finished_state(True, cas_id)
                 if mark.page != self.pagenum:
                     mark.hide()
                 try:
@@ -401,7 +358,8 @@ class BookController(object):
             return
         self.any_unsaved_changes = False
         # if not all paragraphs have been marked -> add unfinished_ to filename
-        finished = len(pdf_paragraphs) == len(self.toc_elems)
+        finished = len(pdf_paragraphs) == \
+            len(self.toc_controller.current_toc_elems(self.operational_mode))
         return self.dp.save_all(dirname, pdf_paragraphs, finished=finished)
 
     # add paragraph mark to paragraph_marks (without duplicates)
@@ -454,7 +412,7 @@ class BookController(object):
         # auto place ALL autozones in ALL paragraphs that have start\end marks
         print "autozones clicked"
         for cas_id in self.paragraph_marks.keys():
-            autozones = self._get_autoplaced_zones(cas_id)
+            autozones = self.toc_controller.get_autoplaced_zones(cas_id)
             (start, end) = self.paragraph_marks[cas_id]["marks"]
             for az in autozones:
                 # no autoplacement if zone already placed
@@ -538,14 +496,10 @@ class BookController(object):
                     start = mark if isinstance(mark, QStartParagraph) \
                                  else other_mark
                     end = other_mark if start == mark else mark
-                    toc_elem = self.get_toc_elem(mark.cas_id,
-                                                 self.operational_mode)
-                    if self.verify_start_end(start, end):
-                        toc_elem.set_finished()
-                        self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(True)
-                    else:
-                        toc_elem.set_mixed_up_marks()
-                        self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
+                    toc_elem = self.toc_controller.get_elem(mark.cas_id,
+                                                            self.operational_mode)
+                    is_ok = self.verify_start_end(start, end)
+                    self.toc_controller.set_finished_state(is_ok)
             return
         # else move as usual
         if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
@@ -579,22 +533,20 @@ class BookController(object):
     # delete mark from a tuple. if all marks have been deleted, remove that key
     # from paragraps_marks
     def delete_mark(self, mark):
-        toc_elem = self.get_toc_elem(mark.cas_id, self.operational_mode)
+        toc_elem = self.toc_controller.get_elem(mark.cas_id,
+                                                self.operational_mode)
         if mark.cas_id in self.paragraph_marks.keys():
             (start, end) = self.paragraph_marks[mark.cas_id]["marks"]
             if start == mark:
                 self.paragraph_marks[mark.cas_id]["marks"] = (None, end)
             elif end == mark:
                 self.paragraph_marks[mark.cas_id]["marks"] = (start, None)
-            toc_elem.set_not_finished()
-            self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
+            self.toc_controller.set_finished_state(False)
         if self.paragraph_marks[mark.cas_id]["marks"] == (None, None):
             del self.paragraph_marks[mark.cas_id]
-            toc_elem.set_not_started()
-            self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
+            self.toc_controller.set_default_state()
 
     def delete_zone(self, zone):
-        toc_elem = self.get_toc_elem(zone.cas_id, self.operational_mode)
         if zone.cas_id in self.paragraph_marks.keys():
             self.paragraph_marks[zone.cas_id]["zones"].remove(zone)
 
@@ -603,7 +555,8 @@ class BookController(object):
 
     # add mark to a correct place (start comes first, end - second)
     def add_mark(self, mark):
-        toc_elem = self.get_toc_elem(mark.cas_id, self.operational_mode)
+        toc_elem = self.toc_controller.get_elem(mark.cas_id,
+                                                self.operational_mode)
         try:
             (start, end) = self.paragraph_marks[mark.cas_id]["marks"]
             if start and end:
@@ -616,21 +569,15 @@ class BookController(object):
             self.paragraph_marks[mark.cas_id]["marks"] = (start, end)
             # set correct states
             if not end or not start:
-                toc_elem.set_not_finished()
-                self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
+                self.toc_controller.set_finished_state(False)
             else:
                 # check that end and start mark come in correct order
-                if self.verify_start_end(start, end):
-                    toc_elem.set_finished()
-                    self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(True)
-                else:
-                    toc_elem.set_mixed_up_marks()
-                    self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
+                is_ok = self.verify_start_end(start, end)
+                self.toc_controller.set_finished_state(is_ok)
         except KeyError:
             self._add_new_paragraph(mark.cas_id)
             self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
-            toc_elem.set_not_finished()
-            self.get_marker_toc_elem(toc_elem.cas_id).set_selectable(False)
+            self.toc_controller.set_finished_state(False)
 
     def find_at_point(self, point, among=None):
         def contains(mark, point):
@@ -657,20 +604,6 @@ class BookController(object):
             return next(
             (mark for mark in page_marks if intersects(mark, ne_rect)), None)
 
-    # returns a list of QTocElems (to fill a listView, for example)
-    # has to return a new list all the time as items are owned by a model and
-    # by calling
-    def create_toc_elems(self, mode):
-        if mode == self.MODE_SECTIONS:
-            self.toc_elems = \
-                [ QTocElem(elem["name"], elem["cas-id"]) \
-                for elem in self.course_toc ]
-            return self.toc_elems
-        else:
-            self.marker_toc_elems = \
-                [ QMarkerTocElem(elem["name"], elem["cas-id"], elem["objects"]) \
-                for elem in self.course_toc ]
-            return self.marker_toc_elems
 
     # find any selected mark at point, either a paragraph mark or a ruler
     # point (section mode) or any zone (marker mode)
@@ -723,7 +656,7 @@ class BookController(object):
 
     def _create_mark_section_mode(self, pos, mark_parent):
         mark = None
-        if self.is_normal_mode() and self.is_toc_selected:
+        if self.is_normal_mode() and self.toc_controller.is_toc_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
             key = toc_elem.cas_id
@@ -751,7 +684,7 @@ class BookController(object):
 
     def _create_mark_marker_mode(self, pos, mark_parent):
         mark = None
-        if self.is_normal_mode() and self.is_toc_selected:
+        if self.is_normal_mode() and self.toc_controller.is_toc_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
             # TODO think of making it better
@@ -791,13 +724,6 @@ class BookController(object):
                     if self.is_section_mode() \
                     else self._create_mark_marker_mode(pos, mark_parent)
         return mark
-
-    def _get_autoplaced_zones(self, cas_id):
-        # verify that everything ok with start\end
-        if self.get_toc_elem(cas_id, self.operational_mode).is_finished():
-            toc_elem = self.get_marker_toc_elem(cas_id)
-            return toc_elem.get_autozones_as_dict()
-        return []
 
     # here data is received from bookviewer as dict
     # { page: { marks: [], zones: [] }}
