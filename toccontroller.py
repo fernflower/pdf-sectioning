@@ -4,6 +4,7 @@ from PyQt4 import QtGui, QtCore
 from bookcontroller import BookController
 from tocelem import QTocElem
 from markertocelem import QMarkerTocElem, QZone
+from paragraphmark import QParagraphMark, QZoneMark
 from stylesheets import GENERAL_STYLESHEET
 
 
@@ -128,9 +129,9 @@ class TocController(object):
     def get_elem_for_mark(self, mark, mode):
         # if mark is a QStart\QEndParagraph mark -> return QTocElem,
         # else return QZone
-        if isinstance(mark, QZone):
+        if isinstance(mark, QZoneMark):
             return self.get_zone_toc_elem(mark.cas_id, mark.zone_id)
-        else:
+        elif isinstance(mark, QParagraphMark):
             return self.get_elem(mark.cas_id, mode)
 
     def get_total_error_count(self, mode):
@@ -213,6 +214,14 @@ class TocController(object):
             toc_elem = self.get_elem(old_toc.cas_id, new_mode)
             new_view.setCurrentIndex(toc_elem.index())
             self.process_selected(new_mode)
+
+    def select_toc_for_mark(self, mark, mode):
+        # rulers can't be mapped to toc-elems
+        if isinstance(mark, QParagraphMark):
+            view = self.get_view_widget(mode)
+            toc = self.get_elem_for_mark(mark, mode)
+            view.setCurrentIndex(toc.index())
+            self.current_toc_elem = toc
 
     # now highlight first met marks' toc-elem
     # TODO NO DAMNED PARAGRAPHS HIGHLIGHTING WITHOUT THOROUGH THINKING

@@ -17,8 +17,9 @@ class QImageLabel(QtGui.QLabel):
                         QtCore.Qt.Key_Left: QtCore.QPoint(-2, 0),
                         QtCore.Qt.Key_Right: QtCore.QPoint(2, 0) }
 
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller, toc_controller):
         self.controller = controller
+        self.toc_controller = toc_controller
         # keep it here on order to pass some keyPressEvents to parent
         self.parent = parent
         self.last_selected = None
@@ -81,10 +82,14 @@ class QImageLabel(QtGui.QLabel):
                 if self.last_selected != selected:
                     selected.toggle_selected()
                     self.controller.deselect_all([selected])
+                    self.toc_controller.\
+                        select_toc_for_mark(selected,
+                                            self.controller.operational_mode)
             else:
                 # for group selection second click removes object from group
                 # selection
                 selected.toggle_selected()
+                # select corr. toc_elem in a list
             self.last_selected = selected
 
         modifiers = QtGui.QApplication.keyboardModifiers()

@@ -134,7 +134,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def init_widgets(self):
         self.showMaximized()
-        self.imageLabel = QImageLabel(self, self.controller)
+        self.imageLabel = QImageLabel(self, self.controller,
+                                      self.toc_controller)
         self.imageLabel.setScaledContents(True)
         self.scrollArea.setWidget(self.imageLabel)
         self.scrollArea.setGeometry(self.scrollArea.x(),
