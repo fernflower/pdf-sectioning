@@ -21,14 +21,14 @@ class TocController(object):
         self.toc_elems = []
         # course toc elems that appear in markup mode (QMarkerTocElem's list)
         self.markup_toc_elems = []
-        # currently selected toc_elem is stored here (regardless of mode)
+        # currently selected element (QTocElem or QZone) is stored here
         self.current_toc_elem = None
         # view for two modes
         self.sections_view = None
         self.markup_view = None
 
     @property
-    def is_toc_selected(self):
+    def is_anything_selected(self):
         return self.current_toc_elem is not None
 
     def is_zone(self, toc_elem):
@@ -36,6 +36,13 @@ class TocController(object):
 
     def is_contents(self, toc_elem):
         return isinstance(toc_elem, QTocElem)
+
+    @property
+    def toc_elem(self):
+        if self.is_toc_selected:
+            return self.current_toc_elem
+        else:
+            return self._get_markup_elem(self.current_toc_elem.cas_id)
 
     def set_views(self, sections_view, markup_view):
         self.sections_view = sections_view
@@ -49,12 +56,22 @@ class TocController(object):
 
     # ready means that this toc can be accessed by user (toc_elem with this id
     # is in FINISHED state and markup elem can be selected)
-    def set_finished_state(self, value, cas_id=None):
+    def set_finished_state(self, both_ends, cas_id, mixed_up=False,
+                           brackets_err=False):
         cas_id = self.current_toc_elem.cas_id \
             if self.current_toc_elem else cas_id
         if cas_id:
-            self._get_sections_elem(cas_id).set_finished(value)
-            self._get_markup_elem(cas_id).set_finished(value)
+            value = not mixed_up and not brackets_err and both_ends
+            if mixed_up:
+                self._get_sections_elem(cas_id).set_mixed_up_marks()
+            elif brackets_err:
+                self._get_sections_elem(cas_id).set_brackets_error()
+            else:
+                self._get_sections_elem(cas_id).set_finished(value)
+            if value:
+                # markup elems can be selected ONLY if appropriate start\end
+                # have been set
+                self._get_markup_elem(cas_id)._set_selectable(True)
 
     def set_default_state(self, cas_id=None):
         cas_id = self.current_toc_elem.cas_id \
@@ -62,6 +79,7 @@ class TocController(object):
         if cas_id:
             self._get_sections_elem(cas_id).set_not_started()
             self._get_markup_elem(cas_id).set_not_started()
+        self.current_toc_elem = None
 
     def set_default_style(self):
         for e in self.toc_elems:
@@ -96,7 +114,7 @@ class TocController(object):
 
     # finds zone in given lesson (cas_id) with given zone_id
     def get_zone_toc_elem(self, cas_id, zone_id):
-        toc_elem = self.get_marker_toc_elem(cas_id)
+        toc_elem = self._get_markup_elem(cas_id)
         if toc_elem:
             return toc_elem.get_zone(zone_id)
 
@@ -167,6 +185,24 @@ class TocController(object):
             view.expand(current.index())
         elif isinstance(current, QZone) and current.isSelectable():
             self.current_toc_elem = current
+        elif isinstance(current, QTocElem):
+            self.current_toc_elem = current
+
+    def process_zone_added(self, zone):
+        zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
+        zone_elem.set_finished(True)
+        # if all zones have been added, mark TocElem as finished as well
+        toc_elem = self._get_markup_elem(zone.cas_id)
+        toc_elem.set_finished(toc_elem.all_zones_placed)
+        self.current_toc_elem = toc_elem
+
+    def process_zone_deleted(self, zone):
+        zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
+        zone_elem.set_finished(False)
+        # mark toc_elem as unfinished or not started
+        toc_elem = self._get_markup_elem(zone.cas_id)
+        # TODO figure out not started and erroneous states
+        toc_elem.set_finished(False)
 
     def process_mode_switch(self, old_mode, new_mode):
         old_toc = self.get_selected(old_mode)
@@ -184,13 +220,13 @@ class TocController(object):
     # first search among zone-marks, then among start/end
     def process_go_to_page(self, mark, mode):
         view = self.get_view_widget(mode)
-        if mark:
-            toc_elem = self.get_elem_for_mark(mark, mode)
-            view.scrollTo(toc_elem.index())
-            view.setCurrentIndex(toc_elem.index())
-            self.highlight_selected_readonly(mode)
-        else:
-            self.dehighlight(mode)
+        #if mark:
+            #toc_elem = self.get_elem_for_mark(mark, mode)
+            #view.scrollTo(toc_elem.index())
+            #view.setCurrentIndex(toc_elem.index())
+            #self.highlight_selected_readonly(mode)
+        #else:
+            #self.dehighlight(mode)
 
     def process_navigate_to_error(self, error_mark, mode):
         view = self.get_view_widget(mode)

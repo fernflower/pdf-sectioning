@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
-from tocelem import QTocElem
+from tocelem import QStatefulElem, QTocElem
 
 
 class QObjectElem(QtGui.QStandardItem):
@@ -37,13 +37,13 @@ class QObjectElem(QtGui.QStandardItem):
         return self.block_id
 
 # creates an item with objects as it's children
-class QZone(QtGui.QStandardItem):
+class QZone(QStatefulElem):
     AUTO_DIC = "dic"
     AUTO_TRA = "tra"
     AUTO_CON = "con"
 
     def __init__(self, parent, type, objects, name=""):
-        super(QZone, self).__init__()
+        super(QZone, self).__init__(type)
         self.parent = parent
         self.type = type
         self.name = name
@@ -137,6 +137,10 @@ class QMarkerTocElem(QTocElem):
     def autozones(self):
         return [z for z in self.zones if z.is_autoplaced]
 
+    @property
+    def all_zones_placed(self):
+        return all(map(lambda z: z.is_finished(), self.zones))
+
     def _process_zone(self, zone):
         if zone in self.auto_groups.keys():
             new_zone = QZone(self, zone, self.auto_groups[zone])
@@ -169,7 +173,7 @@ class QMarkerTocElem(QTocElem):
             self.state = self.STATE_FINISHED
         else:
             self.state = self.STATE_NOT_STARTED
-        self._set_selectable(value)
+        self.update()
 
     def _set_selectable(self, value):
         self.setSelectable(value)

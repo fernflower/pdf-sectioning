@@ -256,6 +256,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # always set normal mode for marks' creation
         self.set_normal_state()
         current = self.toc_controller.get_selected(self.mode)
+        print current
         if current:
             self.mark_to_navigate = self.controller.get_next_paragraph_mark(
                 self.mode, self.mark_to_navigate)
@@ -272,7 +273,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.toolbarpart.autozone_button.setEnabled(True)
         old_tab = (new_tab + 1) % 2
         self.toc_controller.process_mode_switch(self.TAB_MODE[old_tab],
-                                                      self.TAB_MODE[new_tab])
+                                                self.TAB_MODE[new_tab])
 
     # mind that every time currentIndex is changed on_zoom_value_changed is
     # called, so to eliminate double work have to check that delta is not 0

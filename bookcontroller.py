@@ -35,6 +35,8 @@ class BookController(object):
         self.paragraph_marks = {}
         # first page has number 1.
         # Paragraph per page. {pagenum : {marks: [], zones: []}
+        # IMPORTANT! Mind that this dict doesn't get updated on move()
+        # operations -> need to sort elems by y() if want correct order
         self.paragraphs = {}
         # dict of interactive objects per lesson: {paragraph_id: [objects]}
         self.objects = {}
@@ -227,6 +229,7 @@ class BookController(object):
             if self.toc_controller.is_contents(toc_elem):
                 return self._get_next_start_end(toc_elem.cas_id, not_this_one)
             elif self.toc_controller.is_zone(toc_elem):
+                print "ffuuu"
                 return self._get_zone(toc_elem.cas_id, toc_elem.zone_id)
 
     # returns zoom's order num in list to set up in combo box
@@ -385,6 +388,8 @@ class BookController(object):
         # situation with paragraph_marks is different: zones can't be placed
         # unless paragraph has start and end mark -> no check here
         self.paragraph_marks[zone.cas_id]["zones"].append(zone)
+        # mark corr. elem as placed
+        self.toc_controller.process_zone_added(zone)
 
     # if step_by_step is True then scale will be either increased or decreased
     # by 1. Otherwise - scale will be taken from delta: delta + old if delta in [MIN,
@@ -503,7 +508,11 @@ class BookController(object):
                     toc_elem = self.toc_controller.get_elem(mark.cas_id,
                                                             self.operational_mode)
                     is_ok = self.verify_start_end(start, end)
-                    self.toc_controller.set_finished_state(is_ok)
+                    (ok_braces, error) = self.verify_brackets()
+                    self.toc_controller.set_finished_state(True,
+                                                           mark.cas_id,
+                                                           not is_ok,
+                                                           not ok_braces)
             return
         # else move as usual
         if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
@@ -545,7 +554,7 @@ class BookController(object):
                 self.paragraph_marks[mark.cas_id]["marks"] = (None, end)
             elif end == mark:
                 self.paragraph_marks[mark.cas_id]["marks"] = (start, None)
-            self.toc_controller.set_finished_state(False)
+            self.toc_controller.set_finished_state(False, mark.cas_id)
         if self.paragraph_marks[mark.cas_id]["marks"] == (None, None):
             del self.paragraph_marks[mark.cas_id]
             self.toc_controller.set_default_state()
@@ -553,6 +562,7 @@ class BookController(object):
     def delete_zone(self, zone):
         if zone.cas_id in self.paragraph_marks.keys():
             self.paragraph_marks[zone.cas_id]["zones"].remove(zone)
+            self.toc_controller.process_zone_deleted(zone)
 
     def delete_ruler(self, ruler):
         self.rulers.remove(ruler)
@@ -561,6 +571,7 @@ class BookController(object):
     def add_mark(self, mark):
         toc_elem = self.toc_controller.get_elem(mark.cas_id,
                                                 self.operational_mode)
+        self.add_paragraph_mark(mark)
         try:
             (start, end) = self.paragraph_marks[mark.cas_id]["marks"]
             if start and end:
@@ -573,15 +584,19 @@ class BookController(object):
             self.paragraph_marks[mark.cas_id]["marks"] = (start, end)
             # set correct states
             if not end or not start:
-                self.toc_controller.set_finished_state(False)
+                self.toc_controller.set_finished_state(False, mark.cas_id)
             else:
                 # check that end and start mark come in correct order
                 is_ok = self.verify_start_end(start, end)
-                self.toc_controller.set_finished_state(is_ok)
+                (ok_braces, error) = self.verify_brackets()
+                self.toc_controller.set_finished_state(True,
+                                                       mark.cas_id,
+                                                       not is_ok,
+                                                       not ok_braces)
         except KeyError:
             self._add_new_paragraph(mark.cas_id)
             self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
-            self.toc_controller.set_finished_state(False)
+            self.toc_controller.set_finished_state(False, mark.cas_id)
 
     def find_at_point(self, point, among=None):
         def contains(mark, point):
@@ -637,6 +652,30 @@ class BookController(object):
             return False
         return True
 
+    # check that no paragraph begins in between other paragraph's start and end
+    # the solution is similar to (({}()))()) brackets validation problem so
+    # called the same
+    # returns (True, None) and (False, error_mark)
+    def verify_brackets(self):
+        stack = []
+        for pagenum in sorted(self.paragraphs.keys()):
+            for m in sorted(self.paragraphs[pagenum]["marks"],
+                            key=lambda m:m.y()):
+                if isinstance(m, QStartParagraph):
+                    stack.append(m.cas_id)
+                    continue
+                elif isinstance(m, QEndParagraph):
+                    try:
+                        if stack[-1] != m.cas_id:
+                            return (False, m)
+                        else:
+                            stack.pop()
+                    except IndexError:
+                        return (False, m)
+        # as braces check can be done when all paragraphs have both marks,
+        # count will be always = 0
+        return (True, None)
+
     ### helper functions
     def _add_new_paragraph(self, cas_id):
         self.paragraph_marks[cas_id] = {"marks": None,
@@ -660,7 +699,7 @@ class BookController(object):
 
     def _create_mark_section_mode(self, pos, mark_parent):
         mark = None
-        if self.is_normal_mode() and self.toc_controller.is_toc_selected:
+        if self.is_normal_mode() and self.toc_controller.is_anything_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
             key = toc_elem.cas_id
@@ -676,19 +715,18 @@ class BookController(object):
                                        self.delete_mark,
                                        mark_type[0])
             self.add_mark(mark)
-            self.add_paragraph_mark(mark)
         elif self.is_ruler_mode():
             mark = make_ruler_mark(pos,
                                    mark_parent,
                                    "",
                                    self.delete_ruler,
-                                   self.mode)
+                                   self.mark_mode)
             self.rulers.append(mark)
         return mark
 
     def _create_mark_marker_mode(self, pos, mark_parent):
         mark = None
-        if self.is_normal_mode() and self.toc_controller.is_toc_selected:
+        if self.is_normal_mode() and self.toc_controller.is_anything_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
             # TODO think of making it better
@@ -707,7 +745,6 @@ class BookController(object):
                              toc_elem.number,
                              toc_elem.pdf_rubric)
             self.add_zone(zone)
-            print self.paragraphs
         elif self.is_ruler_mode():
             mark = make_ruler_mark(pos,
                                    mark_parent,
@@ -748,4 +785,3 @@ class BookController(object):
             for z in zones:
                 map(lambda z:
                     self.paragraph_marks[z.cas_id]["zones"].append(z), zones)
-        print self.paragraph_marks
