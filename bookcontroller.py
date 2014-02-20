@@ -212,19 +212,22 @@ class BookController(object):
         except KeyError:
             return None
 
-    def get_next_paragraph_mark(self, toc_elem, mark=None):
-        if self.operational_mode == self.MODE_SECTIONS:
-            return self._get_next_start_end(toc_elem.cas_id, mark)
-        elif self.operational_mode == self.MODE_MARKER:
-            try:
-                # if clicked on marker toc -> navigate to start\end
-                if isinstance(toc_elem, QMarkerTocElem):
-                    return self._get_next_start_end(toc_elem.cas_id, mark)
-                # navigate exactly to object clicked_on
-                elif isinstance(toc_elem, QZone):
-                    return self._get_zone(toc_elem.cas_id, toc_elem.zone_id)
-            except KeyError:
-                return None
+    # return first mark corr. to selected toc not equal to mark
+    def get_next_paragraph_mark(self, mode, mark=None):
+        toc_elem = self.toc_controller.get_selected(mode)
+        if not toc_elem:
+            return None
+        return self.get_mark_for_toc_elem(mode, toc_elem, mark)
+
+    # A vital method for toc -> mark retrieval
+    def get_mark_for_toc_elem(self, mode, toc_elem, not_this_one=None):
+        if mode == self.MODE_SECTIONS:
+            return self._get_next_start_end(toc_elem.cas_id, not_this_one)
+        else:
+            if self.toc_controller.is_contents(toc_elem):
+                return self._get_next_start_end(toc_elem.cas_id, not_this_one)
+            elif self.toc_controller.is_zone(toc_elem):
+                return self._get_zone(toc_elem.cas_id, toc_elem.zone_id)
 
     # returns zoom's order num in list to set up in combo box
     def get_current_zoom_index(self):
@@ -243,8 +246,8 @@ class BookController(object):
                       int(self.ZOOM_DELTA * 2)) ]
 
     def get_first_error_mark(self, mode):
-        error_elem = self.toc_controller.get_first_error_elem(mode)
-        return self.get_next_paragraph_mark(error_elem)
+        error_toc = self.toc_controller.get_first_error_elem(mode)
+        return self.get_mark_for_toc_elem(mode, error_toc)
 
     def get_available_marks(self, cas_id):
         both = ["start", "end"]
@@ -491,7 +494,8 @@ class BookController(object):
                 mark.move(delta)
                 # after mark is moved verify that start comes before end,
                 # otherwise set error state
-                other_mark = self.get_next_paragraph_mark(mark, mark)
+                other_mark = self.get_next_paragraph_mark(self.operational_mode,
+                                                          mark)
                 if other_mark and other_mark != mark:
                     start = mark if isinstance(mark, QStartParagraph) \
                                  else other_mark

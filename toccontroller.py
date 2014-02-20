@@ -21,7 +21,7 @@ class TocController(object):
         self.toc_elems = []
         # course toc elems that appear in markup mode (QMarkerTocElem's list)
         self.markup_toc_elems = []
-        # QTocElem or QMarkerTocElem currently selected
+        # currently selected toc_elem is stored here (regardless of mode)
         self.current_toc_elem = None
         # view for two modes
         self.sections_view = None
@@ -30,6 +30,12 @@ class TocController(object):
     @property
     def is_toc_selected(self):
         return self.current_toc_elem is not None
+
+    def is_zone(self, toc_elem):
+        return isinstance(toc_elem, QZone)
+
+    def is_contents(self, toc_elem):
+        return isinstance(toc_elem, QTocElem)
 
     def set_views(self, sections_view, markup_view):
         self.sections_view = sections_view
@@ -41,10 +47,6 @@ class TocController(object):
         else:
             return self.markup_toc_elems
 
-    def set_current_toc_elem(self, elem):
-        self.current_toc_elem = elem
-        print self.current_toc_elem
-
     # ready means that this toc can be accessed by user (toc_elem with this id
     # is in FINISHED state and markup elem can be selected)
     def set_finished_state(self, value, cas_id=None):
@@ -52,20 +54,20 @@ class TocController(object):
             if self.current_toc_elem else cas_id
         if cas_id:
             self._get_sections_elem(cas_id).set_finished(value)
-            self._get_markup_elem(cas_id).set_selectable(value)
+            self._get_markup_elem(cas_id).set_finished(value)
 
     def set_default_state(self, cas_id=None):
         cas_id = self.current_toc_elem.cas_id \
             if self.current_toc_elem else cas_id
         if cas_id:
             self._get_sections_elem(cas_id).set_not_started()
-            self._get_markup_elem(cas_id).set_selectable(False)
+            self._get_markup_elem(cas_id).set_not_started()
 
     def set_default_style(self):
         for e in self.toc_elems:
             e.set_not_started()
         for e in self.markup_toc_elems:
-            e.set_selectable(False)
+            e.set_not_started(False)
 
     # returns a list of QTocElems (to fill a listView, for example)
     # has to return a new list all the time as items are owned by a model and
@@ -138,7 +140,9 @@ class TocController(object):
     def get_selected(self, mode):
         idx = self.get_view_widget(mode).selectedIndexes()
         if len(idx) > 0:
-            return self.get_view_widget(mode).model().itemFromIndex(idx[0])
+            self.current_toc_elem = \
+                self.get_view_widget(mode).model().itemFromIndex(idx[0])
+            return self.current_toc_elem
         return None
 
     def fill_with_data(self, mode):
@@ -162,9 +166,6 @@ class TocController(object):
             view.collapseAll()
             view.expand(current.index())
         elif isinstance(current, QZone) and current.isSelectable():
-            self.current_toc_elem = current
-        else:
-            # if current is None then None will be set
             self.current_toc_elem = current
 
     def process_mode_switch(self, old_mode, new_mode):

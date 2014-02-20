@@ -92,15 +92,13 @@ class QZone(QtGui.QStandardItem):
             return self.objects[0].page
 
 
-class QMarkerTocElem(QtGui.QStandardItem):
+class QMarkerTocElem(QTocElem):
     # TODO perhaps make dependant on pic's height
     AUTOZONE_HEIGHT = 30
 
     # objects = {oid, block-id, rubric}
     def __init__(self, name, cas_id, objects):
-        super(QMarkerTocElem, self).__init__()
-        self.name = name
-        self.cas_id = cas_id
+        super(QMarkerTocElem, self).__init__(name, cas_id)
         self.setText(name)
         self.setEditable(False)
         # will be changed later as start\end marks appear
@@ -133,7 +131,7 @@ class QMarkerTocElem(QtGui.QStandardItem):
         self._process_zone(QZone.AUTO_TRA)
         self._process_zone(QZone.AUTO_CON)
         # no modifications unless filled-in!
-        self.set_selectable(False)
+        self._set_selectable(False)
 
     @property
     def autozones(self):
@@ -166,7 +164,14 @@ class QMarkerTocElem(QtGui.QStandardItem):
     def get_zone(self, zone_id):
         return next((z for z in self.zones if z.zone_id == zone_id), None)
 
-    def set_selectable(self, value):
+    def set_finished(self, value):
+        if value:
+            self.state = self.STATE_FINISHED
+        else:
+            self.state = self.STATE_NOT_STARTED
+        self._set_selectable(value)
+
+    def _set_selectable(self, value):
         self.setSelectable(value)
         for zone in self.zones:
             zone.setSelectable(value)

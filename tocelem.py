@@ -25,7 +25,7 @@ class QTocElem(QtGui.QStandardItem):
         super(QTocElem, self).__init__(name)
         self.name = name
         self.cas_id = cas_id
-        self.state = QTocElem.STATE_NOT_STARTED
+        self.state = self.STATE_NOT_STARTED
         self.setEditable(False)
         self.update()
 

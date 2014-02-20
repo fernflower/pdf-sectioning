@@ -257,8 +257,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.set_normal_state()
         current = self.toc_controller.get_selected(self.mode)
         if current:
-            self.mark_to_navigate = self.controller.\
-                get_next_paragraph_mark(current, self.mark_to_navigate)
+            self.mark_to_navigate = self.controller.get_next_paragraph_mark(
+                self.mode, self.mark_to_navigate)
             self.toc_controller.process_selected(self.mode)
         if self.mark_to_navigate:
             self.spinBox.setValue(self.mark_to_navigate.page)
