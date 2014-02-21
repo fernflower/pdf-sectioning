@@ -9,8 +9,9 @@ class QMark(QtGui.QWidget):
     SELECT_COLOUR = QtGui.QColor(0, 0, 0, 32)
     DESELECT_COLOUR = QtGui.QColor(180, 180, 180, 32)
 
-    def __init__(self, pos, parent, name, delete_func):
+    def __init__(self, pos, parent, name, delete_func, corrections=(0, 0)):
         super(QMark, self).__init__(parent)
+        self.corrections = corrections
         self.is_selected = False
         self.cursor = QtGui.QCursor(QtCore.Qt.SizeAllCursor)
         self.delete_func = delete_func
@@ -21,15 +22,29 @@ class QMark(QtGui.QWidget):
         self.name = name
         self.label = QtGui.QLabel(self.name, parent)
         self._adjust_to_mark()
-        self.mark.show()
-        self.label.show()
         self.update()
 
+    # here corrections is a tuple
+    #(l - left x-offset, that should be added to x,
+    # r - right offset, added to width)
+    def _apply_corrections(self, corrections):
+        if not corrections:
+            return
+        left, right = corrections
+        g = self.geometry()
+        self.set_geometry(QtCore.QRect(g.x() + left, g.y(),
+                                       g.width() + right, g.height()))
+
     def hide(self):
+        # hide marks, and restore all corrections -> marks are stored as they
+        # are, in pdf-coordinates
         self.mark.hide()
         self.label.hide()
+        (l, r) = self.corrections
+        self._apply_corrections((-l, -r))
 
     def show(self):
+        self._apply_corrections(self.corrections)
         self.mark.show()
         self.label.show()
 
@@ -112,16 +127,19 @@ class QMark(QtGui.QWidget):
         self.delete_func(self)
 
 class QParagraphMark(QMark):
-    def __init__(self, pos, parent, cas_id, name, page, delete_func, type):
+    def __init__(self, pos, parent, cas_id, name, page, delete_func, type,
+                 corrections=(0, 0)):
         super(QParagraphMark, self).__init__(QtCore.QPoint(0, pos.y()),
                                              parent,
                                              name, delete_func)
+        self.corrections = corrections
         self.cas_id = cas_id
         self.page = page
         self.ruler = None
         self.type = type
         self.label.setText("%s of paragraph %s" % (self.type, self.name))
         self._adjust_to_mark()
+        self.show()
 
     def bind_to_ruler(self, ruler):
         self.ruler = ruler
@@ -201,32 +219,38 @@ class QVerticalRuler(QRulerMark):
 
 
 class QStartParagraph(QParagraphMark):
-    def __init__(self, pos, parent, cas_id, name, page, delete_func):
+    def __init__(self, pos, parent, cas_id, name, page, delete_func,
+                 corrections=(0, 0)):
         super(QStartParagraph, self).__init__(pos,
                                               parent,
                                               cas_id,
                                               name,
                                               page,
                                               delete_func,
-                                              "start")
+                                              "start",
+                                              corrections)
 
 class QEndParagraph(QParagraphMark):
-    def __init__(self, pos, parent, cas_id, name, page, delete_func):
+    def __init__(self, pos, parent, cas_id, name, page, delete_func,
+                 corrections=(0, 0)):
         super(QEndParagraph, self).__init__(pos,
                                             parent,
                                             cas_id,
                                             name,
                                             page,
                                             delete_func,
-                                            "end")
+                                            "end",
+                                            corrections)
 
 MARKS_DICT = {"start": QStartParagraph,
               "end": QEndParagraph,
               QRulerMark.ORIENT_HORIZONTAL: QHorizontalRuler,
               QRulerMark.ORIENT_VERTICAL: QVerticalRuler}
 
-def make_paragraph_mark(pos, parent, cas_id, name, page, delete_func, type):
-    return MARKS_DICT[type](pos, parent, cas_id, name, page, delete_func)
+def make_paragraph_mark(pos, parent, cas_id, name, page, delete_func, type,
+                        corrections=(0, 0)):
+    return MARKS_DICT[type](pos, parent, cas_id, name, page, delete_func,
+                            corrections)
 
 def make_ruler_mark(pos, parent, name, delete_func, orientation):
     return MARKS_DICT[orientation](pos, parent, name, delete_func)
@@ -234,12 +258,14 @@ def make_ruler_mark(pos, parent, name, delete_func, orientation):
 
 class QZoneMark(QParagraphMark):
     ICON_HEIGHT = 40
-    ICON_WIDTH  = 30
+    ICON_WIDTH = 20
 
     def __init__(self, pos, parent, lesson_id, zone_id, page,
-                 delete_func, type, objects, number, rubric):
+                 delete_func, type, objects, number, rubric, margin,
+                 corrections=(0, 0)):
         super(QZoneMark, self).__init__(pos, parent, lesson_id, zone_id, page,
-                                        delete_func, type)
+                                        delete_func, type, corrections)
+        self.margin = margin
         self.rubric = rubric
         # just a list of dicts [ {oid, block-id, rubric} ]
         self.objects = objects
@@ -253,15 +279,16 @@ class QZoneMark(QParagraphMark):
                                 self.ICON_WIDTH,
                                 self.ICON_HEIGHT)
         self.mark = QtGui.QLabel(zone_id, parent)
-        #self.mark = QtGui.QPushButton(parent)
-        #icon = QtGui.QIcon()
-        #icon.addPixmap(QtGui.QPixmap("buttons/Choose_icons.png"))
-        #self.mark.setIcon(icon)
-        #self.mark.clicked.connect(self.on_zone_click)
-        #self.mark.setObjectName(zone_id)
         self.mark.setGeometry(geometry)
         self.mark.show()
 
-    def on_zone_click(self):
-        for obj in self.objects:
-            print obj.display_name
+    def show(self):
+        super(QZoneMark, self).show()
+        self.mark.show()
+        self.label.hide()
+
+    def paint_me(self, painter):
+        if self.is_selected:
+            painter.fillRect(self.mark.geometry(), self.SELECT_COLOUR)
+        else:
+            painter.fillRect(self.mark.geometry(), self.DESELECT_COLOUR)

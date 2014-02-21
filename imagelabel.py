@@ -11,7 +11,6 @@ tlogger = TimeLogger()
 # class. It keeps track of all paragraph marks with coordinates in dict, key is
 # cas-id
 class QImageLabel(QtGui.QLabel):
-    MARGIN_WIDTH = 50
     STYLESHEET = "QImageLabel { background-color: rgb(58, 56, 56); }"
     MOVE_KEYS_DELTA = { QtCore.Qt.Key_Up: QtCore.QPoint(0, -2),
                         QtCore.Qt.Key_Down: QtCore.QPoint(0, 2),
@@ -63,35 +62,26 @@ class QImageLabel(QtGui.QLabel):
         if img:
             if self.controller.is_markup_mode():
                 # get margins info in order to add rects to image
-                m_width = self.MARGIN_WIDTH
+                w = self.controller.MARGIN_WIDTH
+                m_width = w
                 if self.controller.has_both_margins():
-                    m_width = m_width + self.MARGIN_WIDTH
-                resulting_pmp = QtGui.QPixmap(m_width + img.width(),
-                                              img.height())
+                    m_width = m_width + w
+                resulting_pmp = QtGui.QPixmap(m_width + img.width(), img.height())
                 pixmap_painter = QtGui.QPainter(resulting_pmp)
+                pixmap_painter.setBrush(QtGui.QColor(255, 255, 255))
+                pixmap_painter.setPen(QtGui.QColor(255, 255, 255))
                 img_pmp = QtGui.QPixmap.fromImage(img)
                 if self.controller.has_left_margin():
-                    pixmap_painter.setBrush(QtGui.QColor(255, 255, 255))
-                    pixmap_painter.setPen(QtGui.QColor(255, 255, 255))
-                    pixmap_painter.drawRect(0, 0, self.MARGIN_WIDTH, img.height())
-                    pixmap_painter.drawPixmap(self.MARGIN_WIDTH, 0,
-                                              img.width(),
-                                              img.height(),
+                    pixmap_painter.drawRect(0, 0, w, img.height())
+                    pixmap_painter.drawPixmap(w, 0, img.width(), img.height(),
                                               img_pmp)
                 else:
-                    pixmap_painter.drawPixmap(0, 0, img.width(),
-                                              img.height(),
+                    pixmap_painter.drawPixmap(0, 0, img.width(), img.height(),
                                               img_pmp)
                 if self.controller.has_both_margins():
-                    pixmap_painter.drawRect(self.MARGIN_WIDTH + img.width(),
-                                            0,
-                                            self.MARGIN_WIDTH,
-                                            img.height())
+                    pixmap_painter.drawRect(w + img.width(), 0, w, img.height())
                 elif self.controller.has_right_margin():
-                    pixmap_painter.drawRect(img.width(),
-                                            0,
-                                            self.MARGIN_WIDTH,
-                                            img.height())
+                    pixmap_painter.drawRect(img.width(), 0, w, img.height())
                 pixmap_painter.end()
                 pixmap = resulting_pmp
             else:

@@ -146,6 +146,7 @@ class DocumentProcessor(object):
                             "rubric": zone.get("rubric"),
                             "number": zone.get("n"),
                             "y": zone.get("y"),
+                            "at": zone.get("at"),
                             "objects": objects }
                 zones.append(new_zone)
             out_paragraphs[cas_id] = { "marks": [start, end],
@@ -171,14 +172,12 @@ class DocumentProcessor(object):
                          "end-page": str(marks[1]["page"]),
                          "end-y": str(marks[1]["y"]) })
             for zone in zones:
-                # TODO FIXME
-                margin = "r" if zone["page"] % 2 == 1 else "l"
                 ZONE = E("ebook-zone", type="single",
                         **{ "n": str(zone["n"]),
                             "page": str(zone["page"]),
                             "y": str(zone["y"]),
                             "rubric": zone["rubric"],
-                            "at": margin})
+                            "at": zone["at"]})
                 print zone["objects"]
                 for obj in zone["objects"]:
                     ZONE.append(E("ebook-object",

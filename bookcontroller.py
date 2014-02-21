@@ -30,6 +30,9 @@ class BookController(object):
     RIGHT = "r"
     LEFT_RIGHT = "lr"
     FIRST_PAGE = LEFT
+    MARGIN_WIDTH = 50
+    # the same as in markertocelem
+    ZONE_WIDTH = 20
 
 
     def __init__(self, toc_controller, params, doc_processor=None):
@@ -58,6 +61,23 @@ class BookController(object):
         # margins and first marked page orientation stuff
         self.margins = params["margins"]
         self.first_page = params["first-page"]
+
+    # get (y-coordinate, width correction) for markup mode depending on margins
+    def _get_corrections(self, margin=None):
+        if not margin:
+            if self.has_both_margins():
+                return (0, 2 * self.MARGIN_WIDTH)
+            if self.has_left_margin() or self.has_right_margin():
+                return (0, self.MARGIN_WIDTH)
+            return (0, 0)
+        else:
+            delta = (self.MARGIN_WIDTH - self.ZONE_WIDTH) / 2
+            if margin == self.RIGHT and self.has_both_margins():
+                return (self.MARGIN_WIDTH + self.get_image().width() + delta,
+                        0)
+            if margin == self.RIGHT:
+                return (self.get_image().width() + delta, 0)
+            return (delta, 0)
 
     ### properties section
     @property
@@ -339,14 +359,24 @@ class BookController(object):
                                  type=z["type"],
                                  number=z["number"],
                                  rubric=z["rubric"],
-                                 objects=z["objects"])
+                                 objects=z["objects"],
+                                 margin=z["at"],
+                                 corrections=self._get_corrections(z["at"]))
                 if page not in self.paragraphs.keys():
                     self._add_new_page(page)
                 self.paragraphs[page]["zones"].append(zone)
                 if zone.page != self.pagenum:
                     zone.hide()
+                self.toc_controller.process_zone_added(zone)
         # fill parallel structure
         self._load_paragraph_marks()
+
+    def _get_page_margin(self, page):
+        for margin in [self.LEFT, self.RIGHT]:
+            if all(map(lambda z: z.margin==margin,
+                       self.paragraphs[page]["zones"])):
+                return margin
+        return self.LEFT_RIGHT
 
     # returns full file name (with path) to file with markup
     def save(self, dirname):
@@ -375,7 +405,8 @@ class BookController(object):
                         "page": z.page,
                         "y": y,
                         "rubric": z.rubric,
-                        "objects": z.objects
+                        "objects": z.objects,
+                        "at": z.margin
                         }
                 pdf_paragraphs[cas_id]["zones"].append(zone)
         if not self.dp:
@@ -450,6 +481,7 @@ class BookController(object):
                 elif az["rel-end"]:
                     # substract relative end from end-of-page y
                     pos = QtCore.QPoint(0, end.y() + az["rel-end"] * self.scale)
+                margin = self._guess_margin(pos)
                 zone = QZoneMark(pos,
                                  zone_parent,
                                  cas_id,
@@ -459,7 +491,9 @@ class BookController(object):
                                  az["type"],
                                  az["objects"],
                                  az["number"],
-                                 az["rubric"])
+                                 az["rubric"],
+                                 margin=margin,
+                                 corrections=self._get_corrections(self.LEFT))
                 self.add_zone(zone)
                 if zone.page != self.pagenum:
                     zone.hide()
@@ -731,7 +765,8 @@ class BookController(object):
                                        toc_elem.name,
                                        self.pagenum,
                                        self.delete_mark,
-                                       mark_type[0])
+                                       mark_type[0],
+                                       corrections=self._get_corrections())
             self.add_mark(mark)
         elif self.is_ruler_mode():
             mark = make_ruler_mark(pos,
@@ -752,6 +787,8 @@ class BookController(object):
                 return None
             if self.is_zone_placed(toc_elem.cas_id, toc_elem.zone_id):
                 return None
+            margin = self._guess_margin(pos)
+            print self._get_corrections(margin)
             zone = QZoneMark(pos,
                              mark_parent,
                              toc_elem.cas_id,
@@ -761,16 +798,26 @@ class BookController(object):
                              toc_elem.type,
                              toc_elem.objects_as_dictslist(),
                              toc_elem.number,
-                             toc_elem.pdf_rubric)
+                             toc_elem.pdf_rubric,
+                             margin=margin,
+                             corrections=self._get_corrections(margin))
             self.add_zone(zone)
         elif self.is_ruler_mode():
             mark = make_ruler_mark(pos,
                                    mark_parent,
-                                   "",
+                                   u"",
                                    self.delete_ruler,
                                    self.mode)
             self.rulers.append(mark)
         return mark
+
+    def _guess_margin(self, pos):
+        if self.has_both_margins():
+            if pos.x() <= self.get_image().width() / 2:
+                return self.LEFT
+            else:
+                return self.RIGHT
+        return self.margins
 
     # Callback for on click marl creation, either start\end or ruler in SECTION
     # mode or a zone in MARKUP
