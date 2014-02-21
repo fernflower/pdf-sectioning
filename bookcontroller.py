@@ -25,9 +25,14 @@ class BookController(object):
     ZOOM_DELTA = 0.5
     # viewport delta
     VIEWPORT_DELTA = 5
-    # auto
+    # margins
+    LEFT = "l"
+    RIGHT = "r"
+    LEFT_RIGHT = "lr"
+    FIRST_PAGE = LEFT
 
-    def __init__(self, toc_controller, doc_processor=None):
+
+    def __init__(self, toc_controller, params, doc_processor=None):
         self.dp = doc_processor
         self.toc_controller = toc_controller
         # marks per paragraph.
@@ -50,6 +55,9 @@ class BookController(object):
         self.mark_mode = self.MODE_MARK
         # only for start\end marks, not rulers
         self.any_unsaved_changes = False
+        # margins and first marked page orientation stuff
+        self.margins = params["margins"]
+        self.first_page = params["first-page"]
 
     ### properties section
     @property
@@ -143,6 +151,15 @@ class BookController(object):
                     print "low "
                     return False
             return True
+
+    def has_right_margin(self):
+        return self.margins == self.RIGHT or self.has_both_margins()
+
+    def has_left_margin(self):
+        return self.margins == self.LEFT or self.has_both_margins()
+
+    def has_both_margins(self):
+        return self.margins == self.LEFT_RIGHT
 
     def is_section_mode(self):
         return self.operational_mode == self.MODE_SECTIONS
@@ -338,7 +355,8 @@ class BookController(object):
         # have to iterate over paragraphs (not paragraph_marks) to ensure
         # correct page order
         for pagenum in sorted(self.paragraphs.keys()):
-            for m in self.paragraphs[pagenum]["marks"]:
+            for m in sorted(self.paragraphs[pagenum]["marks"],
+                            key=lambda m:m.y()):
                 para_key = m.cas_id
                 y = self.transform_to_pdf_coords(m.geometry()).y()
                 mark = {"page" : m.page,

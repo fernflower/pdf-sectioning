@@ -135,7 +135,8 @@ def main():
     # if no filename given: construct controller without docprocessor
     dp = DocumentProcessor(filename, display_name) if filename else None
     toc_controller = TocController(toc)
-    controller = BookController(toc_controller, dp)
+    # TODO provide default parameters for margins and first-page
+    controller = BookController(toc_controller, st.config_data, dp)
     ui_mw = BookViewerWidget(controller, toc_controller)
     ui_mw.show()
     if not dp:

@@ -11,6 +11,7 @@ tlogger = TimeLogger()
 # class. It keeps track of all paragraph marks with coordinates in dict, key is
 # cas-id
 class QImageLabel(QtGui.QLabel):
+    MARGIN_WIDTH = 50
     STYLESHEET = "QImageLabel { background-color: rgb(58, 56, 56); }"
     MOVE_KEYS_DELTA = { QtCore.Qt.Key_Up: QtCore.QPoint(0, -2),
                         QtCore.Qt.Key_Down: QtCore.QPoint(0, 2),
@@ -58,18 +59,53 @@ class QImageLabel(QtGui.QLabel):
     def paintEvent(self, event):
         super(QImageLabel, self).paintEvent(event)
         img = self.controller.get_image()
+        pixmap = None
+        if img:
+            if self.controller.is_markup_mode():
+                # get margins info in order to add rects to image
+                m_width = self.MARGIN_WIDTH
+                if self.controller.has_both_margins():
+                    m_width = m_width + self.MARGIN_WIDTH
+                resulting_pmp = QtGui.QPixmap(m_width + img.width(),
+                                              img.height())
+                pixmap_painter = QtGui.QPainter(resulting_pmp)
+                img_pmp = QtGui.QPixmap.fromImage(img)
+                if self.controller.has_left_margin():
+                    pixmap_painter.setBrush(QtGui.QColor(255, 255, 255))
+                    pixmap_painter.setPen(QtGui.QColor(255, 255, 255))
+                    pixmap_painter.drawRect(0, 0, self.MARGIN_WIDTH, img.height())
+                    pixmap_painter.drawPixmap(self.MARGIN_WIDTH, 0,
+                                              img.width(),
+                                              img.height(),
+                                              img_pmp)
+                else:
+                    pixmap_painter.drawPixmap(0, 0, img.width(),
+                                              img.height(),
+                                              img_pmp)
+                if self.controller.has_both_margins():
+                    pixmap_painter.drawRect(self.MARGIN_WIDTH + img.width(),
+                                            0,
+                                            self.MARGIN_WIDTH,
+                                            img.height())
+                elif self.controller.has_right_margin():
+                    pixmap_painter.drawRect(img.width(),
+                                            0,
+                                            self.MARGIN_WIDTH,
+                                            img.height())
+                pixmap_painter.end()
+                pixmap = resulting_pmp
+            else:
+                pixmap = QtGui.QPixmap.fromImage(img)
+        # update all necessary data in parent (bookviewer)
+        self.setPixmap(pixmap)
+        self.setFixedSize(pixmap.size())
         painter = QtGui.QPainter(self)
         marks_and_rulers = self.controller.get_current_page_marks() + \
                            self.controller.get_rulers()
         for mark in marks_and_rulers:
             mark.paint_me(painter)
             mark.update()
-        if img:
-            pixmap = QtGui.QPixmap.fromImage(img)
-            self.setPixmap(pixmap)
-            self.setFixedSize(pixmap.size())
-            self._set_cursor(self.mapFromGlobal(QtGui.QCursor.pos()))
-        # update all necessary data in parent (bookviewer)
+        self._set_cursor(self.mapFromGlobal(QtGui.QCursor.pos()))
         self.parent.update()
 
     def mousePressEvent(self, event):
