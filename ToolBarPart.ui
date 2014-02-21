@@ -141,20 +141,6 @@
       </property>
      </spacer>
     </item>
-    <item>
-     <widget class="QToolButton" name="onePage_button">
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QToolButton" name="twoPage_button">
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
  </widget>

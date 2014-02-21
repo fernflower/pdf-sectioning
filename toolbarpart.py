@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ToolBarPart.ui'
 #
-# Created: Fri Feb 14 17:22:00 2014
+# Created: Fri Feb 21 15:03:56 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -75,14 +75,6 @@ class Ui_ToolBarPart(object):
         self.horizontalLayout.addWidget(self.zoomComboBox)
         spacerItem4 = QtGui.QSpacerItem(58, 22, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem4)
-        self.onePage_button = QtGui.QToolButton(self.layoutWidget)
-        self.onePage_button.setCheckable(True)
-        self.onePage_button.setObjectName(_fromUtf8("onePage_button"))
-        self.horizontalLayout.addWidget(self.onePage_button)
-        self.twoPage_button = QtGui.QToolButton(self.layoutWidget)
-        self.twoPage_button.setCheckable(True)
-        self.twoPage_button.setObjectName(_fromUtf8("twoPage_button"))
-        self.horizontalLayout.addWidget(self.twoPage_button)
 
         self.retranslateUi(ToolBarPart)
         QtCore.QMetaObject.connectSlotsByName(ToolBarPart)

@@ -177,8 +177,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # make rulers' and modes buttons checkable
         self.actionSetVerticalRuler.setCheckable(True)
         self.actionSetHorizontalRuler.setCheckable(True)
-        self.toolbarpart.onePage_button.setCheckable(True)
-        self.toolbarpart.twoPage_button.setCheckable(True)
         # add all zoom values
         self.zoom_comboBox.addItems(self.controller.get_all_zoom_values())
         # TODO will be changed soon
@@ -218,8 +216,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                        hor_ruler: 'buttons/Horisontal_ruler',
                        self.toolbarpart.zoomIn_button: 'buttons/Plus',
                        self.toolbarpart.zoomOut_button: 'buttons/Minus',
-                       self.toolbarpart.onePage_button: 'buttons/Single',
-                       self.toolbarpart.twoPage_button: 'buttons/Double',
                        self.toolbarpart.changeIcons_button: \
                           'buttons/Choose_icons'}
         for (widget, style) in appearance.items():

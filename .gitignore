@@ -4,3 +4,4 @@ pages/
 *.pdf
 .ropeproject
 *.pyc
+config*
