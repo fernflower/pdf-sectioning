@@ -92,3 +92,11 @@ RULER_SELECTED_STYLESHEET = \
       opacity: 20
     }
     """
+
+LIST_ITEM_DESELECT = \
+    """
+    QObjectElem, QZone
+    {
+      color: rgb(120, 120, 120);
+    }
+    """

@@ -8,6 +8,27 @@ from paragraphmark import QParagraphMark, QZoneMark
 from stylesheets import GENERAL_STYLESHEET
 
 
+class DisabledZoneDelegate(QtGui.QStyledItemDelegate):
+    def __init__(self, toc_controller):
+        self.toc_controller = toc_controller
+        super(DisabledZoneDelegate, self).__init__()
+
+    def paint(self, painter, option, index):
+        parent_num = index.parent().row()
+        if parent_num != -1:
+            painter.save()
+            parent = index.model().itemFromIndex(index.parent())
+            if isinstance(parent, QMarkerTocElem) and \
+                parent.cas_id == self.toc_controller.current_toc_elem.cas_id:
+                zone = index.model().itemFromIndex(index)
+                if not zone.is_on_page(self.toc_controller.pagenum_func()):
+                    painter.setBrush(QtGui.QBrush(QtCore.Qt.red))
+                else:
+                    painter.setBrush(QtGui.QBrush(QtCore.Qt.blue))
+                painter.drawRect(option.rect)
+            painter.restore()
+        super(DisabledZoneDelegate, self).paint(painter, option, index)
+
 # this controller stores and operates with toc elems, and can match a given
 # mark with a corresponding tocelem depending on operational mode
 class TocController(object):
@@ -24,6 +45,7 @@ class TocController(object):
         self.markup_toc_elems = []
         # currently selected element (QTocElem or QZone) is stored here
         self.current_toc_elem = None
+        self.pagenum_func = None
         # view for two modes
         self.sections_view = None
         self.markup_view = None
@@ -45,9 +67,20 @@ class TocController(object):
         else:
             return self._get_markup_elem(self.current_toc_elem.cas_id)
 
+    @property
+    def current_page(self):
+        if not self.pagenum_func:
+            return 0
+        return self.pagenum_func()
+
     def set_views(self, sections_view, markup_view):
         self.sections_view = sections_view
         self.markup_view = markup_view
+
+    # FIXME dammit, try to avoid this. Have to pass current page somehow
+    # synchronized with BookViewer, could not think of a better way
+    def set_pagenum_func(self, func):
+        self.pagenum_func = func
 
     def current_toc_elems(self, mode):
         if mode == self.MODE_SECTIONS:
@@ -69,10 +102,14 @@ class TocController(object):
                 self._get_sections_elem(cas_id).set_brackets_error()
             else:
                 self._get_sections_elem(cas_id).set_finished(value)
+            # markup elems can be selected ONLY if appropriate start\end
+            # have been set
+            mtoc = self._get_markup_elem(cas_id)
             if value:
-                # markup elems can be selected ONLY if appropriate start\end
-                # have been set
-                self._get_markup_elem(cas_id)._set_selectable(True)
+                mtoc._set_selectable(True)
+            self.markup_view.setRowHidden(mtoc.index().row(),
+                                          mtoc.index().parent(), not value)
+
 
     def set_default_state(self, cas_id=None):
         cas_id = self.current_toc_elem.cas_id \
@@ -98,10 +135,10 @@ class TocController(object):
                 for elem in self.course_toc ]
             return self.toc_elems
         else:
-            self.marker_toc_elems = \
+            self.markup_toc_elems = \
                 [ QMarkerTocElem(elem["name"], elem["cas-id"], elem["objects"]) \
                 for elem in self.course_toc ]
-            return self.marker_toc_elems
+            return self.markup_toc_elems
 
     # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
     def _get_sections_elem(self, cas_id):
@@ -110,7 +147,7 @@ class TocController(object):
 
     # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
     def _get_markup_elem(self, cas_id):
-        return next((elem for elem in self.marker_toc_elems \
+        return next((elem for elem in self.markup_toc_elems \
                      if elem.cas_id == cas_id), None)
 
     # finds zone in given lesson (cas_id) with given zone_id
@@ -174,7 +211,14 @@ class TocController(object):
         for item in self.create_toc_elems(mode):
             model.appendRow(item)
         view.setModel(model)
+        if mode == self.MODE_MARKUP:
+            dz = DisabledZoneDelegate(self)
+            self.markup_view.setItemDelegate(dz)
         self.current_toc_elem = None
+        # hide unfinished items
+        for mtoc in self.markup_toc_elems:
+            self.markup_view.setRowHidden(mtoc.index().row(),
+                                          mtoc.index().parent(), True)
 
     def process_selected(self, mode):
         view = self.get_view_widget(mode)
@@ -184,9 +228,8 @@ class TocController(object):
             # disable other elems and open-up toc-elem list
             view.collapseAll()
             view.expand(current.index())
-        elif isinstance(current, QZone) and current.isSelectable():
-            self.current_toc_elem = current
-        elif isinstance(current, QTocElem):
+        elif isinstance(current, QZone) and current.isSelectable() or \
+            isinstance(current, QTocElem):
             self.current_toc_elem = current
 
     def process_zone_added(self, zone):
@@ -202,7 +245,6 @@ class TocController(object):
         zone_elem.set_finished(False)
         # mark toc_elem as unfinished or not started
         toc_elem = self._get_markup_elem(zone.cas_id)
-        # TODO figure out not started and erroneous states
         toc_elem.set_finished(False)
 
     def process_mode_switch(self, old_mode, new_mode):
@@ -223,12 +265,16 @@ class TocController(object):
             view.setCurrentIndex(toc.index())
             self.current_toc_elem = toc
 
+    def update(self, mode):
+        self.get_view_widget(mode).updateGeometries()
+
     # now highlight first met marks' toc-elem
     # TODO NO DAMNED PARAGRAPHS HIGHLIGHTING WITHOUT THOROUGH THINKING
     # OVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # first search among zone-marks, then among start/end
     def process_go_to_page(self, mark, mode):
         view = self.get_view_widget(mode)
+        # make only objects on this page selectable for markup
         #if mark:
             #toc_elem = self.get_elem_for_mark(mark, mode)
             #view.scrollTo(toc_elem.index())

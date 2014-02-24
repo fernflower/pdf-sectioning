@@ -266,7 +266,6 @@ class BookController(object):
             if self.toc_controller.is_contents(toc_elem):
                 return self._get_next_start_end(toc_elem.cas_id, not_this_one)
             elif self.toc_controller.is_zone(toc_elem):
-                print "ffuuu"
                 return self._get_zone(toc_elem.cas_id, toc_elem.zone_id)
 
     # returns zoom's order num in list to set up in combo box

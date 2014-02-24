@@ -22,14 +22,15 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def __init__(self, controller, toc_controller):
         super(BookViewerWidget, self).__init__()
         self.setupUi(self)
-        # after widgets initiation pass view's name to toccontroller
-        self.toc_controller = toc_controller
-        self.toc_controller.set_views(self.listView, self.treeView)
         self.controller = controller
         self.last_right_click = None
         self.last_zoom_index = 0
         self.last_open_doc_name = None
         self.pageNum = 1
+        # after widgets initiation pass view's name to toccontroller
+        self.toc_controller = toc_controller
+        self.toc_controller.set_views(self.listView, self.treeView)
+        self.toc_controller.set_pagenum_func(self.pagenum_func)
         # mark to navigate (useful in errors navigation)
         self.mark_to_navigate = None
         # in order to implement navigation on toc-elem click. Store last mark
@@ -65,6 +66,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     @property
     def zoom_comboBox(self):
         return self.toolbarpart.zoomComboBox
+
+    def pagenum_func(self):
+        return self.pageNum
 
     def generate_toolbutton_stylesheet(self, button_name):
         return  \
@@ -375,6 +379,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (self.pageNum, total_pages))
         marks = self.controller.get_page_marks(pagenum, self.mode)
+        self.toc_controller.update(self.mode)
         if marks != []:
             self.toc_controller.process_go_to_page(marks[0], self.mode)
 

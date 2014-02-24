@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
 from tocelem import QStatefulElem, QTocElem
+from stylesheets import GENERAL_STYLESHEET, LIST_ITEM_DESELECT
 
 
 class QObjectElem(QtGui.QStandardItem):
@@ -92,6 +93,9 @@ class QZone(QStatefulElem):
             return self.objects[0].page
 
 
+    def is_on_page(self, page):
+        return self.page == page
+
 class QMarkerTocElem(QTocElem):
     # TODO perhaps make dependant on pic's height
     AUTOZONE_HEIGHT = 30
@@ -179,6 +183,12 @@ class QMarkerTocElem(QTocElem):
         self.setSelectable(value)
         for zone in self.zones:
             zone.setSelectable(value)
+
+    def select_on_page(self, page):
+        map(lambda z: z.deselect(),
+            [z for z in self.zones if z.page != page])
+        map(lambda z: z.select(),
+            [z for z in self.zones if z.page == page])
 
     def get_start(self, zone):
         if zone == QZone.AUTO_DIC:

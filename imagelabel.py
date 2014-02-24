@@ -68,8 +68,8 @@ class QImageLabel(QtGui.QLabel):
                     m_width = m_width + w
                 resulting_pmp = QtGui.QPixmap(m_width + img.width(), img.height())
                 pixmap_painter = QtGui.QPainter(resulting_pmp)
-                pixmap_painter.setBrush(QtGui.QColor(255, 255, 255))
-                pixmap_painter.setPen(QtGui.QColor(255, 255, 255))
+                pixmap_painter.setBrush(QtGui.QColor(105, 105, 105))
+                pixmap_painter.setPen(QtGui.QColor(105, 105, 105))
                 img_pmp = QtGui.QPixmap.fromImage(img)
                 if self.controller.has_left_margin():
                     pixmap_painter.drawRect(0, 0, w, img.height())
