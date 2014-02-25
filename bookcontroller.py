@@ -379,6 +379,8 @@ class BookController(object):
 
     # returns full file name (with path) to file with markup
     def save(self, dirname):
+        if not self.dp:
+            return
         # normalize to get pdf-coordinates (save with scale=1.0)
         pdf_paragraphs = OrderedDict()
         # have to iterate over paragraphs (not paragraph_marks) to ensure
@@ -407,8 +409,13 @@ class BookController(object):
                         "objects": z.objects,
                         "at": z.margin }
                 pdf_paragraphs[cas_id]["zones"].append(zone)
-        if not self.dp:
-            return
+
+        # pass first page orientation
+        pdf_paragraphs["pages"] = OrderedDict()
+        for page in range(1, self.dp.totalPages):
+            pdf_paragraphs["pages"][page] = self._get_page_margin(page) \
+                if page in self.paragraphs.keys() \
+                else [self.RIGHT, self.LEFT][pagenum % 2]
         self.any_unsaved_changes = False
         # if not all paragraphs have been marked -> add unfinished_ to filename
         finished = len(pdf_paragraphs) == \
@@ -491,7 +498,7 @@ class BookController(object):
                                  az["number"],
                                  az["rubric"],
                                  margin=margin,
-                                 corrections=self._get_corrections(self.LEFT))
+                                 corrections=self._get_corrections(margin))
                 self.add_zone(zone)
                 if zone.page != self.pagenum:
                     zone.hide()

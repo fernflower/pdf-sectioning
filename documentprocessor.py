@@ -161,8 +161,10 @@ class DocumentProcessor(object):
         # add paragraphs info
         for cas_id, data in paragraphs.items():
             # make sure that no paragraphs are saved without end mark
-            marks = data["marks"]
-            zones = data["zones"]
+            marks = data.get("marks", None)
+            if not marks:
+                continue
+            zones = data.get("zones", [])
             assert len(marks) == 2, \
                 "Some paragraphs don't have end marks, can't save that way!"
             PARA = E("ebook-para", id=str(cas_id),
@@ -186,8 +188,7 @@ class DocumentProcessor(object):
             PAGES.append(PARA)
 
         for page in range(1, self.totalPages):
-            # TODO FIXME
-            margin = "r" if page % 2 == 1 else "l"
+            margin = paragraphs["pages"][page]
             def _get_page_preview_str(page):
                 return "page-" + "0"*(3-len(str(page))) + str(page) + ".png"
 
