@@ -16,9 +16,9 @@ class QObjectElem(QtGui.QStandardItem):
         self.page = int(oid_parts[1])
         self.name = name
         self.rubric = rubric
-        self.setText(oid)
         self.setEditable(False)
         self.setSelectable(False)
+        self.setText(self.display_name)
 
     # if oid's third position consists of 00, then this object can be placed
     # automatically
@@ -35,7 +35,8 @@ class QObjectElem(QtGui.QStandardItem):
 
     @property
     def display_name(self):
-        return self.block_id
+        return "%s\n(%s)" % (self.name, self.oid) \
+            if self.name is not None else self.oid
 
 # creates an item with objects as it's children
 class QZone(QStatefulElem):
@@ -112,7 +113,8 @@ class QMarkerTocElem(QTocElem):
         self.zones = []
         # now group automatically placed objects. Types can be Dic, Tra, Con
         for obj in objects:
-            child = QObjectElem(obj["oid"], obj["block-id"], obj["rubric"])
+            child = QObjectElem(obj["oid"], obj["block-id"],
+                                obj["rubric"], obj["name"])
             # 00type marks autogroup, type - groups objects by type which can't
             # be placed automatically
             def _add_obj(groups):

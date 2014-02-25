@@ -405,8 +405,7 @@ class BookController(object):
                         "y": y,
                         "rubric": z.rubric,
                         "objects": z.objects,
-                        "at": z.margin
-                        }
+                        "at": z.margin }
                 pdf_paragraphs[cas_id]["zones"].append(zone)
         if not self.dp:
             return

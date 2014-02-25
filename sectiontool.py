@@ -99,9 +99,12 @@ class SectionTool(object):
             tree = etree.fromstring(data)
             paragraphs = tree.xpath(PARAGRAPHS_XPATH,
                                     namespaces = {"is" : XHTML_NAMESPACE})
-            return [{"oid": p.get("objectid"), "block-id": p.get("id"),
-                     "rubric": p.get("erubric")}
-                    for p in paragraphs]
+            return [{"oid": p.get("objectid"),
+                     "block-id": p.get("id"),
+                     "rubric": p.get("erubric"),
+                     "name": p.xpath("is:name/text()",
+                                     namespaces = {"is" : XHTML_NAMESPACE})[0]
+                     } for p in paragraphs]
         else:
             raise SectionToolError("Could not get lesson's {} object list!".\
                                    format(lesson_id))

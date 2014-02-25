@@ -178,18 +178,19 @@ class DocumentProcessor(object):
                             "y": str(zone["y"]),
                             "rubric": zone["rubric"],
                             "at": zone["at"]})
-                print zone["objects"]
                 for obj in zone["objects"]:
                     ZONE.append(E("ebook-object",
                                   **{ "oid": obj["oid"],
                                      "block-id": obj["block-id"] }))
                 PARA.append(ZONE)
             PAGES.append(PARA)
-        def _get_page_preview_str(page):
-            return "page-" + "0"*(3-len(str(page))) + str(page) + ".png"
+
         for page in range(1, self.totalPages):
             # TODO FIXME
             margin = "r" if page % 2 == 1 else "l"
+            def _get_page_preview_str(page):
+                return "page-" + "0"*(3-len(str(page))) + str(page) + ".png"
+
             PAGE = E("ebook-page",
                      **{ "preview": _get_page_preview_str(page),
                          "n": str(page),
@@ -199,6 +200,7 @@ class DocumentProcessor(object):
                          "zone-margins": margin,
                          "fold": margin })
             PAGES.append(PAGE)
+            print page
         root = E.object(E.text(PAGES), **{"display-name": self.display_name})
         result = etree.tostring(root, pretty_print=True, encoding="utf-8")
         return result

@@ -18,8 +18,7 @@ class DisabledZoneDelegate(QtGui.QStyledItemDelegate):
         if parent_num != -1:
             painter.save()
             parent = index.model().itemFromIndex(index.parent())
-            if isinstance(parent, QMarkerTocElem) and \
-                parent.cas_id == self.toc_controller.current_toc_elem.cas_id:
+            if isinstance(parent, QMarkerTocElem):
                 zone = index.model().itemFromIndex(index)
                 painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
                 if not zone.is_on_page(self.toc_controller.pagenum_func()):
@@ -138,7 +137,8 @@ class TocController(object):
             return self.toc_elems
         else:
             self.markup_toc_elems = \
-                [ QMarkerTocElem(elem["name"], elem["cas-id"], elem["objects"]) \
+                [ QMarkerTocElem(elem["name"], elem["cas-id"],
+                                 elem["objects"])
                 for elem in self.course_toc ]
             return self.markup_toc_elems
 
