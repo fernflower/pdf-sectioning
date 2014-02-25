@@ -379,7 +379,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
                                      (self.pageNum, total_pages))
         marks = self.controller.get_page_marks(pagenum, self.mode)
-        self.toc_controller.update(self.mode)
         if marks != []:
             self.toc_controller.process_go_to_page(marks[0], self.mode)
 

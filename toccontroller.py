@@ -21,10 +21,12 @@ class DisabledZoneDelegate(QtGui.QStyledItemDelegate):
             if isinstance(parent, QMarkerTocElem) and \
                 parent.cas_id == self.toc_controller.current_toc_elem.cas_id:
                 zone = index.model().itemFromIndex(index)
+                painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
                 if not zone.is_on_page(self.toc_controller.pagenum_func()):
-                    painter.setBrush(QtGui.QBrush(QtCore.Qt.red))
+                    painter.setBrush(QtGui.QBrush(QtCore.Qt.NoBrush))
                 else:
-                    painter.setBrush(QtGui.QBrush(QtCore.Qt.blue))
+                    painter.setBrush(QtGui.QBrush(QtGui.QColor(171, 205, 239)))
+                zone.emitDataChanged()
                 painter.drawRect(option.rect)
             painter.restore()
         super(DisabledZoneDelegate, self).paint(painter, option, index)
@@ -264,9 +266,6 @@ class TocController(object):
             toc = self.get_elem_for_mark(mark, mode)
             view.setCurrentIndex(toc.index())
             self.current_toc_elem = toc
-
-    def update(self, mode):
-        self.get_view_widget(mode).updateGeometries()
 
     # now highlight first met marks' toc-elem
     # TODO NO DAMNED PARAGRAPHS HIGHLIGHTING WITHOUT THOROUGH THINKING
