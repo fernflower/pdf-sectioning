@@ -35,9 +35,10 @@ class BookController(object):
     ZONE_WIDTH = 20
 
 
-    def __init__(self, toc_controller, params, doc_processor=None):
+    def __init__(self, toc_controller, params, doc_processor, display_name):
         self.dp = doc_processor
         self.toc_controller = toc_controller
+        self.display_name = display_name
         # marks per paragraph.
         # { paragraph_id: { marks: (start, end) }, zones: [] }
         self.paragraph_marks = {}
@@ -311,9 +312,10 @@ class BookController(object):
         # deselect all in toc list
         self.toc_controller.set_default_style()
         try:
-            self.dp = DocumentProcessor(filename)
+            self.dp = DocumentProcessor(filename, self.display_name)
             return True
-        except Exception:
+        except Exception as e:
+            print e.message
             # TODO eliminate catch them all
             return False
 

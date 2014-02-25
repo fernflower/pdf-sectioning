@@ -131,15 +131,15 @@ def main():
     filename, width, height, save_dir = parse_args()
     st = SectionTool("config")
     toc, display_name = st.get_cms_course_toc()
-    print display_name
 
     # show window
     app = QtGui.QApplication(sys.argv)
     # if no filename given: construct controller without docprocessor
     dp = DocumentProcessor(filename, display_name) if filename else None
     toc_controller = TocController(toc)
-    # TODO provide default parameters for margins and first-page
-    controller = BookController(toc_controller, st.config_data, dp)
+    # here display name must be passed in order to create DP later
+    controller = BookController(toc_controller, st.config_data, dp,
+                                display_name)
     ui_mw = BookViewerWidget(controller, toc_controller)
     ui_mw.show()
     if not dp:

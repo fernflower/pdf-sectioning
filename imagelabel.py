@@ -86,16 +86,16 @@ class QImageLabel(QtGui.QLabel):
                 pixmap = resulting_pmp
             else:
                 pixmap = QtGui.QPixmap.fromImage(img)
-        # update all necessary data in parent (bookviewer)
-        self.setPixmap(pixmap)
-        self.setFixedSize(pixmap.size())
-        painter = QtGui.QPainter(self)
-        marks_and_rulers = self.controller.get_current_page_marks() + \
-                           self.controller.get_rulers()
-        for mark in marks_and_rulers:
-            mark.paint_me(painter)
-            mark.update()
-        self._set_cursor(self.mapFromGlobal(QtGui.QCursor.pos()))
+            # update all necessary data in parent (bookviewer)
+            self.setPixmap(pixmap)
+            self.setFixedSize(pixmap.size())
+            painter = QtGui.QPainter(self)
+            marks_and_rulers = self.controller.get_current_page_marks() + \
+                            self.controller.get_rulers()
+            for mark in marks_and_rulers:
+                mark.paint_me(painter)
+                mark.update()
+            self._set_cursor(self.mapFromGlobal(QtGui.QCursor.pos()))
         self.parent.update()
 
     def mousePressEvent(self, event):

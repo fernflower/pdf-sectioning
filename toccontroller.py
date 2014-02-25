@@ -124,7 +124,7 @@ class TocController(object):
         for e in self.toc_elems:
             e.set_not_started()
         for e in self.markup_toc_elems:
-            e.set_not_started(False)
+            e.set_not_started()
 
     # returns a list of QTocElems (to fill a listView, for example)
     # has to return a new list all the time as items are owned by a model and
