@@ -21,7 +21,7 @@ class DocumentProcessor(object):
     def __init__(self, filename, display_name):
         self.filename = filename
         self.display_name = display_name
-        print "filename is %s" % filename
+        print u"filename is %s" % filename
         try:
             self.doc = Poppler.Document.load(filename)
         except:
@@ -216,8 +216,8 @@ class DocumentProcessor(object):
                 # tex-like section-ref
                 destination = elem.attribute("DestinationName")
                 pagenum = self.doc.linkDestination(destination).pageNumber()
-                print "%s%d. %s || %d-%d\n" % (prefix, i, elem.tagName(),
-                                             previous_page, pagenum)
+                print u"%s%d. %s || %d-%d\n" % (prefix, i, elem.tagName(),
+                                                previous_page, pagenum)
                 previous_page = pagenum
                 if fc.hasChildNodes():
                     previous_page = _process_child(fc.firstChild(),

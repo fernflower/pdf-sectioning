@@ -257,7 +257,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # always set normal mode for marks' creation
         self.set_normal_state()
         current = self.toc_controller.get_selected(self.mode)
-        print current
         if current:
             self.mark_to_navigate = self.controller.get_next_paragraph_mark(
                 self.mode, self.mark_to_navigate)

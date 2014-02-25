@@ -157,19 +157,15 @@ class BookController(object):
                     return False
             else:
                 if end.page < self.pagenum or start.page > self.pagenum:
-                    print "pages"
                     return False
                 current = filter(lambda m: m in [start, end],
                                  self.get_start_end_marks(self.pagenum))
-                print current
                 # no marks -> in between pages, True
                 if len(current) == 0:
                     return True
                 if current[0] == start and pos.y() < start.y():
-                    print "high "
                     return False
                 if current[0] == end and pos.y() > end.y():
-                    print "low "
                     return False
             return True
 
@@ -474,7 +470,6 @@ class BookController(object):
 
     def autozones(self, zone_parent):
         # auto place ALL autozones in ALL paragraphs that have start\end marks
-        print "autozones clicked"
         for cas_id in self.paragraph_marks.keys():
             autozones = self.toc_controller.get_autoplaced_zones(cas_id)
             (start, end) = self.paragraph_marks[cas_id]["marks"]
@@ -795,7 +790,6 @@ class BookController(object):
             if self.is_zone_placed(toc_elem.cas_id, toc_elem.zone_id):
                 return None
             margin = self._guess_margin(pos)
-            print self._get_corrections(margin)
             zone = QZoneMark(pos,
                              mark_parent,
                              toc_elem.cas_id,
