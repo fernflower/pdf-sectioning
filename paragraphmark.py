@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
+from zonetypes import ZONE_ICONS
 
 
 class QMark(QtGui.QWidget):
@@ -12,6 +13,7 @@ class QMark(QtGui.QWidget):
     def __init__(self, pos, parent, name, delete_func, corrections=(0, 0)):
         super(QMark, self).__init__(parent)
         self.corrections = corrections
+        self.corrected = False
         self.is_selected = False
         self.cursor = QtGui.QCursor(QtCore.Qt.SizeAllCursor)
         self.delete_func = delete_func
@@ -41,10 +43,14 @@ class QMark(QtGui.QWidget):
         self.mark.hide()
         self.label.hide()
         (l, r) = self.corrections
-        self._apply_corrections((-l, -r))
+        if self.corrected:
+            self._apply_corrections((-l, -r))
+        self.corrected = False
 
     def show(self):
-        self._apply_corrections(self.corrections)
+        if not self.corrected:
+            self._apply_corrections(self.corrections)
+            self.corrected = True
         self.mark.show()
         self.label.show()
 
@@ -127,6 +133,9 @@ class QMark(QtGui.QWidget):
         self.delete_func(self)
 
 class QParagraphMark(QMark):
+    LABELS = {"start": u"Начало",
+              "end": u"Конец"}
+
     def __init__(self, pos, parent, cas_id, name, page, delete_func, type,
                  corrections=(0, 0)):
         super(QParagraphMark, self).__init__(QtCore.QPoint(0, pos.y()),
@@ -137,7 +146,8 @@ class QParagraphMark(QMark):
         self.page = page
         self.ruler = None
         self.type = type
-        self.label.setText("%s of paragraph %s" % (self.type, self.name))
+        self.label.setText(u"%s    %s" % (self.LABELS.get(self.type, u""),
+                                          self.name))
         self._adjust_to_mark()
         self.show()
 
@@ -147,6 +157,15 @@ class QParagraphMark(QMark):
 
     def unbind_from_ruler(self):
         self.ruler = None
+
+    def _apply_corrections(self, corrections):
+        if not corrections:
+            return
+        left, right = corrections
+        g = self.geometry()
+        print corrections
+        self.set_geometry(QtCore.QRect(g.x() + left, g.y(),
+                                       g.width() + right, g.height()))
 
 
 class QRulerMark(QMark):
@@ -257,9 +276,6 @@ def make_ruler_mark(pos, parent, name, delete_func, orientation):
 
 
 class QZoneMark(QParagraphMark):
-    ICON_HEIGHT = 40
-    ICON_WIDTH = 20
-
     def __init__(self, pos, parent, lesson_id, zone_id, page,
                  delete_func, type, objects, number, rubric, margin,
                  corrections=(0, 0)):
@@ -271,14 +287,16 @@ class QZoneMark(QParagraphMark):
         self.objects = objects
         self.number = number
         self.zone_id = zone_id
+        self.icon_width = ZONE_ICONS[self.rubric].width()
+        self.icon_height = ZONE_ICONS[self.rubric].height()
         # destroy unnecessary rubberband
         mark_pos = self.mark.pos()
         self.mark.hide()
         self.mark.setParent(None)
-        geometry = QtCore.QRect(mark_pos.x(), mark_pos.y(),
-                                self.ICON_WIDTH,
-                                self.ICON_HEIGHT)
         self.mark = QtGui.QLabel(zone_id, parent)
+        self.mark.setPixmap(QtGui.QPixmap.fromImage(ZONE_ICONS[self.rubric]))
+        geometry = QtCore.QRect(mark_pos.x(), mark_pos.y(), self.icon_width,
+                                self.icon_height)
         self.mark.setGeometry(geometry)
         self.mark.show()
 

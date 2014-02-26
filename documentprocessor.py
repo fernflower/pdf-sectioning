@@ -243,11 +243,11 @@ class DocumentProcessor(object):
             png.save(name, "png")
         return filenames
 
-    def save_all(self, path_to_dir, paragraphs, finished=True):
+    def save_all(self, path_to_file, paragraphs, finished=True):
         # save native xml
-        filename = os.path.join(path_to_dir, self.result_file_name) \
-            if finished else os.path.join(path_to_dir,
-                                          'unfinished_' + self.result_file_name)
+        (path_to_dir, filename) = os.path.split(path_to_file)
+        filename = path_to_file if finished else os.path.join(
+            path_to_dir, 'unfinished_' + filename)
         fname = open(filename, 'w')
         fname.write(self.gen_native_xml(paragraphs))
         fname.close()

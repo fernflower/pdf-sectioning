@@ -268,9 +268,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if new_tab == 0:
             self.controller.set_normal_section_mode()
             self.toolbarpart.autozone_button.setEnabled(False)
+            self.actionSetVerticalRuler.setEnabled(True)
+            self.actionSetHorizontalRuler.setEnabled(True)
         else:
             self.controller.set_normal_marker_mode()
             self.toolbarpart.autozone_button.setEnabled(True)
+            self.actionSetVerticalRuler.setEnabled(False)
+            self.actionSetHorizontalRuler.setEnabled(False)
         old_tab = (new_tab + 1) % 2
         self.toc_controller.process_mode_switch(self.TAB_MODE[old_tab],
                                                 self.TAB_MODE[new_tab])
@@ -350,12 +354,14 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not self.controller.verify_mark_pairs():
             self.show_cant_save_dialog()
             return False
-        dir_name = QtGui.QFileDialog.\
-            getExistingDirectory(self,
-                                 QtCore.QString.fromUtf8(u'Сохранить разметку'))
-        if not dir_name:
+        file_name = QtGui.QFileDialog.\
+            getSaveFileName(self,
+                            QtCore.QString.fromUtf8(u'Сохранить разметку'),
+                            "nnnative.xml",
+                            "*.xml")
+        if not file_name:
             return
-        self.last_open_doc_name = self.controller.save(unicode(dir_name))
+        self.last_open_doc_name = self.controller.save(unicode(file_name))
         return True
 
     # depending on last_open_doc executes either save or save as

@@ -7,6 +7,7 @@ from paragraphmark import make_paragraph_mark, make_ruler_mark, \
     QParagraphMark, QRulerMark, QEndParagraph, QStartParagraph, QZoneMark
 from tocelem import QTocElem
 from markertocelem import QMarkerTocElem, QZone
+from zonetypes import ZONE_ICONS
 
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
@@ -64,7 +65,8 @@ class BookController(object):
         self.first_page = params["first-page"]
 
     # get (y-coordinate, width correction) for markup mode depending on margins
-    def _get_corrections(self, margin=None):
+    def _get_corrections(self, margin=None, rubric=None):
+        width = self.ZONE_WIDTH if not rubric else ZONE_ICONS[rubric].width()
         if not margin:
             if self.has_both_margins():
                 return (0, 2 * self.MARGIN_WIDTH)
@@ -72,7 +74,7 @@ class BookController(object):
                 return (0, self.MARGIN_WIDTH)
             return (0, 0)
         else:
-            delta = (self.MARGIN_WIDTH - self.ZONE_WIDTH) / 2
+            delta = (self.MARGIN_WIDTH - width) / 2
             if margin == self.RIGHT and self.has_both_margins():
                 return (self.MARGIN_WIDTH + self.get_image().width() + delta,
                         0)
@@ -99,7 +101,7 @@ class BookController(object):
 
     @property
     def selected_rulers(self):
-        return [r for r in self.rulers if r.is_selected]
+        return [r for r in self.get_rulers() if r.is_selected]
 
     @property
     def selected_marks_and_rulers(self):
@@ -114,9 +116,20 @@ class BookController(object):
 
     def set_normal_section_mode(self):
         self.operational_mode = self.MODE_SECTIONS
+        self.mark_mode = self.MODE_MARK
+        for r in self.rulers:
+            r.show()
+        # no zones here
+        self.hide_zones(self.pagenum)
 
     def set_normal_marker_mode(self):
         self.operational_mode = self.MODE_MARKER
+        self.mark_mode = self.MODE_MARK
+        # no rulers here
+        for r in self.rulers:
+            r.hide()
+        # show hidden zones
+        self.show_page_marks(self.pagenum)
 
     ### predicates section
 
@@ -196,7 +209,7 @@ class BookController(object):
 
     ### getters section
     def get_rulers(self):
-        return self.rulers
+        return self.rulers if self.is_section_mode() else []
 
     def get_total_pages(self):
         if self.dp:
@@ -333,7 +346,8 @@ class BookController(object):
                                            pos=QtCore.QPoint(0, float(m["y"])),
                                            page=page,
                                            delete_func=self.delete_mark,
-                                           type=m["type"])
+                                           type=m["type"],
+                                           corrections=self._get_corrections())
                 mark.adjust(self.scale)
                 # mark loaded paragraphs gray
                 # TODO think how to eliminate calling this func twice
@@ -358,7 +372,8 @@ class BookController(object):
                                  rubric=z["rubric"],
                                  objects=z["objects"],
                                  margin=z["at"],
-                                 corrections=self._get_corrections(z["at"]))
+                                 corrections=self._get_corrections(z["at"],
+                                                                   z["rubric"]))
                 if page not in self.paragraphs.keys():
                     self._add_new_page(page)
                 self.paragraphs[page]["zones"].append(zone)
@@ -376,7 +391,7 @@ class BookController(object):
         return self.LEFT_RIGHT
 
     # returns full file name (with path) to file with markup
-    def save(self, dirname):
+    def save(self, path_to_file):
         if not self.dp:
             return
         # normalize to get pdf-coordinates (save with scale=1.0)
@@ -418,7 +433,7 @@ class BookController(object):
         # if not all paragraphs have been marked -> add unfinished_ to filename
         finished = len(pdf_paragraphs) == \
             len(self.toc_controller.current_toc_elems(self.operational_mode))
-        return self.dp.save_all(dirname, pdf_paragraphs, finished=finished)
+        return self.dp.save_all(path_to_file, pdf_paragraphs, finished=finished)
 
     # add paragraph mark to paragraph_marks (without duplicates)
     def add_paragraph_mark(self, mark):
@@ -464,7 +479,7 @@ class BookController(object):
                 for m in markslist:
                     m.adjust(coeff)
             # now rulers
-            for r in self.rulers:
+            for r in self.get_rulers():
                 r.adjust(coeff)
         return self.scale
 
@@ -495,7 +510,8 @@ class BookController(object):
                                  az["number"],
                                  az["rubric"],
                                  margin=margin,
-                                 corrections=self._get_corrections(margin))
+                                 corrections=self._get_corrections(margin,
+                                                                   az["rubric"]))
                 self.add_zone(zone)
                 if zone.page != self.pagenum:
                     zone.hide()
@@ -508,9 +524,23 @@ class BookController(object):
                    self.selected_marks_and_rulers))
 
     def hide_page_marks(self, pagenum):
+        self.hide_zones(pagenum)
+        self.hide_marks(pagenum)
+
+    def hide_zones(self, pagenum):
         if pagenum in self.paragraphs.keys():
-            map(lambda m: m.hide(), self.paragraphs[pagenum]["marks"] + \
-                                    self.paragraphs[pagenum]["zones"])
+            map(lambda m: m.hide(), self.paragraphs[pagenum]["zones"])
+
+    def hide_marks(self, pagenum):
+        if pagenum in self.paragraphs.keys():
+            map(lambda m: m.hide(), self.paragraphs[pagenum]["marks"])
+
+    def show_page_marks(self, pagenum):
+        if pagenum in self.paragraphs.keys():
+            show_marks = self.paragraphs[pagenum]["marks"]
+            if self.is_markup_mode():
+                show_marks = show_marks + self.paragraphs[pagenum]["zones"]
+            map(lambda m: m.show(), show_marks)
 
     def transform_to_pdf_coords(self, rect):
         img = self.dp.curr_page()
@@ -521,11 +551,6 @@ class BookController(object):
                       rect.y() / self.scale,
                       rect.width() / self.scale,
                       rect.height() / self.scale)
-
-    def show_page_marks(self, pagenum):
-        if pagenum in self.paragraphs.keys():
-            map(lambda m: m.show(), self.paragraphs[pagenum]["marks"] + \
-                                    self.paragraphs[pagenum]["zones"])
 
     def go_to_page(self, pagenum):
         # hide selections on this page
@@ -543,7 +568,7 @@ class BookController(object):
                 return
             # check if there are any rulers at point
             mark = self.selected_marks[0]
-            ruler = self.find_at_point(point, self.rulers)
+            ruler = self.find_at_point(point, self.get_rulers())
             self.any_unsaved_changes = True
             if ruler:
                 mark.bind_to_ruler(ruler)
@@ -685,7 +710,7 @@ class BookController(object):
         if selected_mark:
             return selected_mark
         else:
-            return self.find_at_point(point, self.rulers)
+            return self.find_at_point(point, self.get_rulers())
 
     # returns True if all marked paragraphs have both start and end marks in
     # the correct order (start mark goes first).
@@ -801,7 +826,8 @@ class BookController(object):
                              toc_elem.number,
                              toc_elem.pdf_rubric,
                              margin=margin,
-                             corrections=self._get_corrections(margin))
+                             corrections=self._get_corrections(margin,
+                                                               toc_elem.pdf_rubric))
             self.add_zone(zone)
         elif self.is_ruler_mode():
             mark = make_ruler_mark(pos,
