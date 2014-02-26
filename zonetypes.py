@@ -8,5 +8,5 @@ ZONE_TYPES = \
      "vid", "aud", "tab", "dia", "mod", "map", "rul"]
 
 
-ZONE_ICONS = dict((zone_type, QtGui.QImage("buttons/Icons/%s.png" % zone_type))
+ZONE_ICONS = dict((zone_type, QtGui.QImage("buttons/Icons/icon_%s.png" % zone_type))
                   for zone_type in ZONE_TYPES)
