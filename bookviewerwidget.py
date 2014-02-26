@@ -357,7 +357,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         file_name = QtGui.QFileDialog.\
             getSaveFileName(self,
                             QtCore.QString.fromUtf8(u'Сохранить разметку'),
-                            "nnnative.xml",
+                            "native.xml",
                             "*.xml")
         if not file_name:
             return

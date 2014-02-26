@@ -248,9 +248,8 @@ class DocumentProcessor(object):
         (path_to_dir, filename) = os.path.split(path_to_file)
         filename = path_to_file if finished else os.path.join(
             path_to_dir, 'unfinished_' + filename)
-        fname = open(filename, 'w')
-        fname.write(self.gen_native_xml(paragraphs))
-        fname.close()
+        with open(filename, 'w') as fname:
+            fname.write(self.gen_native_xml(paragraphs))
         return filename
 
     def _processTextBlocks(self):
