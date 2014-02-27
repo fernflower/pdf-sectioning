@@ -3,7 +3,7 @@
 from PyQt4 import QtGui, QtCore
 from bookcontroller import BookController
 from tocelem import QTocElem
-from markertocelem import QMarkerTocElem, QZone
+from markertocelem import QMarkerTocElem, QZone, QAutoZoneContainer
 from paragraphmark import QParagraphMark, QZoneMark
 from stylesheets import GENERAL_STYLESHEET
 
@@ -16,10 +16,14 @@ class DisabledZoneDelegate(QtGui.QStyledItemDelegate):
     def paint(self, painter, option, index):
         parent_num = index.parent().row()
         if parent_num != -1:
-            painter.save()
             parent = index.model().itemFromIndex(index.parent())
             if isinstance(parent, QMarkerTocElem):
                 zone = index.model().itemFromIndex(index)
+                # TODO add QAutoZoneContainer support
+                if not isinstance(zone, QZone):
+                    super(DisabledZoneDelegate, self).paint(painter, option, index)
+                    return
+                painter.save()
                 painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
                 if not zone.is_on_page(self.toc_controller.pagenum_func()):
                     painter.setBrush(QtGui.QBrush(QtCore.Qt.NoBrush))
@@ -27,7 +31,7 @@ class DisabledZoneDelegate(QtGui.QStyledItemDelegate):
                     painter.setBrush(QtGui.QBrush(QtGui.QColor(171, 205, 239)))
                 zone.emitDataChanged()
                 painter.drawRect(option.rect)
-            painter.restore()
+                painter.restore()
         super(DisabledZoneDelegate, self).paint(painter, option, index)
 
 # this controller stores and operates with toc elems, and can match a given
@@ -236,7 +240,8 @@ class TocController(object):
 
     def process_zone_added(self, zone):
         zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
-        zone_elem.set_finished(True)
+        if zone_elem:
+            zone_elem.set_finished(True)
         # if all zones have been added, mark TocElem as finished as well
         toc_elem = self._get_markup_elem(zone.cas_id)
         toc_elem.set_finished(toc_elem.all_zones_placed)

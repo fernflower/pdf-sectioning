@@ -39,6 +39,7 @@ class QObjectElem(QtGui.QStandardItem):
         return "%s\n(%s)" % (self.name, self.oid) \
             if self.name is not None else self.oid
 
+
 # creates an item with objects as it's children
 class QZone(QStatefulElem):
     def __init__(self, parent, type, objects, name=""):
@@ -94,6 +95,25 @@ class QZone(QStatefulElem):
     def is_on_page(self, page):
         return self.page == page
 
+
+class QAutoZoneContainer(QStatefulElem):
+    def __init__(self, parent, zones=[], name=""):
+        super(QAutoZoneContainer, self).__init__("auto")
+        self.setText("auto")
+        self.setSelectable(False)
+        # a list of QZones (both auto and non-auto)
+        self.zones = zones
+        # TODO QMarkerTocElem, probably can be removed
+        self.cas_id = parent.cas_id
+        self.parent = parent
+
+    def add_zone(self, type, objects):
+        zone = QZone(self.parent, type, objects)
+        self.appendRow(zone)
+        self.zones.append(zone)
+        return zone
+
+
 class QMarkerTocElem(QTocElem):
     def __init__(self, name, cas_id, objects):
         super(QMarkerTocElem, self).__init__(name, cas_id)
@@ -101,11 +121,12 @@ class QMarkerTocElem(QTocElem):
         self.setEditable(False)
         # will be changed later as start\end marks appear
         self.auto_groups = {}
-        # objects NOT automatically grouped
-        self.groups = {}
+        self.auto = None
         self.zones = []
         # objects = {oid, block-id, rubric}
         # now group automatically placed objects. Types can be Dic, Tra, Con
+        # objects NOT automatically grouped
+        non_auto = {}
         for obj in objects:
             child = QObjectElem(obj["oid"], obj["block-id"],
                                 obj["rubric"], obj["name"])
@@ -120,13 +141,13 @@ class QMarkerTocElem(QTocElem):
             if child.is_autoplaced:
                 _add_obj(self.auto_groups)
             else:
-                _add_obj(self.groups)
+                _add_obj(non_auto)
 
         # now add all elems in correct order: DIC, ...  any other... , TRA, CON
         for zone in START_AUTOZONES:
             self._process_zone(zone)
-        for zone in self.groups.keys():
-            zone = QZone(self, zone, self.groups[zone])
+        for zone in non_auto.keys():
+            zone = QZone(self, zone, non_auto[zone])
             self.appendRow(zone)
             self.zones.append(zone)
         for zone in END_AUTOZONES:
@@ -136,7 +157,7 @@ class QMarkerTocElem(QTocElem):
 
     @property
     def autozones(self):
-        return [z for z in self.zones if z.is_autoplaced]
+        return self.auto.zones if self.auto else []
 
     @property
     def all_zones_placed(self):
@@ -144,8 +165,10 @@ class QMarkerTocElem(QTocElem):
 
     def _process_zone(self, zone):
         if zone in self.auto_groups.keys():
-            new_zone = QZone(self, zone, self.auto_groups[zone])
-            self.appendRow(new_zone)
+            if not self.auto:
+                self.auto = QAutoZoneContainer(self)
+                self.appendRow(self.auto)
+            new_zone = self.auto.add_zone(zone, self.auto_groups[zone])
             self.zones.append(new_zone)
 
     def get_autozones_as_dict(self):
@@ -188,14 +211,15 @@ class QMarkerTocElem(QTocElem):
             [z for z in self.zones if z.page == page])
 
     def get_start(self, zone):
-        if zone not in START_AUTOZONES:
+        start_present = [z for z in self.auto_groups.keys()
+                         if z in START_AUTOZONES]
+        if zone not in start_present:
             return None
-        return [z for z in self.auto_groups.keys()
-                if z in START_AUTOZONES].index(zone) * ZONE_ICONS[zone].height()
+        return start_present.index(zone) * ZONE_ICONS[zone].height()
 
     def get_end(self, zone):
-        if zone not in END_AUTOZONES:
-            return None
         end_present = [z for z in self.auto_groups.keys() if z in END_AUTOZONES]
+        if zone not in end_present:
+            return None
         mult = len(end_present) - end_present.index(zone)
         return -ZONE_ICONS[zone].height() * mult
