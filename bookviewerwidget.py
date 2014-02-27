@@ -202,6 +202,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.progress_bar = QtGui.QProgressBar(self.imageLabel)
         self.progress_text = QtGui.QLabel(u"", self.imageLabel)
         self.progress_bar.hide()
+        self.progress_text.hide()
         self._set_appearance()
 
     def _fill_views(self):
@@ -269,9 +270,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             return self.MARKUP_MODE
 
     def autozones(self):
-        self.progress_bar.reset()
         self.show_progress_bar(u"Автоматическое размещение зон ...")
-        self.controller.autozones(self.imageLabel, self.progress_bar)
+        self.controller.autozones(self.imageLabel)
         self.hide_progress_bar()
 
     # mind that this is called every time a view is clicked, not only on
@@ -392,8 +392,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not file_name:
             return
         self.show_progress_bar(u"Сохранение разметки ... ")
-        self.last_open_doc_name = self.controller.save(unicode(file_name),
-                                                       self.progress_bar)
+        self.last_open_doc_name = self.controller.save(unicode(file_name))
         self.hide_progress_bar()
         return True
 

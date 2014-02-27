@@ -10,7 +10,7 @@ class QMark(QtGui.QWidget):
     SELECT_COLOUR = QtGui.QColor(0, 0, 0, 32)
     DESELECT_COLOUR = QtGui.QColor(180, 180, 180, 32)
 
-    def __init__(self, pos, parent, name, delete_func, corrections=(0, 0)):
+    def __init__(self, pos, parent, name, delete_func, corrections):
         super(QMark, self).__init__(parent)
         self.corrections = corrections
         self.corrected = False
@@ -137,11 +137,10 @@ class QParagraphMark(QMark):
               "end": u"Конец"}
 
     def __init__(self, pos, parent, cas_id, name, page, delete_func, type,
-                 corrections=(0, 0)):
+                 corrections):
         super(QParagraphMark, self).__init__(QtCore.QPoint(0, pos.y()),
                                              parent,
-                                             name, delete_func)
-        self.corrections = corrections
+                                             name, delete_func, corrections)
         self.cas_id = cas_id
         self.page = page
         self.ruler = None
@@ -158,14 +157,6 @@ class QParagraphMark(QMark):
     def unbind_from_ruler(self):
         self.ruler = None
 
-    def _apply_corrections(self, corrections):
-        if not corrections:
-            return
-        left, right = corrections
-        g = self.geometry()
-        self.set_geometry(QtCore.QRect(g.x() + left, g.y(),
-                                       g.width() + right, g.height()))
-
 
 class QRulerMark(QMark):
     # TODO try to move to stylesheets
@@ -174,14 +165,17 @@ class QRulerMark(QMark):
     ORIENT_HORIZONTAL = "horizontal"
     ORIENT_VERTICAL = "vertical"
 
-    def __init__(self, pos, parent, name, delete_func, orientation):
-        super(QRulerMark, self).__init__(pos, parent, name, delete_func)
+    def __init__(self, pos, parent, name, delete_func, orientation,
+                 corrections):
+        super(QRulerMark, self).__init__(pos, parent, name, delete_func,
+                                         corrections)
         self.type = orientation
         # label is not needed, so have to overload all methods using it,
         # escpecialling those which do repainting
         self.label.hide()
 
     def show(self):
+        super(QRulerMark, self).show()
         self.mark.show()
         self.label.hide()
 
@@ -200,15 +194,17 @@ class QRulerMark(QMark):
 
 
 class QHorizontalRuler(QRulerMark):
-    def __init__(self, pos, parent, name, delete_func):
+    def __init__(self, pos, parent, name, delete_func, corrections):
         pos = QtCore.QPoint(0, pos.y())
-        super(QRulerMark, self).__init__(pos, parent, name, delete_func)
+        super(QRulerMark, self).__init__(pos, parent, name, delete_func,
+                                         corrections)
 
 
 class QVerticalRuler(QRulerMark):
-    def __init__(self, pos, parent, name, delete_func):
+    def __init__(self, pos, parent, name, delete_func, corrections):
         pos = QtCore.QPoint(pos.x(), 0)
-        super(QRulerMark, self).__init__(pos, parent, name, delete_func)
+        super(QRulerMark, self).__init__(pos, parent, name, delete_func,
+                                         corrections)
         vert_rect = QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
                                  QtCore.QSize(QMark.WIDTH,
                                             parent.height()))
@@ -270,8 +266,9 @@ def make_paragraph_mark(pos, parent, cas_id, name, page, delete_func, type,
     return MARKS_DICT[type](pos, parent, cas_id, name, page, delete_func,
                             corrections)
 
-def make_ruler_mark(pos, parent, name, delete_func, orientation):
-    return MARKS_DICT[orientation](pos, parent, name, delete_func)
+def make_ruler_mark(pos, parent, name, delete_func, orientation,
+                    corrections=(0, 0)):
+    return MARKS_DICT[orientation](pos, parent, name, delete_func, corrections)
 
 
 class QZoneMark(QParagraphMark):

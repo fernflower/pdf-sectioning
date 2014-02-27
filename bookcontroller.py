@@ -801,7 +801,8 @@ class BookController(object):
                                    mark_parent,
                                    "",
                                    self.delete_ruler,
-                                   self.mark_mode)
+                                   self.mark_mode,
+                                   corrections=self._get_corrections())
             self.rulers.append(mark)
         return mark
 
@@ -830,14 +831,8 @@ class BookController(object):
                              corrections=self._get_corrections(margin,
                                                                toc_elem.pdf_rubric))
             self.add_zone(zone)
-        elif self.is_ruler_mode():
-            mark = make_ruler_mark(pos,
-                                   mark_parent,
-                                   u"",
-                                   self.delete_ruler,
-                                   self.mode)
-            self.rulers.append(mark)
-        return mark
+        # no rulers in marker mode
+        return zone
 
     def _guess_margin(self, pos):
         if self.has_both_margins():
