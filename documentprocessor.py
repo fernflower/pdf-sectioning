@@ -50,10 +50,10 @@ class DocumentProcessor(object):
         return self.doc.numPages()
 
     def width(self, scale=1):
-        return self.render_page(self.curr_page_num, scale).width()
+        return self.curr_page(scale).width()
 
     def height(self, scale=1):
-        return self.render_page(self.curr_page_num, scale).height()
+        return self.curr_page(scale).height()
 
     # returns a QImage
     def render_page(self, num, scale):
@@ -154,7 +154,7 @@ class DocumentProcessor(object):
         return out_paragraphs
 
     # Paragraphs - a dict {cas-id : dict with all paragraph data}
-    def gen_native_xml(self, paragraphs):
+    def gen_native_xml(self, paragraphs, progress):
         PAGES = E("ebook-pages", src=self.filename)
         ICON_SET = E("ebook-icon-set")
         PAGES.append(ICON_SET)
@@ -187,6 +187,10 @@ class DocumentProcessor(object):
                 PARA.append(ZONE)
             PAGES.append(PARA)
 
+        # TODO can take a lot of time (esp. when rendering differently sized
+        # pages), show progress here
+        if progress:
+            progress.setRange(1, self.totalPages)
         for page in range(1, self.totalPages):
             margin = paragraphs["pages"][page]
             def _get_page_preview_str(page):
@@ -201,6 +205,8 @@ class DocumentProcessor(object):
                          "zone-margins": margin,
                          "fold": margin })
             PAGES.append(PAGE)
+            if progress:
+                progress.setValue(page)
             print page
         root = E.object(E.text(PAGES), **{"display-name": self.display_name})
         result = etree.tostring(root, pretty_print=True, encoding="utf-8")
@@ -243,13 +249,14 @@ class DocumentProcessor(object):
             png.save(name, "png")
         return filenames
 
-    def save_all(self, path_to_file, paragraphs, finished=True):
+    def save_all(self, path_to_file, paragraphs, finished=True,
+                 progress=False):
         # save native xml
         (path_to_dir, filename) = os.path.split(path_to_file)
         filename = path_to_file if finished else os.path.join(
             path_to_dir, 'unfinished_' + filename)
         with open(filename, 'w') as fname:
-            fname.write(self.gen_native_xml(paragraphs))
+            fname.write(self.gen_native_xml(paragraphs, progress))
         return filename
 
     def _processTextBlocks(self):

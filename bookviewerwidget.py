@@ -197,11 +197,29 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.toolbarpart.zoomIn_button.clicked.connect(self.zoom_in)
         self.toolbarpart.zoomOut_button.clicked.connect(self.zoom_out)
         self.toolBar.addWidget(self.toolbarpart.layoutWidget)
+        # create progress bar for REALLY long operations (like saving every
+        # page of heavy differently sized pdf)
+        self.progress_bar = QtGui.QProgressBar(self.imageLabel)
+        self.progress_text = QtGui.QLabel(u"", self.imageLabel)
+        self.progress_bar.hide()
         self._set_appearance()
 
     def _fill_views(self):
         for mode in [self.SECTION_MODE, self.MARKUP_MODE]:
             self.toc_controller.fill_with_data(mode)
+
+    def show_progress_bar(self, text):
+        QtGui.QApplication.setOverrideCursor(
+            QtGui.QCursor(QtCore.Qt.BusyCursor))
+        self.progress_bar.show()
+        self.progress_text.show()
+        self.progress_text.setText(text)
+
+    def hide_progress_bar(self):
+        self.progress_bar.hide()
+        self.progress_text.setText(u"")
+        self.progress_text.hide()
+        QtGui.QApplication.restoreOverrideCursor()
 
     # all work on colors and buttons' styles done here
     def _set_appearance(self):
@@ -231,6 +249,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.layout_general = QtGui.QVBoxLayout(self.my_widget)
         self.layout_general.addWidget(self.toolBar)
         self.layout_general.addWidget(self.scrollArea)
+        self.layout_general.addWidget(self.progress_bar)
+        self.layout_general.addWidget(self.progress_text)
         self.layoutmain = QtGui.QHBoxLayout(self.centralwidget)
         self.layoutmain.addWidget(self.my_widget)
         self.layoutmain.addWidget(self.tabWidget)
@@ -249,7 +269,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             return self.MARKUP_MODE
 
     def autozones(self):
-        self.controller.autozones(self.imageLabel)
+        self.progress_bar.reset()
+        self.show_progress_bar(u"Автоматическое размещение зон ...")
+        self.controller.autozones(self.imageLabel, self.progress_bar)
+        self.hide_progress_bar()
 
     # mind that this is called every time a view is clicked, not only on
     # selection
@@ -315,7 +338,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not filename:
             return
         self._fill_views()
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(
+            QtCore.Qt.BusyCursor))
         result = self.controller.open_file(unicode(filename))
+        QtGui.QApplication.restoreOverrideCursor()
         if not result:
             self.show_cant_open_dialog()
             return
@@ -339,7 +365,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # clear listView and fill again with appropriate for given course-id
         # data fetched from cas
         self._fill_views()
-        self.controller.load_markup(self.last_open_doc_name, self.imageLabel)
+        self.show_progress_bar(u"Загрузка разметки ...")
+        self.controller.load_markup(self.last_open_doc_name, self.imageLabel,
+                                    self.progress_bar)
+        self.hide_progress_bar()
 
     def save(self):
         if not self.last_open_doc_name:
@@ -347,7 +376,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not self.controller.verify_mark_pairs():
             self.show_cant_save_dialog()
             return False
-        self.controller.save(os.path.dirname(self.last_open_doc_name))
+        self.show_progress_bar(u"Сохранение разметки ... ")
+        self.controller.save(os.path.dirname(self.last_open_doc_name),
+                             self.progress_bar)
+        self.hide_progress_bar()
 
     def save_as(self):
         # check that all marked paragraphs have both marks
@@ -361,7 +393,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                             "*.xml")
         if not file_name:
             return
-        self.last_open_doc_name = self.controller.save(unicode(file_name))
+        self.show_progress_bar(u"Сохранение разметки ... ")
+        self.last_open_doc_name = self.controller.save(unicode(file_name),
+                                                       self.progress_bar)
+        self.hide_progress_bar()
         return True
 
     # depending on last_open_doc executes either save or save as

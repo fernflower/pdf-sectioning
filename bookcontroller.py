@@ -329,13 +329,17 @@ class BookController(object):
             return False
 
     # here marks_parent is a parent widget to set at marks' creation
-    def load_markup(self, filename, marks_parent):
+    def load_markup(self, filename, marks_parent, progress=None):
         self._clear_paragraph_data()
         # convert from QString
         filename = str(filename)
         paragraphs = self.dp.load_native_xml(filename)
+        if progress:
+            progress.setRange(0, len(paragraphs))
         # generate start\end marks from paragraphs' data
-        for cas_id, data in paragraphs.items():
+        for i, (cas_id, data) in enumerate(paragraphs.items()):
+            if progress:
+                progress.setValue(i)
             marks = data["marks"]
             zones = data["zones"]
             for m in marks:
@@ -391,7 +395,7 @@ class BookController(object):
         return self.LEFT_RIGHT
 
     # returns full file name (with path) to file with markup
-    def save(self, path_to_file):
+    def save(self, path_to_file, progress=None):
         if not self.dp:
             return
         # normalize to get pdf-coordinates (save with scale=1.0)
@@ -433,7 +437,8 @@ class BookController(object):
         # if not all paragraphs have been marked -> add unfinished_ to filename
         finished = len(pdf_paragraphs) == \
             len(self.toc_controller.current_toc_elems(self.operational_mode))
-        return self.dp.save_all(path_to_file, pdf_paragraphs, finished=finished)
+        return self.dp.save_all(path_to_file, pdf_paragraphs,
+                                finished=finished, progress=progress)
 
     # add paragraph mark to paragraph_marks (without duplicates)
     def add_paragraph_mark(self, mark):
@@ -483,9 +488,13 @@ class BookController(object):
                 r.adjust(coeff)
         return self.scale
 
-    def autozones(self, zone_parent):
+    def autozones(self, zone_parent, progress):
         # auto place ALL autozones in ALL paragraphs that have start\end marks
-        for cas_id in self.paragraph_marks.keys():
+        if progress:
+            progress.setRange(0, len(self.paragraph_marks.keys()))
+        for i, cas_id in enumerate(self.paragraph_marks.keys()):
+            if progress:
+                progress.setValue(i)
             autozones = self.toc_controller.get_autoplaced_zones(cas_id)
             (start, end) = self.paragraph_marks[cas_id]["marks"]
             for az in autozones:

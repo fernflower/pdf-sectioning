@@ -163,7 +163,6 @@ class QParagraphMark(QMark):
             return
         left, right = corrections
         g = self.geometry()
-        print corrections
         self.set_geometry(QtCore.QRect(g.x() + left, g.y(),
                                        g.width() + right, g.height()))
 

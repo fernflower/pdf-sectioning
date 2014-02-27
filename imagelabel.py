@@ -50,7 +50,7 @@ class QImageLabel(QtGui.QLabel):
                 QtGui.QApplication.setOverrideCursor(
                     QtGui.QCursor(any_mark.cursor))
             self.cursor_overridden = True
-        else:
+        elif self.cursor_overridden:
             self.cursor_overridden = False
             QtGui.QApplication.restoreOverrideCursor()
 
