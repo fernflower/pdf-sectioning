@@ -3,6 +3,7 @@
 from PyQt4 import QtGui, QtCore
 from tocelem import QStatefulElem, QTocElem
 from stylesheets import GENERAL_STYLESHEET, LIST_ITEM_DESELECT
+from zonetypes import START_AUTOZONES, END_AUTOZONES, ZONE_ICONS
 
 
 class QObjectElem(QtGui.QStandardItem):
@@ -40,10 +41,6 @@ class QObjectElem(QtGui.QStandardItem):
 
 # creates an item with objects as it's children
 class QZone(QStatefulElem):
-    AUTO_DIC = "dic"
-    AUTO_TRA = "tra"
-    AUTO_CON = "con"
-
     def __init__(self, parent, type, objects, name=""):
         super(QZone, self).__init__(type)
         self.parent = parent
@@ -98,10 +95,6 @@ class QZone(QStatefulElem):
         return self.page == page
 
 class QMarkerTocElem(QTocElem):
-    # TODO perhaps make dependant on pic's height
-    AUTOZONE_HEIGHT = 30
-
-    # objects = {oid, block-id, rubric}
     def __init__(self, name, cas_id, objects):
         super(QMarkerTocElem, self).__init__(name, cas_id)
         self.setText(name)
@@ -111,6 +104,7 @@ class QMarkerTocElem(QTocElem):
         # objects NOT automatically grouped
         self.groups = {}
         self.zones = []
+        # objects = {oid, block-id, rubric}
         # now group automatically placed objects. Types can be Dic, Tra, Con
         for obj in objects:
             child = QObjectElem(obj["oid"], obj["block-id"],
@@ -129,13 +123,14 @@ class QMarkerTocElem(QTocElem):
                 _add_obj(self.groups)
 
         # now add all elems in correct order: DIC, ...  any other... , TRA, CON
-        self._process_zone(QZone.AUTO_DIC)
+        for zone in START_AUTOZONES:
+            self._process_zone(zone)
         for zone in self.groups.keys():
             zone = QZone(self, zone, self.groups[zone])
             self.appendRow(zone)
             self.zones.append(zone)
-        self._process_zone(QZone.AUTO_TRA)
-        self._process_zone(QZone.AUTO_CON)
+        for zone in END_AUTOZONES:
+            self._process_zone(zone)
         # no modifications unless filled-in!
         self._set_selectable(False)
 
@@ -193,17 +188,14 @@ class QMarkerTocElem(QTocElem):
             [z for z in self.zones if z.page == page])
 
     def get_start(self, zone):
-        if zone == QZone.AUTO_DIC:
-            return 0
-        return None
+        if zone not in START_AUTOZONES:
+            return None
+        return [z for z in self.auto_groups.keys()
+                if z in START_AUTOZONES].index(zone) * ZONE_ICONS[zone].height()
 
     def get_end(self, zone):
-        if zone == QZone.AUTO_CON:
-            return -self.AUTOZONE_HEIGHT
-        elif zone == QZone.AUTO_CON:
-            mult = 2 if QZone.AUTO_TRA in self.auto_groups.keys() else 1
-            return -self.AUTOZONE_HEIGHT * mult
-        elif zone == QZone.AUTO_TRA:
-            mult = 3 if QZone.AUTO_TRA in self.auto_groups.keys() else 2
-            return -self.AUTOZONE_HEIGHT * mult
-        return None
+        if zone not in END_AUTOZONES:
+            return None
+        end_present = [z for z in self.auto_groups.keys() if z in END_AUTOZONES]
+        mult = len(end_present) - end_present.index(zone)
+        return -ZONE_ICONS[zone].height() * mult
