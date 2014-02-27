@@ -47,7 +47,7 @@ class BookController(object):
         # Paragraph per page. {pagenum : {marks: [], zones: []}
         # IMPORTANT! Mind that this dict doesn't get updated on move()
         # operations -> need to sort elems by y() if want correct order
-        self.paragraphs = {}
+        self.paragraphs = OrderedDict()
         # dict of interactive objects per lesson: {paragraph_id: [objects]}
         self.objects = {}
         # a list of all rulers present
@@ -315,7 +315,7 @@ class BookController(object):
             return both
 
     ### different operations
-    def open_file(self, filename):
+    def open_file(self, filename, progress=None):
         # TODO check that file is truly a pdf file
         self._clear_paragraph_data()
         # deselect all in toc list
@@ -334,12 +334,8 @@ class BookController(object):
         # convert from QString
         filename = str(filename)
         paragraphs = self.dp.load_native_xml(filename)
-        if progress:
-            progress.setRange(0, len(paragraphs))
         # generate start\end marks from paragraphs' data
         for i, (cas_id, data) in enumerate(paragraphs.items()):
-            if progress:
-                progress.setValue(i)
             marks = data["marks"]
             zones = data["zones"]
             for m in marks:
@@ -438,7 +434,7 @@ class BookController(object):
         finished = len(pdf_paragraphs) == \
             len(self.toc_controller.current_toc_elems(self.operational_mode))
         return self.dp.save_all(path_to_file, pdf_paragraphs,
-                                finished=finished, progress=progress)
+                                finished=finished)
 
     # add paragraph mark to paragraph_marks (without duplicates)
     def add_paragraph_mark(self, mark):
@@ -488,13 +484,9 @@ class BookController(object):
                 r.adjust(coeff)
         return self.scale
 
-    def autozones(self, zone_parent, progress):
+    def autozones(self, zone_parent, progress=None):
         # auto place ALL autozones in ALL paragraphs that have start\end marks
-        if progress:
-            progress.setRange(0, len(self.paragraph_marks.keys()))
         for i, cas_id in enumerate(self.paragraph_marks.keys()):
-            if progress:
-                progress.setValue(i)
             autozones = self.toc_controller.get_autoplaced_zones(cas_id)
             (start, end) = self.paragraph_marks[cas_id]["marks"]
             for az in autozones:

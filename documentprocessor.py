@@ -250,7 +250,7 @@ class DocumentProcessor(object):
         return filenames
 
     def save_all(self, path_to_file, paragraphs, finished=True,
-                 progress=False):
+                 progress=None):
         # save native xml
         (path_to_dir, filename) = os.path.split(path_to_file)
         filename = path_to_file if finished else os.path.join(

@@ -211,13 +211,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def show_progress_bar(self, text):
         QtGui.QApplication.setOverrideCursor(
             QtGui.QCursor(QtCore.Qt.BusyCursor))
-        self.progress_bar.show()
-        self.progress_text.show()
-        self.progress_text.setText(text)
+        #self.progress_bar.show()
+        #self.progress_text.show()
+        #self.progress_text.setText(text)
 
     def hide_progress_bar(self):
         self.progress_bar.hide()
-        self.progress_text.setText(u"")
+        #self.progress_text.setText(u"")
         self.progress_text.hide()
         QtGui.QApplication.restoreOverrideCursor()
 
@@ -366,8 +366,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # data fetched from cas
         self._fill_views()
         self.show_progress_bar(u"Загрузка разметки ...")
-        self.controller.load_markup(self.last_open_doc_name, self.imageLabel,
-                                    self.progress_bar)
+        self.controller.load_markup(self.last_open_doc_name, self.imageLabel)
         self.hide_progress_bar()
 
     def save(self):
@@ -377,8 +376,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.show_cant_save_dialog()
             return False
         self.show_progress_bar(u"Сохранение разметки ... ")
-        self.controller.save(os.path.dirname(self.last_open_doc_name),
-                             self.progress_bar)
+        self.controller.save(os.path.dirname(self.last_open_doc_name))
         self.hide_progress_bar()
 
     def save_as(self):
