@@ -5,8 +5,7 @@ from PyQt4 import QtGui, QtCore
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import make_paragraph_mark, make_ruler_mark, \
     QParagraphMark, QRulerMark, QEndParagraph, QStartParagraph, QZoneMark
-from tocelem import QTocElem
-from markertocelem import QMarkerTocElem, QZone
+from tocelem import QTocElem, QMarkerTocElem, QZone
 from zonetypes import ZONE_ICONS
 
 
@@ -32,7 +31,7 @@ class BookController(object):
     LEFT_RIGHT = "lr"
     FIRST_PAGE = LEFT
     MARGIN_WIDTH = 50
-    # the same as in markertocelem
+    # if no image found -> default
     ZONE_WIDTH = 20
 
 
@@ -263,7 +262,7 @@ class BookController(object):
 
     # return first mark corr. to selected toc not equal to mark
     def get_next_paragraph_mark(self, mode, mark=None):
-        toc_elem = self.toc_controller.get_selected(mode)
+        toc_elem = self.toc_controller.active_elem
         if not toc_elem:
             return None
         return self.get_mark_for_toc_elem(mode, toc_elem, mark)
@@ -351,7 +350,7 @@ class BookController(object):
                 mark.adjust(self.scale)
                 # mark loaded paragraphs gray
                 # TODO think how to eliminate calling this func twice
-                self.toc_controller.set_finished_state(True, cas_id)
+                self.toc_controller.set_state(True, cas_id)
                 if mark.page != self.pagenum:
                     mark.hide()
                 try:
@@ -511,6 +510,7 @@ class BookController(object):
                                  az["number"],
                                  az["rubric"],
                                  margin=margin,
+                                 auto=True,
                                  corrections=self._get_corrections(margin,
                                                                    az["rubric"]))
                 self.add_zone(zone)
@@ -589,10 +589,9 @@ class BookController(object):
                                                             self.operational_mode)
                     is_ok = self.verify_start_end(start, end)
                     (ok_braces, error) = self.verify_brackets()
-                    self.toc_controller.set_finished_state(True,
-                                                           mark.cas_id,
-                                                           not is_ok,
-                                                           not ok_braces)
+                    self.toc_controller.set_state(True, mark.cas_id,
+                                                  not is_ok,
+                                                  not ok_braces)
             return
         # else move as usual
         if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
@@ -634,7 +633,7 @@ class BookController(object):
                 self.paragraph_marks[mark.cas_id]["marks"] = (None, end)
             elif end == mark:
                 self.paragraph_marks[mark.cas_id]["marks"] = (start, None)
-            self.toc_controller.set_finished_state(False, mark.cas_id)
+            self.toc_controller.set_state(False, mark.cas_id)
         if self.paragraph_marks[mark.cas_id]["marks"] == (None, None):
             del self.paragraph_marks[mark.cas_id]
             self.toc_controller.set_default_state()
@@ -664,19 +663,18 @@ class BookController(object):
             self.paragraph_marks[mark.cas_id]["marks"] = (start, end)
             # set correct states
             if not end or not start:
-                self.toc_controller.set_finished_state(False, mark.cas_id)
+                self.toc_controller.set_state(False, mark.cas_id)
             else:
                 # check that end and start mark come in correct order
                 is_ok = self.verify_start_end(start, end)
                 (ok_braces, error) = self.verify_brackets()
-                self.toc_controller.set_finished_state(True,
-                                                       mark.cas_id,
-                                                       not is_ok,
-                                                       not ok_braces)
+                self.toc_controller.set_state(True, mark.cas_id,
+                                              not is_ok,
+                                              not ok_braces)
         except KeyError:
             self._add_new_paragraph(mark.cas_id)
             self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
-            self.toc_controller.set_finished_state(False, mark.cas_id)
+            self.toc_controller.set_state(False, mark.cas_id)
 
     def find_at_point(self, point, among=None):
         def contains(mark, point):

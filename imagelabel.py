@@ -108,9 +108,8 @@ class QImageLabel(QtGui.QLabel):
                 if self.last_selected != selected:
                     selected.toggle_selected()
                     self.controller.deselect_all([selected])
-                    if self.controller.is_section_mode():
-                        self.toc_controller.select_toc_for_mark(
-                            selected, self.controller.operational_mode)
+                    self.toc_controller.select_toc_for_mark(
+                        selected, self.controller.operational_mode)
             else:
                 # for group selection second click removes object from group
                 # selection

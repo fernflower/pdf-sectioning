@@ -274,9 +274,11 @@ def make_ruler_mark(pos, parent, name, delete_func, orientation,
 class QZoneMark(QParagraphMark):
     def __init__(self, pos, parent, lesson_id, zone_id, page,
                  delete_func, type, objects, number, rubric, margin,
-                 corrections=(0, 0)):
+                 corrections=(0, 0), auto=False, pass_through=False):
         super(QZoneMark, self).__init__(pos, parent, lesson_id, zone_id, page,
                                         delete_func, type, corrections)
+        self.auto = auto
+        self.pass_through = pass_through
         self.margin = margin
         self.rubric = rubric
         # just a list of dicts [ {oid, block-id, rubric} ]

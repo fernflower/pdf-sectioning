@@ -7,7 +7,6 @@ from toolbarpart import Ui_ToolBarPart
 from imagelabel import QImageLabel
 from console import QConsole
 from stylesheets import GENERAL_STYLESHEET, BLACK_LABEL_STYLESHEET
-from markertocelem import QMarkerTocElem, QZone
 from selectionviewcontroller import SelectionViewController
 
 
@@ -279,11 +278,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def on_selected(self):
         # always set normal mode for marks' creation
         self.set_normal_state()
-        current = self.toc_controller.get_selected(self.mode)
-        if current:
+        self.toc_controller.process_selected(self.mode)
+        if self.toc_controller.active_elem:
             self.mark_to_navigate = self.controller.get_next_paragraph_mark(
                 self.mode, self.mark_to_navigate)
-            self.toc_controller.process_selected(self.mode)
         if self.mark_to_navigate:
             self.spinBox.setValue(self.mark_to_navigate.page)
 

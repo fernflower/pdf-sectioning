@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
 from bookcontroller import BookController
-from tocelem import QTocElem
-from markertocelem import QMarkerTocElem, QZone, QAutoZoneContainer
+from tocelem import QTocElem, QMarkerTocElem, QZone, QAutoZoneContainer
 from paragraphmark import QParagraphMark, QZoneMark
 from stylesheets import GENERAL_STYLESHEET
 
@@ -11,24 +10,28 @@ from stylesheets import GENERAL_STYLESHEET
 class DisabledZoneDelegate(QtGui.QStyledItemDelegate):
     def __init__(self, toc_controller):
         self.toc_controller = toc_controller
+        self.normal_brush = QtGui.QBrush(QtCore.Qt.NoBrush)
+        self.normal_pen = QtGui.QPen(QtCore.Qt.NoPen)
+        self.selected_brush = QtGui.QBrush(QtGui.QColor(171, 205, 239))
         super(DisabledZoneDelegate, self).__init__()
 
     def paint(self, painter, option, index):
         parent_num = index.parent().row()
         if parent_num != -1:
             parent = index.model().itemFromIndex(index.parent())
-            if isinstance(parent, QMarkerTocElem):
+            if isinstance(parent, QMarkerTocElem) or \
+                    isinstance(parent, QAutoZoneContainer):
                 zone = index.model().itemFromIndex(index)
-                # TODO add QAutoZoneContainer support
                 if not isinstance(zone, QZone):
-                    super(DisabledZoneDelegate, self).paint(painter, option, index)
+                    super(DisabledZoneDelegate, self).paint(painter,
+                                                            option, index)
                     return
                 painter.save()
-                painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+                painter.setPen(self.normal_pen)
                 if not zone.is_on_page(self.toc_controller.pagenum_func()):
-                    painter.setBrush(QtGui.QBrush(QtCore.Qt.NoBrush))
+                    painter.setBrush(self.normal_brush)
                 else:
-                    painter.setBrush(QtGui.QBrush(QtGui.QColor(171, 205, 239)))
+                    painter.setBrush(self.selected_brush)
                 zone.emitDataChanged()
                 painter.drawRect(option.rect)
                 painter.restore()
@@ -93,9 +96,18 @@ class TocController(object):
         else:
             return self.markup_toc_elems
 
+    # return either TocElem or Zone; if clicked on a container like AutoZone,
+    # then return TocElem as well. In order to get element to operate with from
+    # TocController this property should be used
+    @property
+    def active_elem(self):
+        if isinstance(self.current_toc_elem, QAutoZoneContainer):
+            return self._get_markup_elem(self.current_toc_elem.cas_id)
+        return self.current_toc_elem
+
     # ready means that this toc can be accessed by user (toc_elem with this id
     # is in FINISHED state and markup elem can be selected)
-    def set_finished_state(self, both_ends, cas_id, mixed_up=False,
+    def set_state(self, both_ends, cas_id, mixed_up=False,
                            brackets_err=False):
         cas_id = self.current_toc_elem.cas_id \
             if self.current_toc_elem else cas_id
@@ -114,7 +126,6 @@ class TocController(object):
                 mtoc._set_selectable(True)
             self.markup_view.setRowHidden(mtoc.index().row(),
                                           mtoc.index().parent(), not value)
-
 
     def set_default_state(self, cas_id=None):
         cas_id = self.current_toc_elem.cas_id \
@@ -145,16 +156,6 @@ class TocController(object):
                                  elem["objects"])
                 for elem in self.course_toc ]
             return self.markup_toc_elems
-
-    # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
-    def _get_sections_elem(self, cas_id):
-        return next((elem for elem in self.toc_elems \
-                     if elem.cas_id == cas_id), None)
-
-    # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
-    def _get_markup_elem(self, cas_id):
-        return next((elem for elem in self.markup_toc_elems \
-                     if elem.cas_id == cas_id), None)
 
     # finds zone in given lesson (cas_id) with given zone_id
     def get_zone_toc_elem(self, cas_id, zone_id):
@@ -199,14 +200,6 @@ class TocController(object):
             return self.sections_view
         return self.markup_view
 
-    def get_selected(self, mode):
-        idx = self.get_view_widget(mode).selectedIndexes()
-        if len(idx) > 0:
-            self.current_toc_elem = \
-                self.get_view_widget(mode).model().itemFromIndex(idx[0])
-            return self.current_toc_elem
-        return None
-
     def fill_with_data(self, mode):
         view = self.get_view_widget(mode)
         model = view.model()
@@ -229,11 +222,14 @@ class TocController(object):
     def process_selected(self, mode):
         view = self.get_view_widget(mode)
         view.setStyleSheet(GENERAL_STYLESHEET)
-        current = self.get_selected(mode)
+        current = self._get_selected(mode)
         if isinstance(current, QMarkerTocElem):
             # disable other elems and open-up toc-elem list
             view.collapseAll()
             view.expand(current.index())
+        elif isinstance(current, QAutoZoneContainer):
+            view.expand(current.index())
+            self.current_toc_elem = self._get_markup_elem(current.cas_id)
         elif isinstance(current, QZone) and current.isSelectable() or \
             isinstance(current, QTocElem):
             self.current_toc_elem = current
@@ -243,9 +239,9 @@ class TocController(object):
         if zone_elem:
             zone_elem.set_finished(True)
         # if all zones have been added, mark TocElem as finished as well
-        toc_elem = self._get_markup_elem(zone.cas_id)
-        toc_elem.set_finished(toc_elem.all_zones_placed)
-        self.current_toc_elem = toc_elem
+        self.current_toc_elem = self._get_markup_elem(zone.cas_id)
+        self.current_toc_elem.set_finished(
+            self.current_toc_elem.all_zones_placed)
 
     def process_zone_deleted(self, zone):
         zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
@@ -255,7 +251,7 @@ class TocController(object):
         toc_elem.set_finished(False)
 
     def process_mode_switch(self, old_mode, new_mode):
-        old_toc = self.get_selected(old_mode)
+        old_toc = self._get_selected(old_mode)
         new_view = self.get_view_widget(new_mode)
         self.current_toc_elem = None
         # highlight corresponding elem according to last selection in prev.tab
@@ -263,14 +259,6 @@ class TocController(object):
             toc_elem = self.get_elem(old_toc.cas_id, new_mode)
             new_view.setCurrentIndex(toc_elem.index())
             self.process_selected(new_mode)
-
-    def select_toc_for_mark(self, mark, mode):
-        # rulers can't be mapped to toc-elems
-        if isinstance(mark, QParagraphMark):
-            view = self.get_view_widget(mode)
-            toc = self.get_elem_for_mark(mark, mode)
-            view.setCurrentIndex(toc.index())
-            self.current_toc_elem = toc
 
     # now highlight first met marks' toc-elem
     # TODO NO DAMNED PARAGRAPHS HIGHLIGHTING WITHOUT THOROUGH THINKING
@@ -307,3 +295,29 @@ class TocController(object):
     def dehighlight(self, mode):
         view = self.get_view_widget(mode)
         view.setStyleSheet(GENERAL_STYLESHEET)
+
+    def select_toc_for_mark(self, mark, mode):
+        # rulers can't be mapped to toc-elems
+        if isinstance(mark, QParagraphMark):
+            view = self.get_view_widget(mode)
+            toc = self.get_elem_for_mark(mark, mode)
+            view.setCurrentIndex(toc.index())
+            self.current_toc_elem = toc
+
+    def _get_selected(self, mode):
+        idx = self.get_view_widget(mode).selectedIndexes()
+        if len(idx) > 0:
+            self.current_toc_elem = \
+                self.get_view_widget(mode).model().itemFromIndex(idx[0])
+            return self.current_toc_elem
+        return None
+
+    # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
+    def _get_sections_elem(self, cas_id):
+        return next((elem for elem in self.toc_elems \
+                     if elem.cas_id == cas_id), None)
+
+    # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
+    def _get_markup_elem(self, cas_id):
+        return next((elem for elem in self.markup_toc_elems \
+                     if elem.cas_id == cas_id), None)
