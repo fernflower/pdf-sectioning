@@ -308,3 +308,24 @@ class QZoneMark(QParagraphMark):
             painter.fillRect(self.mark.geometry(), self.SELECT_COLOUR)
         else:
             painter.fillRect(self.mark.geometry(), self.DESELECT_COLOUR)
+
+
+class QPassThroughZoneMark(QZoneMark):
+    def __init__(self, pos, parent, lesson_id, zone_id, page,
+                 delete_func, type, objects, number, rubric, margin,
+                 corrections=(0, 0), pages=None):
+        super(QPassThroughZoneMark, self).__init__(pos, parent,
+                                               lesson_id, zone_id,
+                                               page,
+                                               delete_func,
+                                               type, objects, number, rubric,
+                                               margin, corrections, True, True)
+        self.pages = [page]
+        if pages:
+            for p in pages:
+                if p not in self.pages:
+                    self.pages.append(p)
+
+    def should_show(self, page):
+        print self.pages
+        return page in self.pages

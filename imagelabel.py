@@ -28,6 +28,7 @@ class QImageLabel(QtGui.QLabel):
         # TODO there might be another way, perhaps to retrieve delta from move event
         self.coordinates = None
         self.zoomed_signal = QtCore.SIGNAL("zoomChanged(float)")
+        self.margin_color = QtGui.QColor(105, 105, 105)
         super(QImageLabel, self).__init__(parent)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setStyleSheet(self.STYLESHEET)
@@ -68,8 +69,8 @@ class QImageLabel(QtGui.QLabel):
                     m_width = m_width + w
                 resulting_pmp = QtGui.QPixmap(m_width + img.width(), img.height())
                 pixmap_painter = QtGui.QPainter(resulting_pmp)
-                pixmap_painter.setBrush(QtGui.QColor(105, 105, 105))
-                pixmap_painter.setPen(QtGui.QColor(105, 105, 105))
+                pixmap_painter.setBrush(self.margin_color)
+                pixmap_painter.setPen(self.margin_color)
                 img_pmp = QtGui.QPixmap.fromImage(img)
                 if self.controller.has_left_margin():
                     pixmap_painter.drawRect(0, 0, w, img.height())
