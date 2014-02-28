@@ -6,7 +6,8 @@ from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import make_paragraph_mark, make_ruler_mark, \
     QParagraphMark, QRulerMark, QEndParagraph, QStartParagraph, QZoneMark
 from tocelem import QTocElem, QMarkerTocElem, QZone
-from zonetypes import ZONE_ICONS
+from zonetypes import ZONE_ICONS, PASS_THROUGH_ZONES, START_AUTOZONES, \
+    END_AUTOZONES
 
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
@@ -47,8 +48,8 @@ class BookController(object):
         # IMPORTANT! Mind that this dict doesn't get updated on move()
         # operations -> need to sort elems by y() if want correct order
         self.paragraphs = OrderedDict()
-        # dict of interactive objects per lesson: {paragraph_id: [objects]}
-        self.objects = {}
+        # dict of pass through auto zones : {pagenum: [zones]}
+        self.pass_through_zones = OrderedDict()
         # a list of all rulers present
         self.rulers = []
         # zoom scale
@@ -207,8 +208,20 @@ class BookController(object):
         return self.dp is not None
 
     ### getters section
+    # get all passthrough zones that are shown on that page
+    def get_pass_through_zones(self, pagenum):
+        try:
+            return self.pass_through_zones[pagenum]
+        except KeyError:
+            return []
+
     def get_rulers(self):
         return self.rulers if self.is_section_mode() else []
+
+    def get_auto_zones(self, cas_id):
+        if cas_id in self.paragraph_marks.keys():
+            return [z for z in self.paragraph_marks[cas_id]["zones"] if z.auto]
+        return []
 
     def get_total_pages(self):
         if self.dp:
@@ -225,7 +238,9 @@ class BookController(object):
             if mode == self.MODE_SECTIONS:
                 return self.paragraphs[page_num]["marks"]
             else:
-                return self.paragraphs[page_num]["zones"]
+                return [z for z in self.paragraphs[page_num]["zones"]
+                        if not z.pass_through] + self.get_pass_through_zones(
+                            page_num)
         except KeyError:
             return []
 
@@ -499,11 +514,15 @@ class BookController(object):
                     # substract relative end from end-of-page y
                     pos = QtCore.QPoint(0, end.y() + az["rel-end"] * self.scale)
                 margin = self._guess_margin(pos)
+                # autozones are bound to START\END, not PAGE NUM in oid!
+                page = start.page if az["rubric"] in START_AUTOZONES \
+                    else end.page
+                pass_through = az["rubric"] in PASS_THROUGH_ZONES
                 zone = QZoneMark(pos,
                                  zone_parent,
                                  cas_id,
                                  az["zone-id"],
-                                 az["page"],
+                                 page,
                                  self.delete_zone,
                                  az["type"],
                                  az["objects"],
@@ -511,11 +530,22 @@ class BookController(object):
                                  az["rubric"],
                                  margin=margin,
                                  auto=True,
+                                 pass_through=pass_through,
                                  corrections=self._get_corrections(margin,
                                                                    az["rubric"]))
                 self.add_zone(zone)
-                if zone.page != self.pagenum:
+                if pass_through:
+                    for p in range(start.page, end.page):
+                        if p != end.page or end.y() > zone.y():
+                            try:
+                                self.pass_through_zones[p].append(zone)
+                            except:
+                                self.pass_through_zones[p] = [zone]
+                    print self.pass_through_zones
+                if zone.page != self.pagenum and not pass_through:
                     zone.hide()
+        # show pass_through_zones
+        self.show_page_marks(self.pagenum)
 
     # deselect all elems on page (both marks and rulers) if not in
     # keep_selections list
@@ -530,11 +560,13 @@ class BookController(object):
 
     def hide_zones(self, pagenum):
         if pagenum in self.paragraphs.keys():
-            map(lambda m: m.hide(), self.paragraphs[pagenum]["zones"])
+            for zone in self.paragraphs[pagenum]["zones"]:
+                zone.hide()
 
     def hide_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
             map(lambda m: m.hide(), self.paragraphs[pagenum]["marks"])
+        map(lambda m: m.hide(), self.get_pass_through_zones(pagenum))
 
     def show_page_marks(self, pagenum):
         if pagenum in self.paragraphs.keys():
@@ -542,6 +574,10 @@ class BookController(object):
             if self.is_markup_mode():
                 show_marks = show_marks + self.paragraphs[pagenum]["zones"]
             map(lambda m: m.show(), show_marks)
+        # there might be no marks on page, but pass through marks should be
+        # shown!
+        if self.is_markup_mode():
+            map(lambda m: m.show(), self.get_pass_through_zones(pagenum))
 
     def transform_to_pdf_coords(self, rect):
         img = self.dp.curr_page()

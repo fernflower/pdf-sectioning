@@ -9,11 +9,11 @@ from stylesheets import GENERAL_STYLESHEET
 
 class DisabledZoneDelegate(QtGui.QStyledItemDelegate):
     def __init__(self, toc_controller):
+        super(DisabledZoneDelegate, self).__init__()
         self.toc_controller = toc_controller
         self.normal_brush = QtGui.QBrush(QtCore.Qt.NoBrush)
         self.normal_pen = QtGui.QPen(QtCore.Qt.NoPen)
         self.selected_brush = QtGui.QBrush(QtGui.QColor(171, 205, 239))
-        super(DisabledZoneDelegate, self).__init__()
 
     def paint(self, painter, option, index):
         parent_num = index.parent().row()
