@@ -136,18 +136,28 @@ class DocumentProcessor(object):
                             "block-id": o.get("block-id")}
                            for o in zone.xpath("is:ebook-object",
                                                namespaces = { "is" : XHTML_NAMESPACE})]
+                placements = [{"page": pl.get("page"),
+                               "y": pl.get("y")}
+                              for pl in zone.xpath("is:ebook-placement",
+                                                   namespaces = { "is" : XHTML_NAMESPACE})
+                             ]
+                page = zone.get("page") or next((z["page"] for z in placements),
+                                                None)
                 def _get_zone_id():
-                    return zone.get("rubric") if zone.get("n") == "00" \
+                    return zone.get("rubric") if zone.get("n") in ["00", None] \
                         else zone.get("n") + zone.get("rubric")
                 new_zone = {"cas-id": cas_id,
                             "zone-id": _get_zone_id(),
-                            "page": zone.get("page"),
+                            "page": page,
                             "type": zone.get("type"),
                             "rubric": zone.get("rubric"),
+                            "placements": placements,
                             "number": zone.get("n"),
                             "y": zone.get("y"),
                             "at": zone.get("at"),
-                            "objects": objects }
+                            "objects": objects,
+                            # FIXME maybe think of better passthrough guess?
+                            "passthrough": zone.get("type") == u"repeat"}
                 zones.append(new_zone)
             out_paragraphs[cas_id] = { "marks": [start, end],
                                        "zones": zones }
@@ -174,12 +184,23 @@ class DocumentProcessor(object):
                          "end-page": str(marks[1]["page"]),
                          "end-y": str(marks[1]["y"]) })
             for zone in zones:
-                ZONE = E("ebook-zone", type="single",
-                        **{ "n": str(zone["n"]),
-                            "page": str(zone["page"]),
-                            "y": str(zone["y"]),
-                            "rubric": zone["rubric"],
-                            "at": zone["at"]})
+                # passthrough zones come first
+                if zone["type"] == "repeat":
+                    ZONE = E("ebook-zone", type="repeat",
+                             **{"y": str(zone["y"]),
+                                "rubric": zone["rubric"],
+                                "at": zone["at"]})
+                    for pl in zone["placements"]:
+                        ZONE.append(E("ebook-placement",
+                                    **{"page": str(pl["page"]),
+                                       "y": str(pl["y"])}))
+                else:
+                    ZONE = E("ebook-zone", type=zone["type"],
+                            **{ "n": str(zone["n"]),
+                                "page": str(zone["page"]),
+                                "y": str(zone["y"]),
+                                "rubric": zone["rubric"],
+                                "at": zone["at"]})
                 for obj in zone["objects"]:
                     ZONE.append(E("ebook-object",
                                   **{ "oid": obj["oid"],

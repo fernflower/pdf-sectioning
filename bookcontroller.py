@@ -4,8 +4,8 @@ from collections import OrderedDict
 from PyQt4 import QtGui, QtCore
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import make_paragraph_mark, make_ruler_mark, \
-    QParagraphMark, QRulerMark, QEndParagraph, QStartParagraph, QZoneMark, \
-    QPassThroughZoneMark
+    make_zone_mark, QParagraphMark, QRulerMark, QEndParagraph, \
+    QStartParagraph, QZoneMark, QPassThroughZoneMark
 from tocelem import QTocElem, QMarkerTocElem, QZone
 from zonetypes import ZONE_ICONS, PASS_THROUGH_ZONES, START_AUTOZONES, \
     END_AUTOZONES
@@ -62,6 +62,7 @@ class BookController(object):
         # margins and first marked page orientation stuff
         self.margins = params["margins"]
         self.first_page = params["first-page"]
+
 
     ### properties section
     @property
@@ -340,27 +341,33 @@ class BookController(object):
                     self.paragraphs[page] = {"marks" : [mark],
                                              "zones": []}
             for z in zones:
+                delete_func = self.delete_pass_through_zone \
+                    if z["passthrough"] else self.delete_zone
                 page = int(z["page"])
-                zone = QZoneMark(parent=marks_parent,
-                                 pos=QtCore.QPoint(0, float(z["y"])),
-                                 lesson_id=cas_id,
-                                 zone_id=z["zone-id"],
-                                 page=page,
-                                 delete_func=self.delete_zone,
-                                 type=z["type"],
-                                 number=z["number"],
-                                 rubric=z["rubric"],
-                                 objects=z["objects"],
-                                 margin=z["at"],
-                                 corrections=self._get_corrections(z["at"],
-                                                                   z["rubric"]))
-                if page not in self.paragraphs.keys():
-                    self._add_new_page(page)
-                self.paragraphs[page]["zones"].append(zone)
-                if zone.page != self.pagenum:
+                pages = {}
+                for z1 in z["placements"]:
+                    pages[int(z1["page"])] = float(z1["y"])
+                zone = make_zone_mark(parent=marks_parent,
+                                      pos=QtCore.QPoint(0, float(z["y"])),
+                                      lesson_id=cas_id,
+                                      zone_id=z["zone-id"],
+                                      page=page,
+                                      pages=pages,
+                                      delete_func=delete_func,
+                                      number=z["number"],
+                                      rubric=z["rubric"],
+                                      objects=z["objects"],
+                                      margin=z["at"],
+                                      pass_through=z["passthrough"],
+                                      corrections=self._get_corrections(
+                                          z["at"], z["rubric"]))
+                self.add_zone(zone)
+                if zone.should_show(self.pagenum):
+                    zone.show()
+                else:
                     zone.hide()
-                self.toc_controller.process_zone_added(zone)
-        # fill parallel structure
+        # fill parallel structure (tiresome task of (start, end) handling is
+        # done here)
         self._load_paragraph_marks()
 
     def _get_page_margin(self, page):
@@ -394,14 +401,8 @@ class BookController(object):
         for cas_id in self.paragraph_marks.keys():
             for z in self.paragraph_marks[cas_id]["zones"]:
                 y = self.transform_to_pdf_coords(z.geometry()).y()
-                zone = {"n": z.number,
-                        "type": z.type,
-                        "page": z.page,
-                        "y": y,
-                        "rubric": z.rubric,
-                        "objects": z.objects,
-                        "at": z.margin }
-                pdf_paragraphs[cas_id]["zones"].append(zone)
+                print z.to_dict()
+                pdf_paragraphs[cas_id]["zones"].append(z.to_dict())
 
         # pass first page orientation
         pdf_paragraphs["pages"] = OrderedDict()
@@ -436,11 +437,16 @@ class BookController(object):
             self.paragraphs[pagenum]["zones"].append(zone)
         # if zone is a passthrough one, then add it to all it's pages
         if not zone.pass_through:
+            print "not PTZ"
             _add_to_page(zone.page)
         else:
+            print "passthrough"
             map(lambda p: _add_to_page(p), zone.pages)
         # situation with paragraph_marks is different: zones can't be placed
         # unless paragraph has start and end mark -> no check here
+        # TODO
+        if zone.cas_id not in self.paragraph_marks:
+            self._add_new_paragraph(zone.cas_id)
         self.paragraph_marks[zone.cas_id]["zones"].append(zone)
         # mark corr. elem as placed
         self.toc_controller.process_zone_added(zone)
@@ -491,25 +497,30 @@ class BookController(object):
                     else end.page
                 # create zone of proper type
                 pass_through = az["rubric"] in PASS_THROUGH_ZONES
-                if not pass_through:
-                    zone = QZoneMark(pos, zone_parent, cas_id, az["zone-id"],
-                                     page, self.delete_zone, az["type"],
-                                     az["objects"], az["number"], az["rubric"],
-                                     margin=margin, auto=True,
-                                     corrections=self._get_corrections(
-                                         margin, az["rubric"]))
-                else:
+                pages = None
+                delete_func = self.delete_pass_through_zone \
+                    if pass_through else self.delete_zone
+                if pass_through:
                     pages = range(start.page, end.page)
                     # figure out whether should add last page
                     if end.y() > pos.y():
                         pages.append(end.page)
                     pages = dict(zip(pages, [pos.y()]*len(pages)))
-                    zone = QPassThroughZoneMark(
-                        pos, zone_parent, cas_id, az["zone-id"], page,
-                        self.delete_pass_through_zone, az["type"], az["objects"],
-                        az["number"], az["rubric"], margin=margin,
-                        corrections=self._get_corrections(margin, az["rubric"]),
-                        pages=pages)
+                zone = make_zone_mark(pos=pos,
+                                      parent=zone_parent,
+                                      lesson_id=cas_id,
+                                      zone_id=az["zone-id"],
+                                      page=page,
+                                      delete_func=delete_func,
+                                      objects=az["objects"],
+                                      number=az["number"],
+                                      rubric=az["rubric"],
+                                      margin=margin,
+                                      corrections=self._get_corrections(
+                                        margin, az["rubric"]),
+                                      auto=True,
+                                      pass_through=pass_through,
+                                      pages=pages)
                 self.add_zone(zone)
                 zone.set_page(self.pagenum)
                 if zone.should_show(self.pagenum):
@@ -625,6 +636,11 @@ class BookController(object):
                 self.paragraphs[self.pagenum]["zones"].remove(m)
             elif isinstance(m, QParagraphMark):
                 self.paragraphs[self.pagenum]["marks"].remove(m)
+                # remove all placed zones as well if any mark removed
+                for z in self.paragraph_marks[m.cas_id]["zones"]:
+                    if z.delete():
+                        z.destroy()
+                self.paragraph_marks[m.cas_id] = []
             m.hide()
             if m.delete():
                 m.destroy()
@@ -843,13 +859,12 @@ class BookController(object):
                              toc_elem.zone_id,
                              self.pagenum,
                              self.delete_zone,
-                             toc_elem.type,
                              toc_elem.objects_as_dictslist(),
                              toc_elem.number,
                              toc_elem.pdf_rubric,
                              margin=margin,
-                             corrections=self._get_corrections(margin,
-                                                               toc_elem.pdf_rubric))
+                             corrections= \
+                             self._get_corrections(margin, toc_elem.pdf_rubric))
             self.add_zone(zone)
             zone.show()
         # no rulers in marker mode

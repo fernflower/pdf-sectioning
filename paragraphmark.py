@@ -258,6 +258,7 @@ class QEndParagraph(QParagraphMark):
                                             corrections)
         self.show()
 
+
 MARKS_DICT = {"start": QStartParagraph,
               "end": QEndParagraph,
               QRulerMark.ORIENT_HORIZONTAL: QHorizontalRuler,
@@ -272,13 +273,27 @@ def make_ruler_mark(pos, parent, name, delete_func, orientation,
                     corrections=(0, 0)):
     return MARKS_DICT[orientation](pos, parent, name, delete_func, corrections)
 
+def make_zone_mark(pos, parent, lesson_id, zone_id, page,
+                   delete_func, objects, number, rubric, margin,
+                   corrections=(0, 0), auto=False, pass_through=False,
+                   pages=None):
+    if not pass_through:
+        return QZoneMark(pos, parent, lesson_id, zone_id, page,
+                         delete_func, objects, number, rubric,
+                         margin, corrections, auto)
+    else:
+        return QPassThroughZoneMark(pos, parent, lesson_id, zone_id, page,
+                                    delete_func, objects, number, rubric,
+                                    margin, corrections, pages)
 
+
+# here type means zone type stored in xml (single, repeat etc)
 class QZoneMark(QParagraphMark):
     def __init__(self, pos, parent, lesson_id, zone_id, page,
-                 delete_func, type, objects, number, rubric, margin,
+                 delete_func, objects, number, rubric, margin,
                  corrections=(0, 0), auto=False, pass_through=False):
         super(QZoneMark, self).__init__(pos, parent, lesson_id, zone_id, page,
-                                        delete_func, type, corrections)
+                                        delete_func, "single", corrections)
         self.auto = auto
         self.type = "single"
         self.pass_through = pass_through
@@ -318,18 +333,29 @@ class QZoneMark(QParagraphMark):
     def set_page(self, page):
         pass
 
+    def to_dict(self):
+        return {"n": self.number,
+                "type": self.type,
+                "page": self.page,
+                "y": self.y(),
+                "rubric": self.rubric,
+                "objects": self.objects,
+                "at": self.margin }
+
 
 class QPassThroughZoneMark(QZoneMark):
     def __init__(self, pos, parent, lesson_id, zone_id, page,
-                 delete_func, type, objects, number, rubric, margin,
+                 delete_func, objects, number, rubric, margin,
                  corrections=(0, 0), pages=None):
         super(QPassThroughZoneMark, self).__init__(pos, parent,
-                                               lesson_id, zone_id,
-                                               page,
-                                               delete_func,
-                                               type, objects, number, rubric,
-                                               margin, corrections, True, True)
+                                                   lesson_id, zone_id,
+                                                   page,
+                                                   delete_func,
+                                                   objects, number,
+                                                   rubric, margin, corrections,
+                                                   True, True)
         self.type = "repeat"
+        self.initial_y = pos.y()
         self.pages = {page: pos.y()}
         if pages:
             for p, y in pages.items():
@@ -364,3 +390,13 @@ class QPassThroughZoneMark(QZoneMark):
 
     def can_be_removed(self):
         return self.pages == {}
+
+    def to_dict(self):
+        return {"n": self.number,
+                "type": self.type,
+                "placements": [{'page':p, 'y':y} for (p, y)
+                               in self.pages.items()],
+                "y": self.y(),
+                "rubric": self.rubric,
+                "objects": self.objects,
+                "at": self.margin }
