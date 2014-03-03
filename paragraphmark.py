@@ -148,7 +148,6 @@ class QParagraphMark(QMark):
         self.label.setText(u"%s    %s" % (self.LABELS.get(self.type, u""),
                                           self.name))
         self._adjust_to_mark()
-        self.show()
 
     def bind_to_ruler(self, ruler):
         self.ruler = ruler
@@ -173,6 +172,7 @@ class QRulerMark(QMark):
         # label is not needed, so have to overload all methods using it,
         # escpecialling those which do repainting
         self.label.hide()
+        self.show()
 
     def show(self):
         super(QRulerMark, self).show()
@@ -243,6 +243,7 @@ class QStartParagraph(QParagraphMark):
                                               delete_func,
                                               "start",
                                               corrections)
+        self.show()
 
 class QEndParagraph(QParagraphMark):
     def __init__(self, pos, parent, cas_id, name, page, delete_func,
@@ -255,6 +256,7 @@ class QEndParagraph(QParagraphMark):
                                             delete_func,
                                             "end",
                                             corrections)
+        self.show()
 
 MARKS_DICT = {"start": QStartParagraph,
               "end": QEndParagraph,
@@ -278,6 +280,7 @@ class QZoneMark(QParagraphMark):
         super(QZoneMark, self).__init__(pos, parent, lesson_id, zone_id, page,
                                         delete_func, type, corrections)
         self.auto = auto
+        self.type = "single"
         self.pass_through = pass_through
         self.margin = margin
         self.rubric = rubric
@@ -303,11 +306,17 @@ class QZoneMark(QParagraphMark):
         self.mark.show()
         self.label.hide()
 
+    def should_show(self, page):
+        return page == self.page
+
     def paint_me(self, painter):
         if self.is_selected:
             painter.fillRect(self.mark.geometry(), self.SELECT_COLOUR)
         else:
             painter.fillRect(self.mark.geometry(), self.DESELECT_COLOUR)
+
+    def set_page(self, page):
+        pass
 
 
 class QPassThroughZoneMark(QZoneMark):
@@ -320,12 +329,38 @@ class QPassThroughZoneMark(QZoneMark):
                                                delete_func,
                                                type, objects, number, rubric,
                                                margin, corrections, True, True)
-        self.pages = [page]
+        self.type = "repeat"
+        self.pages = {page: pos.y()}
         if pages:
-            for p in pages:
-                if p not in self.pages:
-                    self.pages.append(p)
+            for p, y in pages.items():
+                if p not in self.pages.keys():
+                    self.pages[p] = y
 
     def should_show(self, page):
+        return page in self.pages.keys()
+
+    def show(self):
+        super(QPassThroughZoneMark, self).show()
+        if not self.should_show(self.page):
+            return
+        g = self.geometry()
+        self.set_geometry(QtCore.QRect(g.x(),
+                                       self.pages[self.page], g.width(),
+                                       g.height()))
+
+    def move(self, delta):
+        super(QPassThroughZoneMark, self).move(delta)
+        g = self.geometry()
+        self.pages[self.page] = g.y()
         print self.pages
-        return page in self.pages
+
+    def set_page(self, page):
+        if self.should_show(page):
+            self.page = page
+
+    def remove_page(self, page):
+        if self.should_show(page):
+            del self.pages[page]
+
+    def can_be_removed(self):
+        return self.pages == {}
