@@ -5,3 +5,4 @@ pages/
 .ropeproject
 *.pyc
 config*
+unfinished*
