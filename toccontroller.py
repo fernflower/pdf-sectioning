@@ -107,10 +107,9 @@ class TocController(object):
 
     # ready means that this toc can be accessed by user (toc_elem with this id
     # is in FINISHED state and markup elem can be selected)
-    def set_state(self, both_ends, cas_id, mixed_up=False,
+    def set_state(self, both_ends, cas_id=None, mixed_up=False,
                            brackets_err=False):
-        cas_id = self.current_toc_elem.cas_id \
-            if self.current_toc_elem else cas_id
+        cas_id = cas_id if cas_id else self.current_toc_elem
         if cas_id:
             value = not mixed_up and not brackets_err and both_ends
             if mixed_up:
@@ -202,6 +201,7 @@ class TocController(object):
 
     def fill_with_data(self, mode):
         view = self.get_view_widget(mode)
+        view.reset()
         model = view.model()
         if model:
             model.clear()
@@ -235,6 +235,7 @@ class TocController(object):
             self.current_toc_elem = current
 
     def process_zone_added(self, zone):
+        print "za"
         zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
         if zone_elem:
             zone_elem.set_finished(True)
@@ -253,12 +254,12 @@ class TocController(object):
     def process_mode_switch(self, old_mode, new_mode):
         old_toc = self._get_selected(old_mode)
         new_view = self.get_view_widget(new_mode)
-        self.current_toc_elem = None
         # highlight corresponding elem according to last selection in prev.tab
         if old_toc:
             toc_elem = self.get_elem(old_toc.cas_id, new_mode)
             new_view.setCurrentIndex(toc_elem.index())
             self.process_selected(new_mode)
+        self.current_toc_elem = None
 
     # now highlight first met marks' toc-elem
     # TODO NO DAMNED PARAGRAPHS HIGHLIGHTING WITHOUT THOROUGH THINKING
@@ -309,8 +310,9 @@ class TocController(object):
         if len(idx) > 0:
             self.current_toc_elem = \
                 self.get_view_widget(mode).model().itemFromIndex(idx[0])
-            return self.current_toc_elem
-        return None
+        else:
+            self.current_toc_elem = None
+        return self.current_toc_elem
 
     # finds toc elem ordernum by cas_id and returns corresponding QMarkerTocElem
     def _get_sections_elem(self, cas_id):

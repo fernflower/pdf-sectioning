@@ -299,6 +299,8 @@ class QZoneMark(QParagraphMark):
         self.pass_through = pass_through
         self.margin = margin
         self.rubric = rubric
+        # pages that zone should appear at
+        self.pages = {page: pos.y()}
         # just a list of dicts [ {oid, block-id, rubric} ]
         self.objects = objects
         self.number = number
@@ -342,6 +344,20 @@ class QZoneMark(QParagraphMark):
                 "objects": self.objects,
                 "at": self.margin }
 
+    def set_page(self, page):
+        if self.should_show(page):
+            self.page = page
+
+    def remove_page(self, page):
+        if self.should_show(page):
+            del self.pages[page]
+
+    def can_be_removed(self):
+        return self.pages == {}
+
+    def should_show(self, page):
+        return page in self.pages.keys()
+
 
 class QPassThroughZoneMark(QZoneMark):
     def __init__(self, pos, parent, lesson_id, zone_id, page,
@@ -356,14 +372,10 @@ class QPassThroughZoneMark(QZoneMark):
                                                    True, True)
         self.type = "repeat"
         self.initial_y = pos.y()
-        self.pages = {page: pos.y()}
         if pages:
             for p, y in pages.items():
                 if p not in self.pages.keys():
                     self.pages[p] = y
-
-    def should_show(self, page):
-        return page in self.pages.keys()
 
     def show(self):
         super(QPassThroughZoneMark, self).show()
@@ -379,17 +391,6 @@ class QPassThroughZoneMark(QZoneMark):
         g = self.geometry()
         self.pages[self.page] = g.y()
         print self.pages
-
-    def set_page(self, page):
-        if self.should_show(page):
-            self.page = page
-
-    def remove_page(self, page):
-        if self.should_show(page):
-            del self.pages[page]
-
-    def can_be_removed(self):
-        return self.pages == {}
 
     def to_dict(self):
         return {"n": self.number,
