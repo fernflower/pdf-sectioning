@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
 from stylesheets import GENERAL_STYLESHEET, LIST_ITEM_DESELECT
-from zonetypes import START_AUTOZONES, END_AUTOZONES, ZONE_ICONS
+from zonetypes import ZONE_ICONS
 
 
 class QStatefulElem(QtGui.QStandardItem):
@@ -211,12 +211,14 @@ class QAutoZoneContainer(QStatefulElem):
 
 
 class QMarkerTocElem(QTocElem):
-    def __init__(self, name, cas_id, objects):
+    def __init__(self, name, cas_id, objects, start_autozones, end_autozones):
         super(QMarkerTocElem, self).__init__(name, cas_id)
         self.setText(name)
         self.setEditable(False)
         self.auto = None
         self.zones = []
+        self.start_autozones = start_autozones
+        self.end_autozones = end_autozones
 
         auto_data = {}
         non_auto_data = {}
@@ -245,13 +247,13 @@ class QMarkerTocElem(QTocElem):
                 new_zone = self.auto.add_zone(zone, auto_data[zone])
                 self.zones.append(new_zone)
 
-        for zone in START_AUTOZONES:
+        for zone in self.start_autozones:
             _process_auto_zone(zone)
         for zone in non_auto_data.keys():
             zone = QZone(self, zone, non_auto_data[zone])
             self.appendRow(zone)
             self.zones.append(zone)
-        for zone in END_AUTOZONES:
+        for zone in self.end_autozones:
             _process_auto_zone(zone)
         # no modifications unless filled-in!
         self._set_selectable(False)
@@ -307,14 +309,14 @@ class QMarkerTocElem(QTocElem):
 
     def get_start(self, zone):
         start_present = [z.zone_id for z in self.autozones
-                         if z.zone_id in START_AUTOZONES]
+                         if z.zone_id in self.start_autozones]
         if zone not in start_present:
             return None
         return start_present.index(zone) * ZONE_ICONS[zone].height()
 
     def get_end(self, zone):
         end_present = [z.zone_id for z in self.autozones
-                       if z.zone_id in END_AUTOZONES]
+                       if z.zone_id in self.end_autozones]
         if zone not in end_present:
             return None
         mult = len(end_present) - end_present.index(zone)

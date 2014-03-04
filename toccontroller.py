@@ -43,7 +43,7 @@ class TocController(object):
     MODE_SECTIONS = BookController.MODE_SECTIONS
     MODE_MARKUP = BookController.MODE_MARKER
 
-    def __init__(self, course_toc):
+    def __init__(self, course_toc, start_autozones, end_autozones):
         # store data as it comes from sectiontool -> a dict of parsed xml's
         # values
         self.course_toc = course_toc
@@ -57,6 +57,8 @@ class TocController(object):
         # view for two modes
         self.sections_view = None
         self.markup_view = None
+        self.start_autozones = start_autozones
+        self.end_autozones = end_autozones
 
     @property
     def is_anything_selected(self):
@@ -152,7 +154,8 @@ class TocController(object):
         else:
             self.markup_toc_elems = \
                 [ QMarkerTocElem(elem["name"], elem["cas-id"],
-                                 elem["objects"])
+                                 elem["objects"], self.start_autozones,
+                                 self.end_autozones)
                 for elem in self.course_toc ]
             return self.markup_toc_elems
 

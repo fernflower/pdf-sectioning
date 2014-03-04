@@ -10,6 +10,8 @@ from bookviewerwidget import BookViewerWidget
 from documentprocessor import DocumentProcessor, LoaderError
 from bookcontroller import BookController
 from toccontroller import TocController
+from zonetypes import ZONE_TYPES, PASS_THROUGH_ZONES, START_AUTOZONES, \
+    END_AUTOZONES
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
 E = ElementMaker(namespace=XHTML_NAMESPACE,
@@ -38,13 +40,29 @@ class SectionTool(object):
             raise SectionToolError(
             "Cms-course id should be set in config (cms-course field)!")
 
+        def _fill_with_zones(key):
+            data = self.config_data[key]
+            self.config_data[key] = [zone.strip() for zone in data.split(',')
+                                     if zone.strip() in ZONE_TYPES]
+        for param in ['passthrough-zones', 'start-autozones', 'end-autozones']:
+            if param in self.config_data.keys():
+                _fill_with_zones(param)
+            else:
+                self.config_data[param] = self._defaults[param]
+
+    @property
+    def _defaults(self):
+        return {'passthrough-zones': PASS_THROUGH_ZONES,
+                'start-autozones': START_AUTOZONES,
+                'end-autozones': END_AUTOZONES}
+
     def _fetch_data(self, url):
         storage = StringIO()
         c = pycurl.Curl()
         c.setopt(pycurl.URL, url)
         c.setopt(c.WRITEFUNCTION, storage.write)
         c.setopt(pycurl.USERPWD,
-                 self.config_data['username'] + ":" + \
+                 self.config_data["username"] + ":" + \
                  self.config_data["password"])
         # TODO find out how to use certificate
         c.setopt(pycurl.SSL_VERIFYPEER, 0)
@@ -123,12 +141,9 @@ def main():
         filename = None
         if len(sys.argv) >= 2:
             filename = sys.argv[1]
-        maxwidth = get_value("--width", sys.argv)
-        maxheight = get_value("--height", sys.argv)
-        save_dir = get_value("--savedir", sys.argv) or '.'
-        return (filename, maxwidth, maxheight, save_dir)
+        return filename
 
-    filename, width, height, save_dir = parse_args()
+    filename = parse_args()
     st = SectionTool("config")
     toc, display_name = st.get_cms_course_toc()
 
@@ -136,7 +151,8 @@ def main():
     app = QtGui.QApplication(sys.argv)
     # if no filename given: construct controller without docprocessor
     dp = DocumentProcessor(filename, display_name) if filename else None
-    toc_controller = TocController(toc)
+    toc_controller = TocController(toc, st.config_data["start-autozones"],
+                                   st.config_data["end-autozones"])
     # here display name must be passed in order to create DP later
     controller = BookController(toc_controller, st.config_data, dp,
                                 display_name)

@@ -7,9 +7,7 @@ from paragraphmark import make_paragraph_mark, make_ruler_mark, \
     make_zone_mark, QParagraphMark, QRulerMark, QEndParagraph, \
     QStartParagraph, QZoneMark, QPassThroughZoneMark
 from tocelem import QTocElem, QMarkerTocElem, QZone
-from zonetypes import ZONE_ICONS, PASS_THROUGH_ZONES, START_AUTOZONES, \
-    END_AUTOZONES
-
+from zonetypes import ZONE_ICONS
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
 # QImagelabel). Keeps track of paragraphs per page (parapraphs attr) and total
@@ -62,7 +60,12 @@ class BookController(object):
         # margins and first marked page orientation stuff
         self.margins = params["margins"]
         self.first_page = params["first-page"]
-
+        self.pass_through_zones = params["passthrough-zones"]
+        self.start_autozones = params["start-autozones"]
+        self.end_autozones = params["end-autozones"]
+        print self.pass_through_zones
+        print self.start_autozones
+        print self.end_autozones
 
     ### properties section
     @property
@@ -297,8 +300,7 @@ class BookController(object):
 
     ### different operations
     def open_file(self, filename, progress=None):
-        # TODO check that file is truly a pdf file
-        self._clear_paragraph_data()
+        self.delete_all()
         # deselect all in toc list
         self.toc_controller.set_default_style()
         try:
@@ -311,7 +313,7 @@ class BookController(object):
 
     # here marks_parent is a parent widget to set at marks' creation
     def load_markup(self, filename, marks_parent, progress=None):
-        self._clear_paragraph_data()
+        self.delete_all()
         # convert from QString
         filename = str(filename)
         paragraphs = self.dp.load_native_xml(filename)
@@ -470,10 +472,10 @@ class BookController(object):
                     pos = QtCore.QPoint(0, end.y() + az["rel-end"] * self.scale)
                 margin = self._guess_margin(pos)
                 # autozones are bound to START\END, not PAGE NUM in oid!
-                page = start.page if az["rubric"] in START_AUTOZONES \
+                page = start.page if az["rubric"] in self.start_autozones \
                     else end.page
                 # create zone of proper type
-                pass_through = az["rubric"] in PASS_THROUGH_ZONES
+                pass_through = az["rubric"] in self.pass_through_zones
                 pages = None
                 if pass_through:
                     pages = range(start.page, end.page)
@@ -602,6 +604,11 @@ class BookController(object):
         for cas_id in self.paragraph_marks.keys():
             self.delete_marks(marks=self.paragraph_marks[cas_id]["marks"])
             self.toc_controller.set_default_state(cas_id)
+        self.paragraphs = {}
+        # destroy previous rulers
+        for r in self.rulers:
+            r.destroy()
+        self.rulers = []
 
     # delete currently selected marks on current page. Destroy
     # widget here as well, after removing from all parallel data structures
@@ -778,19 +785,6 @@ class BookController(object):
     def _add_new_page(self, pagenum):
         self.paragraphs[pagenum] = {"marks": [],
                                     "zones": []}
-
-    def _clear_paragraph_data(self):
-        # destroy previous marks
-        for page in self.paragraphs.keys():
-            marks = self.paragraphs[page]["marks"]
-            zones = self.paragraphs[page]["zones"]
-            map(lambda m: m.destroy(), marks)
-            map(lambda z: z.destroy(), zones)
-        self.paragraphs = {}
-        # destroy previous rulers
-        for r in self.rulers:
-            r.destroy()
-        self.rulers = []
 
     def _create_mark_section_mode(self, pos, mark_parent):
         mark = None
