@@ -332,7 +332,7 @@ class BookController(object):
                 mark.adjust(self.scale)
                 if mark.page != self.pagenum:
                     mark.hide()
-                self.add_paragraph_mark(mark)
+                self.add_mark(mark)
             # now generate zones
             for z in zones:
                 page = int(z["page"])
@@ -358,12 +358,6 @@ class BookController(object):
                     zone.show()
                 else:
                     zone.hide()
-        # fill parallel structure (tiresome task of (start, end) handling is
-        # done here)
-        self._load_paragraph_marks()
-        # mark with both ends as ok as only paired marks can be loaded
-        for cas_id in self.paragraph_marks.keys():
-            self.toc_controller.set_state(True, cas_id)
 
     def _get_page_margin(self, page):
         for margin in [self.LEFT, self.RIGHT]:
@@ -396,7 +390,6 @@ class BookController(object):
         for cas_id in self.paragraph_marks.keys():
             for z in self.paragraph_marks[cas_id]["zones"]:
                 y = self.transform_to_pdf_coords(z.geometry()).y()
-                print z.to_dict()
                 pdf_paragraphs[cas_id]["zones"].append(z.to_dict())
 
         # pass first page orientation
@@ -412,15 +405,6 @@ class BookController(object):
         return self.dp.save_all(path_to_file, pdf_paragraphs,
                                 finished=finished)
 
-    # add paragraph mark to paragraph_marks (without duplicates)
-    def add_paragraph_mark(self, mark):
-        try:
-            if mark not in self.paragraphs[mark.page]["marks"]:
-                self.paragraphs[mark.page]["marks"].append(mark)
-        except KeyError:
-            self.paragraphs[mark.page] = {"marks": [mark],
-                                          "zones": []}
-
     # add zone to zones on page zone.page AND to paragraph's zones
     # There might be no marks on pages, so have to check on pagenum's presence
     # in self.paragraphs' keys
@@ -431,10 +415,8 @@ class BookController(object):
             self.paragraphs[pagenum]["zones"].append(zone)
         # if zone is a passthrough one, then add it to all it's pages
         if not zone.pass_through:
-            print "not PTZ"
             _add_to_page(zone.page)
         else:
-            print "passthrough"
             map(lambda p: _add_to_page(p), zone.pages)
         # situation with paragraph_marks is different: zones can't be placed
         # unless paragraph has start and end mark -> no check here
@@ -479,6 +461,7 @@ class BookController(object):
                 # no autoplacement if zone already placed
                 if self.is_zone_placed(cas_id, az["zone-id"]):
                     continue
+                self.any_unsaved_changes = True
                 pos = QtCore.QPoint(0, start.y())
                 if az["rel-start"]:
                     pos = QtCore.QPoint(0, az["rel-start"] * self.scale + start.y())
@@ -615,16 +598,26 @@ class BookController(object):
                 r.delete()
                 r.destroy()
 
+    def delete_all(self):
+        for cas_id in self.paragraph_marks.keys():
+            self.delete_marks(marks=self.paragraph_marks[cas_id]["marks"])
+            self.toc_controller.set_default_state(cas_id)
+
     # delete currently selected marks on current page. Destroy
     # widget here as well, after removing from all parallel data structures
-    def delete_marks(self):
-        selected = self.selected_marks_and_rulers
-        for m in selected:
+    def delete_marks(self, forced=False, marks=None):
+        marks = marks or self.selected_marks_and_rulers
+        for m in marks:
             if isinstance(m, QZoneMark):
-                self.paragraphs[self.pagenum]["zones"].remove(m)
-                m.remove_page(m.page)
+                if forced:
+                    for page in m.pages:
+                        self.paragraphs[page]["zones"].remove(m)
+                    m.remove_pages()
+                else:
+                    self.paragraphs[self.pagenum]["zones"].remove(m)
+                    m.remove_page(m.page)
             elif isinstance(m, QParagraphMark):
-                self.paragraphs[self.pagenum]["marks"].remove(m)
+                self.paragraphs[m.page]["marks"].remove(m)
                 # remove all placed zones as well if any mark removed
                 for z in self.paragraph_marks[m.cas_id]["zones"]:
                     for page in z.pages:
@@ -674,7 +667,7 @@ class BookController(object):
     def add_mark(self, mark):
         toc_elem = self.toc_controller.get_elem(mark.cas_id,
                                                 self.operational_mode)
-        self.add_paragraph_mark(mark)
+        self._add_paragraph_mark(mark)
         try:
             (start, end) = self.paragraph_marks[mark.cas_id]["marks"]
             if start and end:
@@ -876,25 +869,6 @@ class BookController(object):
                     else self._create_mark_marker_mode(pos, mark_parent)
         return mark
 
-    # here data is received from bookviewer as dict
-    # { page: { marks: [], zones: [] }}
-    # (useful when loading markup)
-    def _load_paragraph_marks(self):
-        self.paragraph_marks = {}
-        for pagenum in self.paragraphs.keys():
-            marks = self.paragraphs[pagenum]["marks"]
-            zones = self.paragraphs[pagenum]["zones"]
-            for mark in marks:
-                try:
-                    (start, no_end) = self.paragraph_marks[mark.cas_id]["marks"]
-                    self.paragraph_marks[mark.cas_id]["marks"] = (start, mark)
-                except KeyError:
-                    self._add_new_paragraph(mark.cas_id)
-                    self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
-            # no KeyError: cas-id already added above
-            for z in zones:
-                self.paragraph_marks[z.cas_id]["zones"].append(z)
-
     # get (y-coordinate, width correction) for markup mode depending on margins
     def _get_corrections(self, margin=None, rubric=None):
         width = self.ZONE_WIDTH if not rubric else ZONE_ICONS[rubric].width()
@@ -912,3 +886,12 @@ class BookController(object):
             if margin == self.RIGHT:
                 return (self.get_image().width() + delta, 0)
             return (delta, 0)
+
+    # add paragraph mark to paragraph_marks (without duplicates)
+    def _add_paragraph_mark(self, mark):
+        try:
+            if mark not in self.paragraphs[mark.page]["marks"]:
+                self.paragraphs[mark.page]["marks"].append(mark)
+        except KeyError:
+            self.paragraphs[mark.page] = {"marks": [mark],
+                                          "zones": []}

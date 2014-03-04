@@ -38,6 +38,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.unsaved_changes_dialog = None
         self.cant_save_dialog = None
         self.cant_open_dialog = None
+        self.wipe_all_dialog = None
         self.init_actions()
         self.init_widgets()
         self.init_menubar()
@@ -119,6 +120,15 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             QtCore.QString.fromUtf8(u"Удалить объект"), self)
         self.actionDelete_selection.setShortcut('Delete')
         self.actionDelete_selection.triggered.connect(self.delete_marks)
+        self.actionForced_delete_selection = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Удалить активную зону"), self)
+        self.actionForced_delete_selection.setShortcut('Shift+Delete')
+        self.actionForced_delete_selection.triggered.connect(
+            self.delete_marks_forced)
+        self.actionDelete_all = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Удалить текущую разметку"), self)
+        self.actionDelete_all.setShortcut('Ctrl+Shift+Delete')
+        self.actionDelete_all.triggered.connect(self.delete_all)
         self.actionClose = QtGui.QAction(
             QtCore.QString.fromUtf8(u"Выход"), self)
         self.actionClose.triggered.connect(self.close)
@@ -132,6 +142,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.menuFile.addAction(self.actionSaveAs)
         self.menuFile.addAction(self.actionClose)
         self.menuEdit.addAction(self.actionDelete_selection)
+        self.menuEdit.addAction(self.actionForced_delete_selection)
+        self.menuEdit.addAction(self.actionDelete_all)
         self.menuTools.addAction(self.actionSetHorizontalRuler)
         self.menuTools.addAction(self.actionSetVerticalRuler)
 
@@ -321,10 +333,18 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.last_right_click = self.mapToGlobal(point)
         self.cmenu.exec_(self.last_right_click)
 
-    # delete currently selected marks on current page. Destroy
-    # widget here as well, after removing from all parallel data structures
+    # delete currently selected marks on current page.
     def delete_marks(self):
         self.controller.delete_marks()
+
+    # this is called when shift + del is pressed
+    def delete_marks_forced(self):
+        self.controller.delete_marks(forced=True)
+
+    def delete_all(self):
+        if not self.show_wipe_all_dialog():
+            return
+        self.controller.delete_all()
 
     def open_file(self):
         if self.controller.any_unsaved_changes and \
@@ -490,6 +510,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # set actions enabled\disabled depending on current situation
         anything_selected = self.controller.selected_marks_and_rulers != []
         self.actionDelete_selection.setEnabled(anything_selected)
+        self.actionForced_delete_selection.setEnabled(anything_selected)
+        self.actionDelete_all.setEnabled(self.controller.any_unsaved_changes)
         self.actionSave.setEnabled(self.last_open_doc_name is not None)
 
     ## all possible dialogs go here
@@ -525,9 +547,23 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.cant_save_dialog.exec_()
 
     def show_cant_open_dialog(self):
-        self.cant_open_dialog = QtGui.QMessageBox(self)
-        self.cant_open_dialog.setText(u"Невозможно открыть файл.")
-        self.cant_open_dialog.setInformativeText(
-            u"Проверьте, что заданный файл является pdf-файлом.")
-        self.cant_open_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
+        if not self.cant_open_dialog:
+            self.cant_open_dialog = QtGui.QMessageBox(self)
+            self.cant_open_dialog.setText(u"Невозможно открыть файл.")
+            self.cant_open_dialog.setInformativeText(
+                u"Проверьте, что заданный файл является pdf-файлом.")
+            self.cant_open_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
         self.cant_open_dialog.exec_()
+
+    def show_wipe_all_dialog(self):
+        if not self.wipe_all_dialog:
+            self.wipe_all_dialog = QtGui.QMessageBox(self)
+            self.wipe_all_dialog.setText(u"Удаление всех элементов разметки.")
+            self.wipe_all_dialog.setInformativeText(
+            u"Вы уверены, что хотите продолжить? Это действие нельзя отменить.")
+            self.wipe_all_dialog.setStandardButtons(QtGui.QMessageBox.Yes |
+                                                    QtGui.QMessageBox.No)
+        result = self.wipe_all_dialog.exec_()
+        if result == QtGui.QMessageBox.Yes:
+            return True
+        return False

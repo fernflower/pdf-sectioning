@@ -235,7 +235,6 @@ class TocController(object):
             self.current_toc_elem = current
 
     def process_zone_added(self, zone):
-        print "za"
         zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
         if zone_elem:
             zone_elem.set_finished(True)

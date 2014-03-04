@@ -352,6 +352,9 @@ class QZoneMark(QParagraphMark):
         if self.should_show(page):
             del self.pages[page]
 
+    def remove_pages(self):
+        self.pages = {}
+
     def can_be_removed(self):
         return self.pages == {}
 
@@ -390,7 +393,6 @@ class QPassThroughZoneMark(QZoneMark):
         super(QPassThroughZoneMark, self).move(delta)
         g = self.geometry()
         self.pages[self.page] = g.y()
-        print self.pages
 
     def to_dict(self):
         return {"n": self.number,
