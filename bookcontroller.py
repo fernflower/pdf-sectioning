@@ -81,6 +81,14 @@ class BookController(object):
         return self.dp.curr_page_number + 1
 
     @property
+    def markup_finished(self):
+        finished = [e for e in \
+                    self.toc_controller.current_toc_elems(self.MODE_MARKER)
+                    if e.is_finished()]
+        return len(finished) == \
+            len(self.toc_controller.current_toc_elems(self.MODE_MARKER))
+
+    @property
     def selected_marks(self):
         return [m for m in self.get_current_page_marks() if m.is_selected]
 
@@ -356,7 +364,7 @@ class BookController(object):
                                       corrections=self._get_corrections(
                                           z["at"], z["rubric"]))
                 self.add_zone(zone)
-                if zone.should_show(self.pagenum):
+                if self.is_markup_mode and zone.should_show(self.pagenum):
                     zone.show()
                 else:
                     zone.hide()
@@ -402,10 +410,7 @@ class BookController(object):
                 else [self.RIGHT, self.LEFT][pagenum % 2]
         self.any_unsaved_changes = False
         # if not all paragraphs have been marked -> add unfinished_ to filename
-        finished = len(pdf_paragraphs) == \
-            len(self.toc_controller.current_toc_elems(self.operational_mode))
-        return self.dp.save_all(path_to_file, pdf_paragraphs,
-                                finished=finished)
+        return self.dp.save_all(path_to_file, pdf_paragraphs)
 
     # add zone to zones on page zone.page AND to paragraph's zones
     # There might be no marks on pages, so have to check on pagenum's presence

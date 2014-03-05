@@ -228,7 +228,6 @@ class DocumentProcessor(object):
             PAGES.append(PAGE)
             if progress:
                 progress.setValue(page)
-            print page
         root = E.object(E.text(PAGES), **{"display-name": self.display_name})
         result = etree.tostring(root, pretty_print=True, encoding="utf-8")
         return result
@@ -243,8 +242,6 @@ class DocumentProcessor(object):
                 # tex-like section-ref
                 destination = elem.attribute("DestinationName")
                 pagenum = self.doc.linkDestination(destination).pageNumber()
-                print u"%s%d. %s || %d-%d\n" % (prefix, i, elem.tagName(),
-                                                previous_page, pagenum)
                 previous_page = pagenum
                 if fc.hasChildNodes():
                     previous_page = _process_child(fc.firstChild(),
@@ -270,15 +267,10 @@ class DocumentProcessor(object):
             png.save(name, "png")
         return filenames
 
-    def save_all(self, path_to_file, paragraphs, finished=True,
-                 progress=None):
-        # save native xml
-        (path_to_dir, filename) = os.path.split(path_to_file)
-        filename = path_to_file if finished else os.path.join(
-            path_to_dir, 'unfinished_' + filename)
-        with open(filename, 'w') as fname:
+    def save_all(self, path_to_file, paragraphs, progress=None):
+        with open(path_to_file, 'w') as fname:
             fname.write(self.gen_native_xml(paragraphs, progress))
-        return filename
+        return path_to_file
 
     def _processTextBlocks(self):
         result = dict()

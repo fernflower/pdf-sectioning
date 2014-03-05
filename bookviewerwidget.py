@@ -38,6 +38,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.unsaved_changes_dialog = None
         self.cant_save_dialog = None
         self.cant_open_dialog = None
+        self.save_as_dialog = None
+        self.file_exists_dialog = None
         self.wipe_all_dialog = None
         self.init_actions()
         self.init_widgets()
@@ -376,7 +378,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             getOpenFileName(self,
                             QtCore.QString.fromUtf8(u'Загрузить разметку'),
                             '.',
-                            "Xml files (*.xml)")
+                            "Xml files (*.xml *.unfinished)")
         if not filename:
             return
         self.last_open_doc_name = unicode(filename)
@@ -385,6 +387,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._fill_views()
         self.show_progress_bar(u"Загрузка разметки ...")
         self.controller.load_markup(self.last_open_doc_name, self.imageLabel)
+        # if markup no finished -> make sure that filename has unfinished
+        # extension
+        if not self.controller.markup_finished:
+            name, ext = os.path.splitext(self.last_open_doc_name)
+            self.last_open_doc_name = name + ".unfinished"
         self.hide_progress_bar()
 
     def save(self):
@@ -394,7 +401,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.show_cant_save_dialog()
             return False
         self.show_progress_bar(u"Сохранение разметки ... ")
-        self.controller.save(os.path.dirname(self.last_open_doc_name))
+        self.controller.save(self.last_open_doc_name)
+        print self.last_open_doc_name
         self.hide_progress_bar()
 
     def save_as(self):
@@ -402,15 +410,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not self.controller.verify_mark_pairs():
             self.show_cant_save_dialog()
             return False
-        file_name = QtGui.QFileDialog.\
-            getSaveFileName(self,
-                            QtCore.QString.fromUtf8(u'Сохранить разметку'),
-                            "native.xml",
-                            "*.xml")
-        if not file_name:
+        filename = self.show_save_as_dialog()
+        if not filename:
             return
         self.show_progress_bar(u"Сохранение разметки ... ")
-        self.last_open_doc_name = self.controller.save(unicode(file_name))
+        self.last_open_doc_name = self.controller.save(filename)
         self.hide_progress_bar()
         return True
 
@@ -567,3 +571,33 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if result == QtGui.QMessageBox.Yes:
             return True
         return False
+
+    def show_save_as_dialog(self):
+        if not self.save_as_dialog:
+            self.save_as_dialog = QtGui.QFileDialog(self)
+            self.save_as_dialog.setConfirmOverwrite(True)
+        extension = "xml" if self.controller.markup_finished else "unfinished"
+        self.save_as_dialog.setDefaultSuffix(extension)
+        self.save_as_dialog.setNameFilter("*." + extension)
+        self.save_as_dialog.setWindowTitle(
+            QtCore.QString.fromUtf8(u"Сохранить разметку"))
+        self.save_as_dialog.exec_()
+        filename = self.save_as_dialog.selectedFiles()[0] \
+            if self.save_as_dialog.selectedFiles() else None
+        if not filename:
+            return None
+        filename = unicode(filename)
+        # check if overwriting existing file
+        if not self.file_exists_dialog:
+            self.file_exists_dialog = QtGui.QMessageBox(self)
+            self.file_exists_dialog.setText(u"Файл существует")
+            self.file_exists_dialog.setInformativeText(
+                u"Вы хотите перезаписать существующий файл?")
+            self.file_exists_dialog.setStandardButtons(QtGui.QMessageBox.Yes |
+                                                       QtGui.QMessageBox.No)
+        if os.path.isfile(filename):
+            result = self.file_exists_dialog.exec_()
+            if result == QtGui.QMessageBox.Yes:
+                return filename
+            return None
+        return filename
