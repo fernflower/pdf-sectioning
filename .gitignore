@@ -5,5 +5,6 @@ pages/
 .ropeproject
 *.pyc
 config*
+!tests/config-test
 unfinished*
 *.unfinished
