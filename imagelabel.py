@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
 from paragraphmark import QStartParagraph, QEndParagraph, QParagraphMark, \
-    QRulerMark, make_paragraph_mark, make_ruler_mark
+    QRulerMark
 from timelogger import TimeLogger
 
 tlogger = TimeLogger()

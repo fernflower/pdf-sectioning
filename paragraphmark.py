@@ -286,6 +286,17 @@ def make_zone_mark(pos, parent, lesson_id, zone_id, page,
                                     delete_func, objects, number, rubric,
                                     margin, corrections, pages)
 
+# TODO reconsider this, there might be another way of testing bookcontroller
+class MarkCreator(object):
+    def make_paragraph_mark(self, *args, **kwargs):
+        return make_paragraph_mark(*args, **kwargs)
+
+    def make_ruler_mark(self, *args, **kwargs):
+        return make_ruler_mark(*args, **kwargs)
+
+    def make_zone_mark(self, *args, **kwargs):
+        return make_zone_mark(*args, **kwargs)
+
 
 # here type means zone type stored in xml (single, repeat etc)
 class QZoneMark(QParagraphMark):

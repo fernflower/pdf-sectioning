@@ -7,7 +7,6 @@ from StringIO import StringIO
 from lxml import etree
 from lxml.builder import ElementMaker
 from bookviewerwidget import BookViewerWidget
-from documentprocessor import DocumentProcessor, LoaderError
 from bookcontroller import BookController
 from toccontroller import TocController
 from zonetypes import ZONE_TYPES, PASS_THROUGH_ZONES, START_AUTOZONES, \
@@ -54,7 +53,9 @@ class SectionTool(object):
     def _defaults(self):
         return {'passthrough-zones': PASS_THROUGH_ZONES,
                 'start-autozones': START_AUTOZONES,
-                'end-autozones': END_AUTOZONES}
+                'end-autozones': END_AUTOZONES,
+                'margins': 'lr',
+                'first-page': 'l'}
 
     def _fetch_data(self, url):
         storage = StringIO()
@@ -149,17 +150,13 @@ def main():
 
     # show window
     app = QtGui.QApplication(sys.argv)
-    # if no filename given: construct controller without docprocessor
-    dp = DocumentProcessor(filename, display_name) if filename else None
     toc_controller = TocController(toc, st.config_data["start-autozones"],
                                    st.config_data["end-autozones"])
     # here display name must be passed in order to create DP later
-    controller = BookController(toc_controller, st.config_data, dp,
-                                display_name)
+    controller = BookController(toc_controller, st.config_data,
+                                display_name, filename)
     ui_mw = BookViewerWidget(controller, toc_controller)
     ui_mw.show()
-    if not dp:
-        ui_mw.open_file()
     sys.exit(app.exec_())
 
 

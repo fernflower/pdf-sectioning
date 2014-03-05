@@ -11,28 +11,25 @@ E = ElementMaker(namespace=XHTML_NAMESPACE,
 
 
 class LoaderError(Exception):
-    pass
+    def __str__(self):
+        return self.message.encode("utf-8")
 
 class DocumentProcessor(object):
     resolution = 72.0
-    result_file_name = 'native.xml'
-    toc_file_name = 'toc.xml'
 
     def __init__(self, filename, display_name):
         self.filename = filename
         self.display_name = display_name
-        print u"filename is %s" % filename
-        try:
-            self.doc = Poppler.Document.load(filename)
-        except:
-            # TODO AWFUL exception handling!!!!
-            raise LoaderError(u'Файла %s не существует' % filename)
-        self.doc.setRenderHint(Poppler.Document.TextAntialiasing)
-        self.textBlocksPerPage = self._processTextBlocks()
-        self.selectionsPerPage = {}
         self.curr_page_num = 0
         # map of maps: rendered_pages in all possible scales
         self.rendered_pages = {}
+        print u"filename is %s" % filename
+        # check that file exists (in case app is run from console)
+        if os.path.isfile(filename):
+            self.doc = Poppler.Document.load(filename)
+            self.doc.setRenderHint(Poppler.Document.TextAntialiasing)
+        else:
+            raise LoaderError(u"No such file: %s" % filename)
 
     # 0 for first page
     @property
@@ -105,6 +102,7 @@ class DocumentProcessor(object):
 
     # returns a dict of {cas-id : paragraph marks data} (the same used in
     # bookviewer as self.paragraphs)
+    # filename = name of file with markup, NOT pdf
     def load_native_xml(self, filename):
         tree = etree.parse(filename)
         PAGES_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-page"
@@ -156,7 +154,6 @@ class DocumentProcessor(object):
                             "y": zone.get("y"),
                             "at": zone.get("at"),
                             "objects": objects,
-                            # FIXME maybe think of better passthrough guess?
                             "passthrough": zone.get("type") == u"repeat"}
                 zones.append(new_zone)
             out_paragraphs[cas_id] = { "marks": [start, end],
