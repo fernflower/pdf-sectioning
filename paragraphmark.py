@@ -273,16 +273,16 @@ def make_ruler_mark(pos, parent, name, delete_func, orientation,
                     corrections=(0, 0)):
     return MARKS_DICT[orientation](pos, parent, name, delete_func, corrections)
 
-def make_zone_mark(pos, parent, lesson_id, zone_id, page,
+def make_zone_mark(pos, parent, cas_id, zone_id, page,
                    delete_func, objects, number, rubric, margin,
                    corrections=(0, 0), auto=False, pass_through=False,
                    pages=None):
     if not pass_through:
-        return QZoneMark(pos, parent, lesson_id, zone_id, page,
+        return QZoneMark(pos, parent, cas_id, zone_id, page,
                          delete_func, objects, number, rubric,
                          margin, corrections, auto)
     else:
-        return QPassThroughZoneMark(pos, parent, lesson_id, zone_id, page,
+        return QPassThroughZoneMark(pos, parent, cas_id, zone_id, page,
                                     delete_func, objects, number, rubric,
                                     margin, corrections, pages)
 
@@ -300,10 +300,10 @@ class MarkCreator(object):
 
 # here type means zone type stored in xml (single, repeat etc)
 class QZoneMark(QParagraphMark):
-    def __init__(self, pos, parent, lesson_id, zone_id, page,
+    def __init__(self, pos, parent, cas_id, zone_id, page,
                  delete_func, objects, number, rubric, margin,
                  corrections=(0, 0), auto=False, pass_through=False):
-        super(QZoneMark, self).__init__(pos, parent, lesson_id, zone_id, page,
+        super(QZoneMark, self).__init__(pos, parent, cas_id, zone_id, page,
                                         delete_func, "single", corrections)
         self.auto = auto
         self.type = "single"
@@ -374,11 +374,11 @@ class QZoneMark(QParagraphMark):
 
 
 class QPassThroughZoneMark(QZoneMark):
-    def __init__(self, pos, parent, lesson_id, zone_id, page,
+    def __init__(self, pos, parent, cas_id, zone_id, page,
                  delete_func, objects, number, rubric, margin,
                  corrections=(0, 0), pages=None):
         super(QPassThroughZoneMark, self).__init__(pos, parent,
-                                                   lesson_id, zone_id,
+                                                   cas_id, zone_id,
                                                    page,
                                                    delete_func,
                                                    objects, number,

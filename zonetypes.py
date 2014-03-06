@@ -16,6 +16,7 @@ END_AUTOZONES = ["tra", "con"]
 # zones that shoukd appear on every page in paragraph
 PASS_THROUGH_ZONES = ["dic"]
 
+MARGINS = ["l", "r", "lr"]
 
 ZONE_ICONS = dict((zone_type, QtGui.QImage("buttons/Icons/icon_%s.png" % zone_type))
                   for zone_type in ZONE_TYPES)

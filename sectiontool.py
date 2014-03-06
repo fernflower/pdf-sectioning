@@ -10,7 +10,7 @@ from bookviewerwidget import BookViewerWidget
 from bookcontroller import BookController
 from toccontroller import TocController
 from zonetypes import ZONE_TYPES, PASS_THROUGH_ZONES, START_AUTOZONES, \
-    END_AUTOZONES
+    END_AUTOZONES, MARGINS
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
 E = ElementMaker(namespace=XHTML_NAMESPACE,
@@ -39,14 +39,27 @@ class SectionTool(object):
             raise SectionToolError(
             "Cms-course id should be set in config (cms-course field)!")
 
-        def _fill_with_zones(key):
-            data = self.config_data[key]
-            self.config_data[key] = [zone.strip() for zone in data.split(',')
-                                     if zone.strip() in ZONE_TYPES]
-        for param in ['passthrough-zones', 'start-autozones', 'end-autozones']:
-            if param in self.config_data.keys():
-                _fill_with_zones(param)
+        # a list of 2+ is returned as a list, but if [a] -> a (single elem) is
+        # returned
+        def _check_against(key, against):
+            return  [e.strip() for e in self.config_data[key].split(',')
+                     if e.strip() in against]
+
+        def _set_given_or_dfl(key, value):
+            if value != []:
+                self.config_data[key] = value
             else:
+                self.config_data[key] = self._defaults[key]
+
+        for param in self._defaults.keys():
+            if param in self.config_data.keys():
+                if param in ['passthrough-zones',
+                             'start-autozones', 'end-autozones']:
+                    _set_given_or_dfl(param, _check_against(param, ZONE_TYPES))
+                elif param == 'margins':
+                    _set_given_or_dfl(param, _check_against(param, MARGINS))
+            else:
+                # add default value
                 self.config_data[param] = self._defaults[param]
 
     @property
@@ -55,6 +68,8 @@ class SectionTool(object):
                 'start-autozones': START_AUTOZONES,
                 'end-autozones': END_AUTOZONES,
                 'margins': 'lr',
+                'margin-width': 50,
+                'zone-width': 20,
                 'first-page': 'l'}
 
     def _fetch_data(self, url):

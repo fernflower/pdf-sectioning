@@ -3,9 +3,7 @@
 from PyQt4 import QtGui, QtCore
 from paragraphmark import QStartParagraph, QEndParagraph, QParagraphMark, \
     QRulerMark
-from timelogger import TimeLogger
 
-tlogger = TimeLogger()
 
 # this class manages all keys/mouse clicks and calls actions from page_viewer
 # class. It keeps track of all paragraph marks with coordinates in dict, key is
@@ -63,7 +61,7 @@ class QImageLabel(QtGui.QLabel):
         if img:
             if self.controller.is_markup_mode():
                 # get margins info in order to add rects to image
-                w = self.controller.MARGIN_WIDTH
+                w = self.controller.margin_width
                 m_width = w
                 if self.controller.has_both_margins():
                     m_width = m_width + w

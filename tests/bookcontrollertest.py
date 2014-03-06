@@ -28,9 +28,9 @@ class MockMark(object):
         self.auto = kwargs.get("auto") or False
         self.page = kwargs.get("page") or 0
         self.pages = kwargs.get("pages") or [self.page]
-        self.cas_id = kwargs.get("cas_id") or kwargs.get("lesson_id")
+        self.cas_id = kwargs.get("cas_id")
         self.delete_func = kwargs.get("delete_func") or None
-        self.type = "will be set later"
+        self.type = ""
 
     @property
     def name(self):

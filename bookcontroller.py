@@ -10,7 +10,7 @@ from zonetypes import ZONE_ICONS
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
 # QImagelabel). Keeps track of paragraphs per page (parapraphs attr) and total
-# paragraph marks (total marks per paragraph)
+# marks per paragraph (paragraph_marks attr)
 class BookController(object):
     # selection creation mode
     MODE_SECTIONS = "section_mode"
@@ -24,15 +24,6 @@ class BookController(object):
     ZOOM_DELTA = 0.5
     # viewport delta
     VIEWPORT_DELTA = 5
-    # margins
-    LEFT = "l"
-    RIGHT = "r"
-    LEFT_RIGHT = "lr"
-    FIRST_PAGE = LEFT
-    MARGIN_WIDTH = 50
-    # if no image found -> default
-    ZONE_WIDTH = 20
-
 
     def __init__(self, toc_controller, params, display_name, filename=None,
                  mark_creator=None):
@@ -61,6 +52,8 @@ class BookController(object):
         self.any_unsaved_changes = False
         # margins and first marked page orientation stuff
         self.margins = params["margins"]
+        self.margin_width = params["margin-width"]
+        self.default_zone_width = params["zone-width"]
         self.first_page = params["first-page"]
         self.pass_through_zones = params["passthrough-zones"]
         self.start_autozones = params["start-autozones"]
@@ -175,13 +168,13 @@ class BookController(object):
             return True
 
     def has_right_margin(self):
-        return self.margins == self.RIGHT or self.has_both_margins()
+        return "r" in self.margins
 
     def has_left_margin(self):
-        return self.margins == self.LEFT or self.has_both_margins()
+        return "l" in self.margins
 
     def has_both_margins(self):
-        return self.margins == self.LEFT_RIGHT
+        return self.has_left_margin() and self.has_right_margin()
 
     def is_section_mode(self):
         return self.operational_mode == self.MODE_SECTIONS
@@ -350,7 +343,7 @@ class BookController(object):
                     pages[int(z1["page"])] = float(z1["y"])
                 zone = self.mc.make_zone_mark(parent=marks_parent,
                                       pos=QtCore.QPoint(0, float(z["y"])),
-                                      lesson_id=cas_id,
+                                      cas_id=cas_id,
                                       zone_id=z["zone-id"],
                                       page=page,
                                       pages=pages,
@@ -369,11 +362,11 @@ class BookController(object):
                     zone.hide()
 
     def _get_page_margin(self, page):
-        for margin in [self.LEFT, self.RIGHT]:
+        for margin in ["l", "r"]:
             if all(map(lambda z: z.margin==margin,
                        self.paragraphs[page]["zones"])):
                 return margin
-        return self.LEFT_RIGHT
+        return "lr"
 
     # returns full file name (with path) to file with markup
     def save(self, path_to_file, progress=None):
@@ -406,7 +399,7 @@ class BookController(object):
         for page in range(1, self.dp.totalPages):
             pdf_paragraphs["pages"][page] = self._get_page_margin(page) \
                 if page in self.paragraphs.keys() \
-                else [self.RIGHT, self.LEFT][pagenum % 2]
+                else ["r", "l"][pagenum % 2]
         self.any_unsaved_changes = False
         # if not all paragraphs have been marked -> add unfinished_ to filename
         return self.dp.save_all(path_to_file, pdf_paragraphs)
@@ -487,22 +480,22 @@ class BookController(object):
                     if end.y() > pos.y():
                         pages.append(end.page)
                     pages = dict(zip(pages, [pos.y()]*len(pages)))
-                    zone = self.mc.\
-                        make_zone_mark(pos=pos,
-                                       parent=zone_parent,
-                                       lesson_id=cas_id,
-                                       zone_id=az["zone-id"],
-                                       page=page,
-                                       delete_func=self.delete_zone,
-                                       objects=az["objects"],
-                                       number=az["number"],
-                                       rubric=az["rubric"],
-                                       margin=margin,
-                                       corrections=self._get_corrections(
-                                           margin, az["rubric"]),
-                                       auto=True,
-                                       pass_through=pass_through,
-                                       pages=pages)
+                zone = self.mc.\
+                    make_zone_mark(pos=pos,
+                                    parent=zone_parent,
+                                    cas_id=cas_id,
+                                    zone_id=az["zone-id"],
+                                    page=page,
+                                    delete_func=self.delete_zone,
+                                    objects=az["objects"],
+                                    number=az["number"],
+                                    rubric=az["rubric"],
+                                    margin=margin,
+                                    corrections=self._get_corrections(
+                                        margin, az["rubric"]),
+                                    auto=True,
+                                    pass_through=pass_through,
+                                    pages=pages)
                 self.add_zone(zone)
                 zone.set_page(self.pagenum)
                 if zone.should_show(self.pagenum):
@@ -846,10 +839,11 @@ class BookController(object):
     def _guess_margin(self, pos):
         if self.has_both_margins():
             if pos.x() <= self.get_image().width() / 2:
-                return self.LEFT
+                return "l"
             else:
-                return self.RIGHT
-        return self.margins
+                return "r"
+        # else only one margin
+        return self.margins[0]
 
     # Callback for on click marl creation, either start\end or ruler in SECTION
     # mode or a zone in MARKUP
@@ -865,19 +859,20 @@ class BookController(object):
 
     # get (y-coordinate, width correction) for markup mode depending on margins
     def _get_corrections(self, margin=None, rubric=None):
-        width = self.ZONE_WIDTH if not rubric else ZONE_ICONS[rubric].width()
+        width = self.default_zone_width \
+            if not rubric else ZONE_ICONS[rubric].width()
         if not margin:
             if self.has_both_margins():
-                return (0, 2 * self.MARGIN_WIDTH)
+                return (0, 2 * self.margin_width)
             if self.has_left_margin() or self.has_right_margin():
-                return (0, self.MARGIN_WIDTH)
+                return (0, self.margin_width)
             return (0, 0)
         else:
-            delta = (self.MARGIN_WIDTH - width) / 2
-            if margin == self.RIGHT and self.has_both_margins():
-                return (self.MARGIN_WIDTH + self.get_image().width() + delta,
+            delta = (self.margin_width - width) / 2
+            if margin == "r" and self.has_both_margins():
+                return (self.margin_width + self.get_image().width() + delta,
                         0)
-            if margin == self.RIGHT:
+            if margin == "r":
                 return (self.get_image().width() + delta, 0)
             return (delta, 0)
 
