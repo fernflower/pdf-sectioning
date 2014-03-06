@@ -10,6 +10,7 @@ class QMark(QtGui.QWidget):
     SELECT_COLOUR = QtGui.QColor(0, 0, 0, 32)
     DESELECT_COLOUR = QtGui.QColor(180, 180, 180, 32)
 
+    # pos in a tuple (x, y)
     def __init__(self, pos, parent, name, delete_func, corrections):
         super(QMark, self).__init__(parent)
         self.corrections = corrections
@@ -18,13 +19,32 @@ class QMark(QtGui.QWidget):
         self.cursor = QtGui.QCursor(QtCore.Qt.SizeAllCursor)
         self.delete_func = delete_func
         self.mark = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, parent)
-        self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
+        (pos_x, pos_y) = pos
+        self.mark.setGeometry(QtCore.QRect(QtCore.QPoint(pos_x, pos_y),
                                            QtCore.QSize(parent.width(),
                                                         self.WIDTH)))
         self.name = name
         self.label = QtGui.QLabel(self.name, parent)
         self._adjust_to_mark()
         self.update()
+
+    def is_paragraph(self):
+        return isinstance(self, QParagraphMark)
+
+    def is_start(self):
+        return isinstance(self, QStartParagraph)
+
+    def is_end(self):
+        return isinstance(self, QEndParagraph)
+
+    def is_ruler(self):
+        return isinstance(self, QRulerMark)
+
+    def is_zone(self):
+        return isinstance(self, QZoneMark)
+
+    def is_passthrough_zone(self):
+        return isinstance(self, QPassThroughZoneMark)
 
     # here corrections is a tuple
     #(l - left x-offset, that should be added to x,
@@ -36,6 +56,13 @@ class QMark(QtGui.QWidget):
         g = self.geometry()
         self.set_geometry(QtCore.QRect(g.x() + left, g.y(),
                                        g.width() + right, g.height()))
+
+    def geometry_as_tuple(self):
+        g = self.geometry()
+        return (g.x(), g.y(), g.width(), g.height())
+
+    def pos_as_tuple(self):
+        return (self.pos().x(), self.pos().y())
 
     def hide(self):
         # hide marks, and restore all corrections -> marks are stored as they
@@ -138,9 +165,9 @@ class QParagraphMark(QMark):
 
     def __init__(self, pos, parent, cas_id, name, page, delete_func, type,
                  corrections):
-        super(QParagraphMark, self).__init__(QtCore.QPoint(0, pos.y()),
-                                             parent,
-                                             name, delete_func, corrections)
+        (pos_x, pos_y) = pos
+        super(QParagraphMark, self).__init__((0, pos_y), parent, name,
+                                             delete_func, corrections)
         self.cas_id = cas_id
         self.page = page
         self.ruler = None
@@ -195,17 +222,17 @@ class QRulerMark(QMark):
 
 class QHorizontalRuler(QRulerMark):
     def __init__(self, pos, parent, name, delete_func, corrections):
-        pos = QtCore.QPoint(0, pos.y())
-        super(QRulerMark, self).__init__(pos, parent, name, delete_func,
-                                         corrections)
+        (pos_x, pos_y) = pos
+        super(QRulerMark, self).__init__((0, pos_y), parent, name,
+                                         delete_func, corrections)
 
 
 class QVerticalRuler(QRulerMark):
     def __init__(self, pos, parent, name, delete_func, corrections):
-        pos = QtCore.QPoint(pos.x(), 0)
-        super(QRulerMark, self).__init__(pos, parent, name, delete_func,
-                                         corrections)
-        vert_rect = QtCore.QRect(QtCore.QPoint(pos.x(), pos.y()),
+        (pos_x, pos_y) = pos
+        super(QRulerMark, self).__init__((pos_x, 0), parent, name,
+                                         delete_func, corrections)
+        vert_rect = QtCore.QRect(QtCore.QPoint(pos_x, 0),
                                  QtCore.QSize(QMark.WIDTH,
                                             parent.height()))
         self.set_geometry(vert_rect)
@@ -311,7 +338,8 @@ class QZoneMark(QParagraphMark):
         self.margin = margin
         self.rubric = rubric
         # pages that zone should appear at
-        self.pages = {page: pos.y()}
+        (pos_x, pos_y) = pos
+        self.pages = {page: pos_y}
         # just a list of dicts [ {oid, block-id, rubric} ]
         self.objects = objects
         self.number = number
@@ -385,7 +413,8 @@ class QPassThroughZoneMark(QZoneMark):
                                                    rubric, margin, corrections,
                                                    True, True)
         self.type = "repeat"
-        self.initial_y = pos.y()
+        (pos_x, pos_y) = pos
+        self.initial_y = pos_y
         if pages:
             for p, y in pages.items():
                 if p not in self.pages.keys():

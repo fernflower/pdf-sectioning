@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from PyQt4 import QtCore
 from popplerqt4 import Poppler
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -268,6 +269,18 @@ class DocumentProcessor(object):
         with open(path_to_file, 'w') as fname:
             fname.write(self.gen_native_xml(paragraphs, progress))
         return path_to_file
+
+    def _is_in_pdf_bounds(self, pos, scale, viewport_delta):
+        img = self.curr_page(scale).rect()
+        viewport = QtCore.QRect(img.x(),
+                                img.y() + viewport_delta,
+                                img.width(),
+                                img.height() - viewport_delta)
+        if type(pos) == QtCore.QPoint:
+            return viewport.contains(pos)
+        elif type(pos) == QtCore.QRect:
+            return viewport.intersects(pos)
+        return False
 
     def _processTextBlocks(self):
         result = dict()

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from collections import OrderedDict
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtCore
 from documentprocessor import DocumentProcessor, LoaderError
-from paragraphmark import QParagraphMark, QRulerMark, QEndParagraph, \
-    QStartParagraph, QZoneMark, QPassThroughZoneMark, MarkCreator
+from paragraphmark import MarkCreator, QRulerMark, QParagraphMark
 from tocelem import QTocElem, QMarkerTocElem, QZone
 from zonetypes import ZONE_ICONS
 
@@ -125,22 +124,13 @@ class BookController(object):
                 [z.zone_id for z in self.paragraph_marks[cas_id]["zones"]]
         return False
 
+    # here pos is either a point (x, y) or a rectangle (x, y, w, h)
     def _is_in_pdf_bounds(self, pos):
-        img = self.get_image()
-        if not img:
-            return
-        img = img.rect()
-        viewport = QtCore.QRect(img.x(),
-                               img.y() + self.VIEWPORT_DELTA,
-                               img.width(),
-                               img.height() - self.VIEWPORT_DELTA)
-        if type(pos) == QtCore.QPoint:
-            return viewport.contains(pos)
-        elif type(pos) == QtCore.QRect:
-            return viewport.intersects(pos)
-        else:
+        if not self.dp:
             return False
+        return self.dp._is_in_pdf_bounds(pos, self.scale, self.VIEWPORT_DELTA)
 
+    # pos is a QPoint
     def is_in_viewport(self, pos):
         if self.is_section_mode():
             return self._is_in_pdf_bounds(pos)
@@ -323,39 +313,40 @@ class BookController(object):
             zones = data["zones"]
             for m in marks:
                 page = int(m["page"])
-                mark = self.mc.make_paragraph_mark(parent=marks_parent,
-                                      cas_id=cas_id,
-                                      name=m["name"],
-                                      pos=QtCore.QPoint(0, float(m["y"])),
-                                      page=page,
-                                      delete_func=self.delete_mark,
-                                      type=m["type"],
-                                      corrections=self._get_corrections())
+                mark_data = {"parent": marks_parent,
+                             "cas_id": cas_id,
+                             "name": m["name"],
+                             "pos": (0, float(m["y"])),
+                             "page": page,
+                             "delete_func": self.delete_mark,
+                             "type": m["type"],
+                             "corrections":self._get_corrections()}
+                mark = self.add_mark(mark_data)
                 mark.adjust(self.scale)
                 if mark.page != self.pagenum:
                     mark.hide()
-                self.add_mark(mark)
             # now generate zones
             for z in zones:
                 page = int(z["page"])
                 pages = {}
                 for z1 in z["placements"]:
                     pages[int(z1["page"])] = float(z1["y"])
-                zone = self.mc.make_zone_mark(parent=marks_parent,
-                                      pos=QtCore.QPoint(0, float(z["y"])),
-                                      cas_id=cas_id,
-                                      zone_id=z["zone-id"],
-                                      page=page,
-                                      pages=pages,
-                                      delete_func=self.delete_zone,
-                                      number=z["number"],
-                                      rubric=z["rubric"],
-                                      objects=z["objects"],
-                                      margin=z["at"],
-                                      pass_through=z["passthrough"],
-                                      corrections=self._get_corrections(
-                                          z["at"], z["rubric"]))
-                self.add_zone(zone)
+                zone_data = { "parent": marks_parent,
+                              "pos": (0, float(z["y"])),
+                              "cas_id": cas_id,
+                              "zone_id": z["zone-id"],
+                              "page": page,
+                              "pages": pages,
+                              "delete_func": self.delete_zone,
+                              "number": z["number"],
+                              "rubric": z["rubric"],
+                              "objects": z["objects"],
+                              "margin": z["at"],
+                              "pass_through": z["passthrough"],
+                              "corrections": self._get_corrections(
+                                  z["at"], z["rubric"])
+                             }
+                zone = self.add_zone(zone_data)
                 if self.is_markup_mode and zone.should_show(self.pagenum):
                     zone.show()
                 else:
@@ -407,11 +398,12 @@ class BookController(object):
     # add zone to zones on page zone.page AND to paragraph's zones
     # There might be no marks on pages, so have to check on pagenum's presence
     # in self.paragraphs' keys
-    def add_zone(self, zone):
+    def add_zone(self, zone_data):
         def _add_to_page(pagenum):
             if pagenum not in self.paragraphs.keys():
                 self._add_new_page(pagenum)
             self.paragraphs[pagenum]["zones"].append(zone)
+        zone = self.mc.make_zone_mark(**zone_data)
         # if zone is a passthrough one, then add it to all it's pages
         if not zone.pass_through:
             _add_to_page(zone.page)
@@ -425,6 +417,7 @@ class BookController(object):
         self.paragraph_marks[zone.cas_id]["zones"].append(zone)
         # mark corr. elem as placed
         self.toc_controller.process_zone_added(zone)
+        return zone
 
     # if step_by_step is True then scale will be either increased or decreased
     # by 1. Otherwise - scale will be taken from delta: delta + old if delta in [MIN,
@@ -461,12 +454,12 @@ class BookController(object):
                 if self.is_zone_placed(cas_id, az["zone-id"]):
                     continue
                 self.any_unsaved_changes = True
-                pos = QtCore.QPoint(0, start.y())
+                pos = (0, start.y())
                 if az["rel-start"]:
-                    pos = QtCore.QPoint(0, az["rel-start"] * self.scale + start.y())
+                    pos = (0, az["rel-start"] * self.scale + start.y())
                 elif az["rel-end"]:
                     # substract relative end from end-of-page y
-                    pos = QtCore.QPoint(0, end.y() + az["rel-end"] * self.scale)
+                    pos = (0, end.y() + az["rel-end"] * self.scale)
                 margin = self._guess_margin(pos)
                 # autozones are bound to START\END, not PAGE NUM in oid!
                 page = start.page if az["rubric"] in self.start_autozones \
@@ -474,29 +467,29 @@ class BookController(object):
                 # create zone of proper type
                 pass_through = az["rubric"] in self.pass_through_zones
                 pages = None
+                (pos_x, pos_y) = pos
                 if pass_through:
                     pages = range(start.page, end.page)
                     # figure out whether should add last page
-                    if end.y() > pos.y():
+                    if end.y() > pos_y:
                         pages.append(end.page)
-                    pages = dict(zip(pages, [pos.y()]*len(pages)))
-                zone = self.mc.\
-                    make_zone_mark(pos=pos,
-                                    parent=zone_parent,
-                                    cas_id=cas_id,
-                                    zone_id=az["zone-id"],
-                                    page=page,
-                                    delete_func=self.delete_zone,
-                                    objects=az["objects"],
-                                    number=az["number"],
-                                    rubric=az["rubric"],
-                                    margin=margin,
-                                    corrections=self._get_corrections(
-                                        margin, az["rubric"]),
-                                    auto=True,
-                                    pass_through=pass_through,
-                                    pages=pages)
-                self.add_zone(zone)
+                    pages = dict(zip(pages, [pos_y]*len(pages)))
+                zone_data = { "pos": pos,
+                              "parent": zone_parent,
+                              "cas_id": cas_id,
+                              "zone_id": az["zone-id"],
+                              "page": page,
+                              "delete_func": self.delete_zone,
+                              "objects": az["objects"],
+                              "number": az["number"],
+                              "rubric": az["rubric"],
+                              "margin": margin,
+                              "corrections":self._get_corrections(margin,
+                                                                  az["rubric"]),
+                              "auto": True,
+                              "pass_through": pass_through,
+                              "pages": pages }
+                zone = self.add_zone(zone_data)
                 zone.set_page(self.pagenum)
                 if zone.should_show(self.pagenum):
                     zone.show()
@@ -552,6 +545,7 @@ class BookController(object):
         return self.dp.go_to_page(pagenum)
 
     # move all currently selected elems
+    # here point is either QPoint or QRect (doesn't matter as is passed to DP)
     def move(self, delta, point):
         # if only one mark is selected at a time, the check whether we want to
         # bind it to a ruler
@@ -573,8 +567,7 @@ class BookController(object):
                 other_mark = self.get_next_paragraph_mark(self.operational_mode,
                                                           mark)
                 if other_mark and other_mark != mark:
-                    start = mark if isinstance(mark, QStartParagraph) \
-                                 else other_mark
+                    start = mark if mark.is_start() else other_mark
                     end = other_mark if start == mark else mark
                     toc_elem = self.toc_controller.get_elem(mark.cas_id,
                                                             self.operational_mode)
@@ -613,7 +606,7 @@ class BookController(object):
     def delete_marks(self, forced=False, marks=None):
         marks = marks or self.selected_marks_and_rulers
         for m in marks:
-            if isinstance(m, QZoneMark):
+            if m.is_zone():
                 if forced:
                     for page in m.pages:
                         self.paragraphs[page]["zones"].remove(m)
@@ -621,7 +614,7 @@ class BookController(object):
                 else:
                     self.paragraphs[self.pagenum]["zones"].remove(m)
                     m.remove_page(m.page)
-            elif isinstance(m, QParagraphMark):
+            elif m.is_paragraph():
                 self.paragraphs[m.page]["marks"].remove(m)
                 # remove all placed zones as well if any mark removed
                 for z in self.paragraph_marks[m.cas_id]["zones"]:
@@ -669,7 +662,8 @@ class BookController(object):
         return True
 
     # add mark to a correct place (start comes first, end - second)
-    def add_mark(self, mark):
+    def add_mark(self, mark_data):
+        mark = self.mc.make_paragraph_mark(**mark_data)
         toc_elem = self.toc_controller.get_elem(mark.cas_id,
                                                 self.operational_mode)
         self._add_paragraph_mark(mark)
@@ -678,9 +672,9 @@ class BookController(object):
             if start and end:
                # already have paragraph start and paragraph end
                 return
-            if not start and isinstance(mark, QStartParagraph):
+            if not start and mark.is_start():
                 start = mark
-            elif not end and isinstance(mark, QEndParagraph):
+            elif not end and mark.is_end():
                 end = mark
             self.paragraph_marks[mark.cas_id]["marks"] = (start, end)
             # set correct states
@@ -697,6 +691,7 @@ class BookController(object):
             self._add_new_paragraph(mark.cas_id)
             self.paragraph_marks[mark.cas_id]["marks"] = (mark, None)
             self.toc_controller.set_state(False, mark.cas_id)
+        return mark
 
     def find_at_point(self, point, among=None):
         def contains(mark, point):
@@ -761,10 +756,10 @@ class BookController(object):
         for pagenum in sorted(self.paragraphs.keys()):
             for m in sorted(self.paragraphs[pagenum]["marks"],
                             key=lambda m:m.y()):
-                if isinstance(m, QStartParagraph):
+                if m.is_start():
                     stack.append(m.cas_id)
                     continue
-                elif isinstance(m, QEndParagraph):
+                elif m.is_end():
                     try:
                         if stack[-1] != m.cas_id:
                             return (False, m)
@@ -794,12 +789,15 @@ class BookController(object):
             mark_type = self.get_available_marks(key)
             if not mark_type:
                 return None
-            mark = self.mc.\
-                make_paragraph_mark(pos, mark_parent, toc_elem.cas_id,
-                                    toc_elem.name, self.pagenum,
-                                    self.delete_mark, mark_type[0],
-                                    corrections=self._get_corrections())
-            self.add_mark(mark)
+            mark_data = {"pos": pos,
+                         "parent": mark_parent,
+                         "cas_id": toc_elem.cas_id,
+                         "name": toc_elem.name,
+                         "page": self.pagenum,
+                         "delete_func": self.delete_mark,
+                         "type": mark_type[0],
+                         "corrections": self._get_corrections()}
+            mark = self.add_mark(mark_data)
         elif self.is_ruler_mode():
             mark = self.mc.make_ruler_mark(pos, mark_parent, "",
                                            self.delete_ruler,
@@ -819,26 +817,28 @@ class BookController(object):
             if self.is_zone_placed(toc_elem.cas_id, toc_elem.zone_id):
                 return None
             margin = self._guess_margin(pos)
-            zone = QZoneMark(pos,
-                             mark_parent,
-                             toc_elem.cas_id,
-                             toc_elem.zone_id,
-                             self.pagenum,
-                             self.delete_zone,
-                             toc_elem.objects_as_dictslist(),
-                             toc_elem.number,
-                             toc_elem.pdf_rubric,
-                             margin=margin,
-                             corrections= \
-                             self._get_corrections(margin, toc_elem.pdf_rubric))
-            self.add_zone(zone)
+            zone_data = { "pos": pos,
+                          "parent": mark_parent,
+                          "cas_id": toc_elem.cas_id,
+                          "zone_id": toc_elem.zone_id,
+                          "page": self.pagenum,
+                          "delete_func": self.delete_zone,
+                          "objects": toc_elem.objects_as_dictslist(),
+                          "number": toc_elem.number,
+                          "rubric": toc_elem.pdf_rubric,
+                          "margin": margin,
+                          "corrections":self._get_corrections(
+                              margin, toc_elem.pdf_rubric) }
+            zone = self.add_zone(zone_data)
             zone.show()
         # no rulers in marker mode
         return zone
 
+    # pos is a tuple (x, y)
     def _guess_margin(self, pos):
+        (pos_x, pos_y) = pos
         if self.has_both_margins():
-            if pos.x() <= self.get_image().width() / 2:
+            if pos_x <= self.get_image().width() / 2:
                 return "l"
             else:
                 return "r"
@@ -852,9 +852,11 @@ class BookController(object):
         # start\end mark available
         if not self.is_in_viewport(pos):
             return None
-        mark = self._create_mark_section_mode(pos, mark_parent) \
+        # pos is a QPoint and has to be parsed
+        pos_tuple = (pos.x(), pos.y())
+        mark = self._create_mark_section_mode(pos_tuple, mark_parent) \
                     if self.is_section_mode() \
-                    else self._create_mark_marker_mode(pos, mark_parent)
+                    else self._create_mark_marker_mode(pos_tuple, mark_parent)
         return mark
 
     # get (y-coordinate, width correction) for markup mode depending on margins

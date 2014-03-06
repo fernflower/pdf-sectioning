@@ -31,6 +31,11 @@ class QImageLabel(QtGui.QLabel):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setStyleSheet(self.STYLESHEET)
 
+    @property
+    def coordinates_as_tuple(self):
+        if self.coordinates:
+            return (self.coordinates.x(), self.coordinates.y())
+
     def wheelEvent(self, event):
         modifiers = QtGui.QApplication.keyboardModifiers()
         if modifiers == QtCore.Qt.ControlModifier:
