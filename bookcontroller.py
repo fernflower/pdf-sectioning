@@ -446,6 +446,7 @@ class BookController(object):
 
     def autozones(self, zone_parent, progress=None):
         # auto place ALL autozones in ALL paragraphs that have start\end marks
+        count = 0
         for i, cas_id in enumerate(self.paragraph_marks.keys()):
             autozones = self.toc_controller.get_autoplaced_zones(cas_id)
             (start, end) = self.paragraph_marks[cas_id]["marks"]
@@ -469,6 +470,8 @@ class BookController(object):
                 pages = None
                 (pos_x, pos_y) = pos
                 if pass_through:
+                    # not end.page + 1 as there may be no paragraph mark on
+                    # that page!
                     pages = range(start.page, end.page)
                     # figure out whether should add last page
                     if end.y() > pos_y:
@@ -481,7 +484,6 @@ class BookController(object):
                               "page": page,
                               "delete_func": self.delete_zone,
                               "objects": az["objects"],
-                              "number": az["number"],
                               "rubric": az["rubric"],
                               "margin": margin,
                               "corrections":self._get_corrections(margin,
@@ -490,11 +492,12 @@ class BookController(object):
                               "pass_through": pass_through,
                               "pages": pages }
                 zone = self.add_zone(zone_data)
-                zone.set_page(self.pagenum)
+                count = count + 1
                 if zone.should_show(self.pagenum):
                     zone.show()
                 else:
                     zone.hide()
+        return count
 
     # deselect all elems on page (both marks and rulers) if not in
     # keep_selections list
@@ -676,6 +679,10 @@ class BookController(object):
                 start = mark
             elif not end and mark.is_end():
                 end = mark
+            else:
+                # this is likely to NEVER happen, but let's check it anyway:
+                # forbid adding second start or end mark
+                return
             self.paragraph_marks[mark.cas_id]["marks"] = (start, end)
             # set correct states
             if not end or not start:

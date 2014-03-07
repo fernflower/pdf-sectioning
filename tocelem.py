@@ -270,13 +270,11 @@ class QMarkerTocElem(QTocElem):
         result = []
         for auto in self.autozones:
             key_type = auto.zone_id
-            zone = { "type": key_type,
-                     "rel-start": self.get_start(key_type),
+            zone = { "rel-start": self.get_start(key_type),
                      "rel-end": self.get_end(key_type),
                      "type": auto.type,
                      "rubric": auto.pdf_rubric,
                      "zone-id": auto.zone_id,
-                     "number": auto.number,
                      "page": auto.page,
                      "objects": auto.objects_as_dictslist()
                     }

@@ -284,7 +284,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def autozones(self):
         self.show_progress_bar(u"Автоматическое размещение зон ...")
-        self.controller.autozones(self.imageLabel)
+        num = self.controller.autozones(self.imageLabel)
         self.hide_progress_bar()
 
     # mind that this is called every time a view is clicked, not only on
