@@ -493,7 +493,7 @@ class DocLoaderTest(unittest.TestCase):
                                                         "lesson:bla-bla-bla"))
         self.controller.go_to_page(24)
         self.assertEqual(self.controller.pagenum, 25)
-        # try to place zone mark after end of paragraph
+        # try to place zone mark after end of paragraph and fail
         self.assertFalse(self.controller.is_in_viewport((8, 300),
                                                         "lesson:bla-bla-bla"))
 
@@ -504,6 +504,12 @@ class DocLoaderTest(unittest.TestCase):
         # in controller and from 0 in document processor
         self.controller.go_to_page(6)
         self.assertEqual(self.controller.pagenum, 7)
+
+    def test_rulers(self):
+        pass
+
+    def test_move(self):
+        pass
 
     # here different functins that include racalculation (transform to pdf,
     # zoom etc) will be tested

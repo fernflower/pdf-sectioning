@@ -264,7 +264,7 @@ class BookController(object):
         doubled_list = range(self.MIN_SCALE * 2,
                              self.MAX_SCALE * 2, int(self.ZOOM_DELTA * 2))
         try:
-            return  doubled_list.index(int(self.scale * 2))
+            return doubled_list.index(int(self.scale * 2))
         except ValueError:
             return 0 if self.scale < self.MIN_SCALE else len(doubled_list) - 1
 
@@ -279,7 +279,7 @@ class BookController(object):
         error_toc = self.toc_controller.get_first_error_elem(mode)
         return self.get_mark_for_toc_elem(mode, error_toc)
 
-    def get_available_marks(self, cas_id):
+    def _get_available_marks(self, cas_id):
         both = ["start", "end"]
         end_only = ["end"]
         start_only = ["start"]
@@ -791,7 +791,7 @@ class BookController(object):
             toc_elem = self.current_toc_elem
             key = toc_elem.cas_id
             (start, end) = (None, None)
-            mark_type = self.get_available_marks(key)
+            mark_type = self._get_available_marks(key)
             if not mark_type:
                 return None
             mark_data = {"pos": pos,
