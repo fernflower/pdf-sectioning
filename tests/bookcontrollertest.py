@@ -44,6 +44,9 @@ class MocTocController(object):
 
 # an object representing mark but without all QWidget stuff
 class MockMark(object):
+    WIDTH = 20
+    HEIGHT = 2
+
     def __init__(self, *args, **kwargs):
         self.pos = kwargs.get("pos")
         self.corrections = kwargs.get("corrections") or (0, 0)
@@ -65,6 +68,9 @@ class MockMark(object):
     def y(self):
         x, y = self.pos
         return y
+
+    def set_page(self, page):
+        self.page = page
 
     def show(self):
         return "shown!"
@@ -108,6 +114,27 @@ class MockMark(object):
 
     def can_be_removed(self):
         return self.pages == {}
+
+    def geometry(self):
+        x, y = self.pos
+        return ([x, x + self.WIDTH], [y, y + self.HEIGHT])
+
+    def contains(self, point_tuple):
+        x, y = point_tuple
+        x_range, y_range = self.geometry()
+        return x in x_range and y in y_range
+
+    def intersects(self, rect_tuple):
+        x1, y1, x2, y2 = rect_tuple
+        width = x2 - x1
+        height = y2 - y1
+        x_range, y_range = self.geometry()
+        x_topleft, y_topleft = x_range[0], y_range[0]
+        x_bottomleft, y_bottomleft = x_range[0], y_range[1]
+        x_topright, y_topright = x_range[1], y_range[0]
+        x_bottomright, y_bottomright = x_range[1], y_range[1]
+        return not(x2 < x_topleft or x1 > x_topright or \
+                   y2 < y_topleft or y1 > y_bottomright)
 
 
 class MockMarkCreator(object):
@@ -436,17 +463,51 @@ class DocLoaderTest(unittest.TestCase):
         self.assertTupleEqual(self.controller.verify_brackets(),
                               (False, end))
 
+    def test_find_and_viewport_functions(self):
+        # first test find_at_point functions
+        self._fill_with_data()
+        marks = self.controller.paragraph_marks["lesson:bla-bla-bla"]["marks"]
+        start = next((m for m in marks if m.is_start()), None)
+        # exact match
+        elem = self.controller.find_at_point((0, 10), marks)
+        self.assertEqual(elem, start)
+        # non exact match
+        elem = self.controller.find_at_point((2, 16), marks)
+        self.assertEqual(elem, start)
+        # test viewport match func
+        self.assertTrue(self.controller.is_section_mode())
+        in_viewport = self.controller.is_in_viewport((8, 30),
+                                                     "lesson:bla-bla-bla")
+        # start\end marks can be placed anywhere
+        self.assertTrue(in_viewport)
+        self.controller.set_normal_marker_mode()
+        self.assertTrue(self.controller.is_markup_mode())
+        self.controller.go_to_page(6)
+        self.assertEqual(self.controller.pagenum, 7)
+        self.assertTrue(self.controller.is_in_viewport((8, 30),
+                                                       "lesson:bla-bla-bla"))
+        self.controller.go_to_page(2)
+        # have no marks here, should not be able to put any
+        self.assertEqual(self.controller.pagenum, 3)
+        self.assertFalse(self.controller.is_in_viewport((8, 30),
+                                                        "lesson:bla-bla-bla"))
+        self.controller.go_to_page(24)
+        self.assertEqual(self.controller.pagenum, 25)
+        # try to place zone mark after end of paragraph
+        self.assertFalse(self.controller.is_in_viewport((8, 300),
+                                                        "lesson:bla-bla-bla"))
 
-    # TODO here some args are passed as QPoint\QRect, can involve code refactor
-    # and moving widget logic somewhere else
-    def test_move(self):
-        pass
 
     def test_show_hide_marks(self):
-        pass
+        # test go to page functionality here as well
+        # FIXME perhaps have to make clearer that pages are enumerated from 1
+        # in controller and from 0 in document processor
+        self.controller.go_to_page(6)
+        self.assertEqual(self.controller.pagenum, 7)
 
     # here different functins that include racalculation (transform to pdf,
     # zoom etc) will be tested
+    # FIXME again, some refactor might be needed
     def test_recalc_functions(self):
         pass
 

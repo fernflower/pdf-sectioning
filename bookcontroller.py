@@ -3,7 +3,7 @@
 from collections import OrderedDict
 from PyQt4 import QtCore
 from documentprocessor import DocumentProcessor, LoaderError
-from paragraphmark import MarkCreator, QRulerMark, QParagraphMark
+from paragraphmark import MarkCreator, QRulerMark
 from tocelem import QTocElem, QMarkerTocElem, QZone
 from zonetypes import ZONE_ICONS
 
@@ -23,6 +23,7 @@ class BookController(object):
     ZOOM_DELTA = 0.5
     # viewport delta
     VIEWPORT_DELTA = 5
+    SELECT_DELTA = 12
 
     def __init__(self, toc_controller, params, display_name, filename=None,
                  mark_creator=None):
@@ -129,23 +130,25 @@ class BookController(object):
         return False
 
     # here pos is either a point (x, y) or a rectangle (x, y, w, h)
-    def _is_in_pdf_bounds(self, pos):
+    def _is_in_pdf_bounds(self, pos_tuple):
         if not self.dp:
             return False
-        return self.dp._is_in_pdf_bounds(pos, self.scale, self.VIEWPORT_DELTA)
+        return self.dp._is_in_pdf_bounds(pos_tuple, self.scale,
+                                         self.VIEWPORT_DELTA)
 
-    # pos is a QPoint
-    def is_in_viewport(self, pos):
+    def is_in_viewport(self, pos_tuple, cas_id=None):
         if self.is_section_mode():
-            return self._is_in_pdf_bounds(pos)
+            return self._is_in_pdf_bounds(pos_tuple)
         else:
             # get mark's start\end and calculate available viewport
-            if not self.current_toc_elem:
+            curr_cas_id = cas_id or self.current_toc_elem.cas_id
+            if not curr_cas_id:
                 return False
+            x, y = pos_tuple
             (start, end) = \
-                self.paragraph_marks[self.current_toc_elem.cas_id]["marks"]
+                self.paragraph_marks[curr_cas_id]["marks"]
             if start.page == end.page and end.page == self.pagenum:
-                if pos.y() < start.y() or pos.y() > end.y():
+                if y < start.y() or y > end.y():
                     return False
             else:
                 if end.page < self.pagenum or start.page > self.pagenum:
@@ -155,9 +158,9 @@ class BookController(object):
                 # no marks -> in between pages, True
                 if len(current) == 0:
                     return True
-                if current[0] == start and pos.y() < start.y():
+                if current[0] == start and y < start.y():
                     return False
-                if current[0] == end and pos.y() > end.y():
+                if current[0] == end and y > end.y():
                     return False
             return True
 
@@ -552,16 +555,17 @@ class BookController(object):
         return self.dp.go_to_page(pagenum)
 
     # move all currently selected elems
-    # here point is either QPoint or QRect (doesn't matter as is passed to DP)
-    def move(self, delta, point):
+    def move(self, delta, point_tuple):
         # if only one mark is selected at a time, the check whether we want to
         # bind it to a ruler
         if len(self.selected_marks) == 1:
-            if not self.is_in_viewport(point):
+            if not self.is_in_viewport(point_tuple):
                 return
             # check if there are any rulers at point
             mark = self.selected_marks[0]
-            ruler = self.find_at_point(point, self.get_rulers())
+            # TODO here point is passed as a QPoint, have to convert to tuple
+            ruler = self.find_at_point(point_tuple,
+                                       self.get_rulers())
             self.any_unsaved_changes = True
             if ruler:
                 mark.bind_to_ruler(ruler)
@@ -585,7 +589,8 @@ class BookController(object):
                                                   not ok_braces)
             return
         # else move as usual
-        if all(map(lambda m: self.is_in_viewport(m.pos() + delta), \
+        if all(map(lambda m: self.is_in_viewport((m.x() + delta.x(),
+                                                  m.y() + delta.y())), \
                    self.selected_marks)):
             self.any_unsaved_changes = True
             for m in self.selected_marks:
@@ -593,7 +598,7 @@ class BookController(object):
         # if rulers become invisible after move -> delete them
         for r in self.selected_rulers:
             r.move(delta)
-            if not self.is_in_viewport(r.geometry()):
+            if not self.is_in_viewport(r.geometry_as_tuple()):
                 # delete ruler
                 r.delete()
                 r.destroy()
@@ -704,40 +709,29 @@ class BookController(object):
             self.toc_controller.set_state(False, mark.cas_id)
         return mark
 
-    def find_at_point(self, point, among=None):
-        def contains(mark, point):
-            if mark is not None and mark.contains(point):
-                return mark
-
-        def intersects(mark, rect):
-            if mark is not None and mark.intersects(rect):
-                return mark
-
+    def find_at_point(self, point_tuple, among=None):
         # in order to be a bit more user-friendly, first search precisely at
         # point clicked, then add some delta and search withing +-delta area
         page_marks = self.get_current_page_marks() if among is None else among
         exact_match = next(
-            (mark for mark in page_marks if contains(mark, point)), None)
+            (mark for mark in page_marks if mark.contains(point_tuple)), None)
         if exact_match:
             return exact_match
         else:
-            ne_rect = QtCore.QRect(
-                QtCore.QPoint(point.x() - QParagraphMark.SELECT_DELTA,
-                              point.y() - QParagraphMark.SELECT_DELTA),
-                QtCore.QPoint(point.x() + QParagraphMark.SELECT_DELTA,
-                              point.y() + QParagraphMark.SELECT_DELTA))
-            return next(
-            (mark for mark in page_marks if intersects(mark, ne_rect)), None)
-
+            x, y = point_tuple
+            rect_tuple = (x - self.SELECT_DELTA, y - self.SELECT_DELTA,
+                          x + self.SELECT_DELTA, y + self.SELECT_DELTA)
+            return next((mark for mark in page_marks
+                         if mark.intersects(rect_tuple)), None)
 
     # find any selected mark at point, either a paragraph mark or a ruler
     # point (section mode) or any zone (marker mode)
-    def find_any_at_point(self, point):
-        selected_mark = self.find_at_point(point)
+    def find_any_at_point(self, point_tuple):
+        selected_mark = self.find_at_point(point_tuple)
         if selected_mark:
             return selected_mark
         else:
-            return self.find_at_point(point, self.get_rulers())
+            return self.find_at_point(point_tuple, self.get_rulers())
 
     # returns True if all marked paragraphs have both start and end marks in
     # the correct order (start mark goes first).
@@ -858,13 +852,12 @@ class BookController(object):
 
     # Callback for on click marl creation, either start\end or ruler in SECTION
     # mode or a zone in MARKUP
-    def _create_mark_on_click(self, pos, mark_parent):
+    def _create_mark_on_click(self, pos_tuple, mark_parent):
         # else create new one if any TOC elem selected and free space for
         # start\end mark available
-        if not self.is_in_viewport(pos):
+        if not self.is_in_viewport(pos_tuple):
             return None
         # pos is a QPoint and has to be parsed
-        pos_tuple = (pos.x(), pos.y())
         mark = self._create_mark_section_mode(pos_tuple, mark_parent) \
                     if self.is_section_mode() \
                     else self._create_mark_marker_mode(pos_tuple, mark_parent)

@@ -48,7 +48,7 @@ class QImageLabel(QtGui.QLabel):
 
     def _set_cursor(self, pos):
         # if over a ruler or mark - change cursor appropriately
-        any_mark = self.controller.find_any_at_point(pos)
+        any_mark = self.controller.find_any_at_point((pos.x(), pos.y()))
         if any_mark:
             if not self.cursor_overridden:
                 QtGui.QApplication.setOverrideCursor(
@@ -126,22 +126,24 @@ class QImageLabel(QtGui.QLabel):
         if event.buttons() == QtCore.Qt.RightButton:
             return super(QImageLabel, self).mousePressEvent(event)
         if event.buttons() == QtCore.Qt.LeftButton:
-            selected = self.controller.find_any_at_point(event.pos())
+            selected = self.controller.find_any_at_point((event.pos().x(),
+                                                          event.pos().y()))
             self.coordinates = event.pos()
             if selected:
                 if modifiers == QtCore.Qt.AltModifier and isinstance(selected,
                                                                      QRulerMark):
                     # try to create new mark and bind it to ruler
                     self.controller.deselect_all()
-                    mark = self.controller._create_mark_on_click(event.pos(),
-                                                                 self)
+                    mark = self.controller._create_mark_on_click(
+                        self.coordinates_as_tuple, self)
                     mark.bind_to_ruler(selected)
                 else:
                     process_selected(selected)
             else:
                 # deselected everything selected earlier on page
                 self.controller.deselect_all()
-                self.controller._create_mark_on_click(event.pos(), self)
+                self.controller._create_mark_on_click(
+                    self.coordinates_as_tuple, self)
                 self.last_selected = None
         self.update()
 
@@ -149,7 +151,7 @@ class QImageLabel(QtGui.QLabel):
         delta = QtCore.QPoint(event.pos().x() - self.coordinates.x(),
                               event.pos().y() - self.coordinates.y())
         self.coordinates = event.pos()
-        self.controller.move(delta, self.coordinates)
+        self.controller.move(delta, self.coordinates_as_tuple)
         self.update()
 
     def keyPressEvent(self, event):
@@ -157,5 +159,5 @@ class QImageLabel(QtGui.QLabel):
                 event.key() in self.MOVE_KEYS_DELTA.keys():
             delta = self.MOVE_KEYS_DELTA[event.key()]
             self.coordinates = self.coordinates + delta
-            self.controller.move(delta, self.coordinates)
+            self.controller.move(delta, self.coordinates_as_tuple)
         self.update()

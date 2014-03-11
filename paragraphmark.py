@@ -6,7 +6,6 @@ from zonetypes import ZONE_ICONS
 
 class QMark(QtGui.QWidget):
     WIDTH = 5
-    SELECT_DELTA = 12
     SELECT_COLOUR = QtGui.QColor(0, 0, 0, 32)
     DESELECT_COLOUR = QtGui.QColor(180, 180, 180, 32)
 
@@ -135,6 +134,9 @@ class QMark(QtGui.QWidget):
     def y(self):
         return self.geometry().y()
 
+    def x(self):
+        return self.geometry().x()
+
     def pos(self):
         return self.mark.pos()
 
@@ -142,10 +144,14 @@ class QMark(QtGui.QWidget):
         self.mark.update()
         self.label.update()
 
-    def contains(self, cursor):
-        return self.geometry().contains(cursor)
+    def contains(self, point_tuple):
+        x, y = point_tuple
+        point = QtCore.QPoint(x, y)
+        return self.geometry().contains(point)
 
-    def intersects(self, rect):
+    def intersects(self, rect_tuple):
+        x1, y1, x2, y2 = rect_tuple
+        rect = QtCore.QRect(QtCore.QPoint(x1, y1,), QtCore.QPoint(x2, y2))
         return self.geometry().intersects(rect)
 
     def move(self, delta):

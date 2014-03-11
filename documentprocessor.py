@@ -270,15 +270,18 @@ class DocumentProcessor(object):
             fname.write(self.gen_native_xml(paragraphs, progress))
         return path_to_file
 
-    def _is_in_pdf_bounds(self, pos, scale, viewport_delta):
+    def _is_in_pdf_bounds(self, pos_tuple, scale, viewport_delta):
         img = self.curr_page(scale).rect()
         viewport = QtCore.QRect(img.x(),
                                 img.y() + viewport_delta,
                                 img.width(),
                                 img.height() - viewport_delta)
-        if type(pos) == QtCore.QPoint:
+        if len(pos_tuple) == 2:
+            pos = QtCore.QPoint(pos_tuple[0], pos_tuple[1])
             return viewport.contains(pos)
-        elif type(pos) == QtCore.QRect:
+        elif len(pos_tuple) == 4:
+            pos = QtCore.QRect(QtCore.QPoint(pos_tuple[0], pos_tuple[1]),
+                               QtCore.QPoint(pos_tuple[2], pos_tuple[3]))
             return viewport.intersects(pos)
         return False
 
