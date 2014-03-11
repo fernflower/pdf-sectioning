@@ -14,6 +14,9 @@ class MocTocController(object):
     def set_state(self, value, cas_id, is_ok=False, braces_err=False):
         pass
 
+    def set_default_state(self, cas_id):
+        pass
+
     def process_zone_added(self, zone):
         print "%s has been added" % zone.name
 
@@ -34,6 +37,10 @@ class MocTocController(object):
                  "page": 15,
                  "objects": [{"oid": "195-15-00-01-con",
                               "block-id": "qqqq"}]}]
+
+    def process_zone_deleted(self, zone):
+        print "%s has been deleted" % zone.name
+
 
 # an object representing mark but without all QWidget stuff
 class MockMark(object):
@@ -81,10 +88,26 @@ class MockMark(object):
         return self.type == "end"
 
     def is_zone(self):
-        return self.type == "zone"
+        return self.type in ["zone", "auto zone"]
 
     def is_passthrough_zone(self):
         return self.pass_through
+
+    def remove_page(self, pagenum):
+        if pagenum in self.pages.keys():
+            del self.pages[pagenum]
+
+    def remove_pages(self):
+        self.pages = {}
+
+    def destroy(self):
+        print "widget destruction"
+
+    def delete(self):
+        return self.delete_func(self)
+
+    def can_be_removed(self):
+        return self.pages == {}
 
 
 class MockMarkCreator(object):
@@ -108,6 +131,41 @@ class MockMarkCreator(object):
 
 # figure out that cas-xml is loaded and parsed properly
 class DocLoaderTest(unittest.TestCase):
+
+    def _fill_with_data(self):
+        start_data = {"pos": (0, 10),
+                      "parent": "MockParent",
+                      "cas_id": "lesson:bla-bla-bla",
+                      "page": 5,
+                      "delete_func": self.controller.delete_funcs["start_end"],
+                      "name": "lesson blablabla. Paragraph 2",
+                      "type": "start"}
+        end_data = {"pos": (0, 190),
+                    "parent": "MockParent",
+                    "cas_id": "lesson:bla-bla-bla",
+                    "page": 25,
+                    "delete_func": self.controller.delete_funcs["start_end"],
+                    "name": "lesson blablabla. Paragraph 2",
+                    "type": "end"}
+        self.controller.add_mark(start_data)
+        self.controller.add_mark(end_data)
+        # now place zone manually
+        zone_data = {"pos": (55, 50),
+                     "parent": "MockParent",
+                     "cas_id": "lesson:bla-bla-bla",
+                     "zone_id": "01int",
+                     "page": 14,
+                     "delete_func": self.controller.delete_funcs["zone"],
+                     "objects":[ {"oid": "195-12-01-01-int",
+                                  "block-id": "some block id"}],
+                     "number": "01",
+                     "rubric": "int",
+                     "margin": "l"}
+        # TODO perhaps it's better to test _create_mark_on_click func but it
+        # requires a whole deal of new mock objects so here base add method
+        # will be tested
+        self.controller.add_zone(zone_data)
+        self.controller.autozones("MockParent")
 
     def setUp(self):
         super(DocLoaderTest, self).setUp()
@@ -225,7 +283,7 @@ class DocLoaderTest(unittest.TestCase):
                      "number": "01",
                      "rubric": "int",
                      "margin": "l"}
-        # TODO perhaps its better to test _create_mark_on_click func but it
+        # TODO perhaps it's better to test _create_mark_on_click func but it
         # requires a whole deal of new mock objects so here base add method
         # will be tested
         m_zone = self.controller.add_zone(zone_data)
@@ -240,11 +298,144 @@ class DocLoaderTest(unittest.TestCase):
     def test_delete_marks(self):
         # TODO here deletion from main controller structures, paragraphs and
         # paragraph_marks will be tested
-        pass
+        self._fill_with_data()
+        zones = self.controller.paragraph_marks["lesson:bla-bla-bla"]["zones"]
+        self.assertEqual(len(zones), 3)
+        # manually placed
+        self.assertEqual(zones[0].page, 14)
+        # auto passthrough bound to start
+        self.assertEqual(zones[1].page, 5)
+        # auto bound to end
+        self.assertEqual(zones[2].page, 25)
+        # all but some passthrough zones should be deleted
+        self.controller.delete_marks(forced=False, marks=zones)
+        zones_left = self.controller.\
+            paragraph_marks["lesson:bla-bla-bla"]["zones"]
+        self.assertEqual(len(zones_left), 1)
+        # verify all deleted in paragraphs
+        self.assertTrue(zones_left[0].pass_through)
+        for p in [5, 14, 25]:
+            self.assertEqual(self.controller.paragraphs[p]["zones"],
+                             zones_left)
+        # now delete with forced
+        self.controller.delete_marks(forced=True, marks=zones_left)
+        # verify all deleted in paragraphs
+        for p in [5, 14, 25]:
+            self.assertEqual(self.controller.paragraphs[p]["zones"], [])
+        self._fill_with_data()
+        # now test delete all
+        self.controller.delete_all()
+        self.assertEqual(self.controller.paragraphs, {})
+        self.assertEqual(self.controller.paragraph_marks, {})
 
     def test_verify_functions(self):
         # here verify error functions will be tested
-        pass
+        bad_start = {"pos": (0, 300),
+                     "parent": "MockParent",
+                     "cas_id": "lesson:bla-bla-bla",
+                     "page": 5,
+                     "delete_func": self.controller.delete_funcs["start_end"],
+                     "name": "lesson blablabla. Paragraph 2",
+                     "type": "start"}
+        bad_end = {"pos": (0, 190),
+                   "parent": "MockParent",
+                   "cas_id": "lesson:bla-bla-bla",
+                   "page": 5,
+                   "delete_func": self.controller.delete_funcs["start_end"],
+                   "name": "lesson blablabla. Paragraph 2",
+                   "type": "end"}
+        start = self.controller.add_mark(bad_start)
+        end = self.controller.add_mark(bad_end)
+        # end comes before start on same page
+        self.assertFalse(self.controller.verify_start_end(start, end))
+        bad_start = {"pos": (0, 100),
+                     "parent": "MockParent",
+                     "cas_id": "lesson:bla-bla-bla2",
+                     "page": 15,
+                     "delete_func": self.controller.delete_funcs["start_end"],
+                     "name": "lesson blablabla. Paragraph 4",
+                     "type": "start"}
+        bad_end = {"pos": (0, 190),
+                   "parent": "MockParent",
+                   "cas_id": "lesson:bla-bla-bla2",
+                   "page": 5,
+                   "delete_func": self.controller.delete_funcs["start_end"],
+                   "name": "lesson blablabla. Paragraph 4",
+                   "type": "end"}
+        start = self.controller.add_mark(bad_start)
+        end = self.controller.add_mark(bad_end)
+        # end page comes before start page
+        self.assertFalse(self.controller.verify_start_end(start, end))
+        self.controller.delete_all()
+        # normal order
+        start_data = {"pos": (0, 10),
+                      "parent": "MockParent",
+                      "cas_id": "lesson:bla-bla-bla",
+                      "page": 5,
+                      "delete_func": self.controller.delete_funcs["start_end"],
+                      "name": "lesson blablabla. Paragraph 2",
+                      "type": "start"}
+        end_data = {"pos": (0, 190),
+                    "parent": "MockParent",
+                    "cas_id": "lesson:bla-bla-bla",
+                    "page": 25,
+                    "delete_func": self.controller.delete_funcs["start_end"],
+                    "name": "lesson blablabla. Paragraph 2",
+                    "type": "end"}
+        start = self.controller.add_mark(start_data)
+        end = self.controller.add_mark(end_data)
+        self.assertTrue(self.controller.verify_start_end(start, end))
+        # check both start\end
+        self.assertTrue(self.controller.verify_mark_pairs())
+        # at the moment have start and end in normal order, let's delete one
+        self.controller.delete_marks(marks = [start])
+        self.assertFalse(self.controller.verify_mark_pairs())
+        # when both ends are deleted should get no error (not erroneous, but
+        # default, markless state)
+        self.controller.delete_marks(marks = [end])
+        self.assertTrue(self.controller.verify_mark_pairs())
+        # brackets error (appears when start of some paragraph is in-between
+        # some other paragraph whereas end lays outside that other paragraph)
+        self.controller.delete_all()
+        start_data = {"pos": (0, 10),
+                      "parent": "MockParent",
+                      "cas_id": "lesson:bla-bla-bla",
+                      "page": 5,
+                      "delete_func": self.controller.delete_funcs["start_end"],
+                      "name": "lesson blablabla. Paragraph 2",
+                      "type": "start"}
+        end_data = {"pos": (0, 190),
+                    "parent": "MockParent",
+                    "cas_id": "lesson:bla-bla-bla",
+                    "page": 25,
+                    "delete_func": self.controller.delete_funcs["start_end"],
+                    "name": "lesson blablabla. Paragraph 2",
+                    "type": "end"}
+        start = self.controller.add_mark(start_data)
+        end = self.controller.add_mark(end_data)
+        # by now everything is ok
+        self.assertTupleEqual(self.controller.verify_brackets(), (True, None))
+        bad_start = {"pos": (0, 10),
+                     "parent": "MockParent",
+                     "cas_id": "lesson:fffuuuuu",
+                     "page": 6,
+                     "delete_func": self.controller.delete_funcs["start_end"],
+                     "name": "lesson blablabla. Paragraph 2",
+                     "type": "start"}
+        bad_end = {"pos": (0, 10),
+                   "parent": "MockParent",
+                   "cas_id": "lesson:fffuuuuu",
+                   "page": 14,
+                   "delete_func": self.controller.delete_funcs["start_end"],
+                   "name": "lesson blablabla. Paragraph 2",
+                   "type": "start"}
+        bad_s = self.controller.add_mark(bad_start)
+        bad_e = self.controller.add_mark(bad_end)
+        # TODO perhaps it's not correct to return end of wrongly placed
+        # paragraph, but will leave it as is at least now
+        self.assertTupleEqual(self.controller.verify_brackets(),
+                              (False, end))
+
 
     # TODO here some args are passed as QPoint\QRect, can involve code refactor
     # and moving widget logic somewhere else

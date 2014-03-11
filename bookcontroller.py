@@ -57,6 +57,10 @@ class BookController(object):
         self.pass_through_zones = params["passthrough-zones"]
         self.start_autozones = params["start-autozones"]
         self.end_autozones = params["end-autozones"]
+        # delete funcs to be passed on different marks' construction
+        self.delete_funcs = {"start_end": self.delete_mark,
+                             "zone": self.delete_zone,
+                             "ruler": self.delete_ruler}
 
     ### properties section
     @property
@@ -318,7 +322,7 @@ class BookController(object):
                              "name": m["name"],
                              "pos": (0, float(m["y"])),
                              "page": page,
-                             "delete_func": self.delete_mark,
+                             "delete_func": self.delete_funcs["start_end"],
                              "type": m["type"],
                              "corrections":self._get_corrections()}
                 mark = self.add_mark(mark_data)
@@ -337,7 +341,7 @@ class BookController(object):
                               "zone_id": z["zone-id"],
                               "page": page,
                               "pages": pages,
-                              "delete_func": self.delete_zone,
+                              "delete_func": self.delete_funcs["zone"],
                               "number": z["number"],
                               "rubric": z["rubric"],
                               "objects": z["objects"],
@@ -482,7 +486,7 @@ class BookController(object):
                               "cas_id": cas_id,
                               "zone_id": az["zone-id"],
                               "page": page,
-                              "delete_func": self.delete_zone,
+                              "delete_func": self.delete_funcs["zone"],
                               "objects": az["objects"],
                               "rubric": az["rubric"],
                               "margin": margin,
@@ -615,9 +619,9 @@ class BookController(object):
                         self.paragraphs[page]["zones"].remove(m)
                     m.remove_pages()
                 else:
-                    self.paragraphs[self.pagenum]["zones"].remove(m)
+                    self.paragraphs[m.page]["zones"].remove(m)
                     m.remove_page(m.page)
-            elif m.is_paragraph():
+            elif m.is_start() or m.is_end():
                 self.paragraphs[m.page]["marks"].remove(m)
                 # remove all placed zones as well if any mark removed
                 for z in self.paragraph_marks[m.cas_id]["zones"]:
@@ -647,7 +651,7 @@ class BookController(object):
             self.toc_controller.set_state(False, mark.cas_id)
         if self.paragraph_marks[mark.cas_id]["marks"] == (None, None):
             del self.paragraph_marks[mark.cas_id]
-            self.toc_controller.set_default_state()
+            self.toc_controller.set_default_state(mark.cas_id)
         return True
 
     # return value (True/False) means whether widget has to be physically
@@ -801,13 +805,13 @@ class BookController(object):
                          "cas_id": toc_elem.cas_id,
                          "name": toc_elem.name,
                          "page": self.pagenum,
-                         "delete_func": self.delete_mark,
+                         "delete_func": self.delete_funcs["start_end"],
                          "type": mark_type[0],
                          "corrections": self._get_corrections()}
             mark = self.add_mark(mark_data)
         elif self.is_ruler_mode():
             mark = self.mc.make_ruler_mark(pos, mark_parent, "",
-                                           self.delete_ruler,
+                                           self.delete_funcs["ruler"],
                                            self.mark_mode,
                                            corrections=self._get_corrections())
             self.rulers.append(mark)
@@ -829,7 +833,7 @@ class BookController(object):
                           "cas_id": toc_elem.cas_id,
                           "zone_id": toc_elem.zone_id,
                           "page": self.pagenum,
-                          "delete_func": self.delete_zone,
+                          "delete_func": self.delete_funcs["zone"],
                           "objects": toc_elem.objects_as_dictslist(),
                           "number": toc_elem.number,
                           "rubric": toc_elem.pdf_rubric,
