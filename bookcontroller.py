@@ -3,7 +3,7 @@
 from collections import OrderedDict
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import MarkCreator, QRulerMark
-from tocelem import QTocElem, QMarkerTocElem, QZone
+from tocelem import QTocElem, QMarkerTocElem
 from zonetypes import ZONE_ICONS
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
@@ -819,13 +819,10 @@ class BookController(object):
         return mark
 
     def _create_mark_marker_mode(self, pos, mark_parent):
-        mark = None
-        if self.is_normal_mode() and self.toc_controller.is_anything_selected:
+        zone = None
+        if self.is_normal_mode() and self.toc_controller.is_zone_selected:
             self.any_unsaved_changes = True
             toc_elem = self.current_toc_elem
-            # TODO think of making it better
-            if not isinstance(toc_elem, QZone):
-                return None
             if self.is_zone_placed(toc_elem.cas_id, toc_elem.zone_id):
                 return None
             margin = self._guess_margin(pos)
@@ -839,8 +836,9 @@ class BookController(object):
                           "number": toc_elem.number,
                           "rubric": toc_elem.pdf_rubric,
                           "margin": margin,
-                          "corrections":self._get_corrections(
-                              margin, toc_elem.pdf_rubric) }
+                          "corrections": self._get_corrections(
+                              margin, toc_elem.pdf_rubric),
+                          "inner": toc_elem.is_inner}
             zone = self.add_zone(zone_data)
             zone.show()
         # no rulers in marker mode

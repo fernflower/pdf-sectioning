@@ -7,7 +7,33 @@ from bookviewerwidget import BookViewerWidget
 from sectiontool import SectionTool
 
 
-class MocTocController(object):
+class MockTocElem(object):
+    def __init__(self, cas_id, zone_id, objects, **kwargs):
+        self.cas_id = cas_id
+        self.name = "mock toc %s" % cas_id
+        self.zone_id = zone_id
+        self.objects = objects
+        self.number = kwargs.get("number") or "no_number"
+        self.pdf_rubric = kwargs.get("pdf_rubric") or "no_rubric"
+        self.is_inner = kwargs.get("inner") or False
+
+    def objects_as_dictslist(self):
+        return self.objects
+
+
+class MockTocController(object):
+    def __init__(self):
+        self.active_elem = None
+
+    @property
+    def is_anything_selected(self):
+        return self.active_elem is not None
+
+    @property
+    def is_zone_selected(self):
+        return self.is_anything_selected and \
+            self.active_elem.zone_id is not None
+
     def get_elem(self, cas_id, mode):
         return None
 
@@ -41,6 +67,9 @@ class MocTocController(object):
     def process_zone_deleted(self, zone):
         print "%s has been deleted" % zone.name
 
+    # not present in real Toc Controller, but useful for testing
+    def select(self, cas_id, zone_id=None, objects=None, **kwargs):
+        self.active_elem = MockTocElem(cas_id, zone_id, objects, **kwargs)
 
 # an object representing mark but without all QWidget stuff
 class MockMark(object):
@@ -54,6 +83,7 @@ class MockMark(object):
         self.is_selected = False
         self.pass_through = kwargs.get("pass_through") or False
         self.auto = kwargs.get("auto") or self.pass_through
+        self.inner = kwargs.get("inner") or False
         self.page = kwargs.get("page") or 0
         self.pages = kwargs.get("pages") or {self.page: self.y()}
         self.cas_id = kwargs.get("cas_id")
@@ -98,8 +128,14 @@ class MockMark(object):
     def is_end(self):
         return self.type == "end"
 
+    def is_inner(self):
+        return self.type == "inner"
+
     def is_zone(self):
-        return self.type in ["zone", "auto zone"]
+        return self.type in ["zone", "auto zone", "inner"]
+
+    def is_ruler(self):
+        return self.type == "ruler"
 
     def is_passthrough_zone(self):
         return self.pass_through
@@ -157,7 +193,12 @@ class MockMarkCreator(object):
 
     def make_zone_mark(self, *args, **kwargs):
         mark = self._create_mark(*args, **kwargs)
-        mark.type = "zone" if not mark.auto else "auto zone"
+        if mark.auto:
+            mark.type = "auto zone"
+        elif mark.inner:
+            mark.type = "inner"
+        else:
+            mark.type = "zone"
         return mark
 
 
@@ -212,7 +253,7 @@ class DocLoaderTest(unittest.TestCase):
         self.pdf_file = "tests/chemistry8.pdf"
         self.st = SectionTool(u"tests/config-test")
         self.mc = MockMarkCreator()
-        self.toc_controller = MocTocController()
+        self.toc_controller = MockTocController()
         self.controller = BookController(toc_controller=self.toc_controller,
                                          params=self.st._defaults,
                                          display_name=self.display_name,
@@ -550,16 +591,52 @@ class DocLoaderTest(unittest.TestCase):
                                                         "lesson:bla-bla-bla"))
 
     # Below high level functions' logic will be tested
-    # For further testing more Mock objects necessary: Toc Controller and
-    # TocElem at least
-    def mark_creation_on_click(self):
-        pass
+    def test_mark_creation_on_click(self):
+        self.toc_controller.select("lesson:bla-bla-bla")
+        self.assertTrue(self.controller.is_section_mode())
+        start = self.controller._create_mark_on_click((16, 5), "MockParent")
+        self.assertTrue(start.is_start())
+        end = self.controller._create_mark_on_click((34, 80), "MockParent")
+        self.assertTrue(end.is_end())
+        # try to create start\end again, should be unable to do this
+        nomark = self.controller._create_mark_on_click((34, 80), "MockParent")
+        self.assertTrue(nomark == None)
+        # create ruler
+        self.controller.set_vertical_ruler_mode()
+        ruler = self.controller._create_mark_on_click((50, 40), "MockParent")
+        self.assertTrue(ruler.is_ruler())
+        self.controller.set_normal_markup_mode()
+        self.assertTrue(self.controller.is_markup_mode())
+        self.toc_controller.select(
+            "lesson:bla-bla-bla", "01pic", ["obj1", "obj2"], pdf_rubric="pic")
+        zone = self.controller._create_mark_on_click((46, 51), "MockParent")
+        self.assertTrue(zone.is_zone())
+        self.assertTrue(zone in self.controller.paragraphs[zone.page]["zones"])
+        # now try to place the same zone again, shoul fail
+        zone = self.controller._create_mark_on_click((0, 45), "MockParent")
+        self.assertTrue(zone == None)
+        # inner zone
+        self.toc_controller.select(
+            "lesson:bla-bla-bla", "09pic", ["obj1"], pdf_rubric="pic",
+            inner=True)
+        inner_zone = self.controller._create_mark_on_click((46, 51),
+                                                          "MockParent")
+        self.assertTrue(inner_zone is not None)
+        self.assertTrue(inner_zone.is_inner())
 
+    # binding to ruler has to be tested here as well as ruler deletion when
+    # moved outside vieport
     def test_move(self):
         pass
 
-    def test_selected(self):
+    def test_toc_controller(self):
+        # here stuff like correct selectioning will be handled, esp.
+        # current_toc_elem and active elem
         pass
+
+    # TODO have to write tests for correct TocElem creation (oid parsing and so
+    # on). Perhaps in a different module
+
 
 if __name__ == '__main__':
     unittest.main()

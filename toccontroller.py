@@ -61,6 +61,10 @@ class TocController(object):
         self.end_autozones = end_autozones
 
     @property
+    def is_zone_selected(self):
+        return isinstance(self.current_toc_elem, QZone)
+
+    @property
     def is_anything_selected(self):
         return self.current_toc_elem is not None
 

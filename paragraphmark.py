@@ -45,6 +45,9 @@ class QMark(QtGui.QWidget):
     def is_passthrough_zone(self):
         return isinstance(self, QPassThroughZoneMark)
 
+    def is_inner_zone(self):
+        return isinstance(self, QInnerZoneMark)
+
     # here corrections is a tuple
     #(l - left x-offset, that should be added to x,
     # r - right offset, added to width)
@@ -307,16 +310,18 @@ def make_ruler_mark(pos, parent, name, delete_func, type, corrections=(0, 0)):
 
 def make_zone_mark(pos, parent, cas_id, zone_id, page,
                    delete_func, objects, rubric, margin,
-                   corrections=(0, 0), auto=False, pass_through=False,
-                   pages=None, number="00"):
+                   corrections=(0, 0), inner=False, auto=False,
+                   pass_through=False, pages=None, number="00"):
     if not pass_through:
         return QZoneMark(pos, parent, cas_id, zone_id, page,
                          delete_func, objects, rubric,
                          margin, corrections, auto, number)
-    else:
-        return QPassThroughZoneMark(pos, parent, cas_id, zone_id, page,
-                                    delete_func, objects, rubric,
-                                    margin, corrections, pages)
+    elif inner:
+        return QInnerZoneMark(pos, parent, cas_id, zone_is, page,
+                              delete_func, objects, rubric, pages)
+    return QPassThroughZoneMark(pos, parent, cas_id, zone_id, page,
+                                delete_func, objects, rubric,
+                                margin, corrections, pages)
 
 # TODO reconsider this, there might be another way of testing bookcontroller
 class MarkCreator(object):
@@ -452,6 +457,46 @@ class QPassThroughZoneMark(QZoneMark):
                 "type": self.type,
                 "placements": [{'page':p, 'y':y} for (p, y)
                                in self.pages.items()],
+                "y": self.y(),
+                "rubric": self.rubric,
+                "objects": self.objects,
+                "at": self.margin }
+
+
+class QInnerZoneMark(QZoneMark):
+    def __init__(self, pos, parent, cas_id, zone_id, page, delete_func,
+                 objects, rubric, pages=None):
+        super(QInnerZoneMark, self).__init__(pos, parent, cas_id, zone_id,
+                                             page, delete_func, objects,
+                                             rubric, "", (0, 0), False, True)
+        self.type = "inner"
+        self.initial_pos = pos
+        self.pages = {page: self.initial_pos}
+        if pages:
+            for p, pos in pages.items():
+                if p not in self.pages.keys():
+                    self.pages[p] = pos
+
+    def show(self):
+        super(QInnerZoneMark, self).show()
+        if not self.should_show(self.page):
+            return
+        g = self.geometry()
+        self.set_geometry(QtCore.QRect(self.pages[self.page][0],
+                                       self.pages[self.page][1],
+                                       g.width(), g.height()))
+
+    def move(self, delta):
+        super(QPassThroughZoneMark, self).move(delta)
+        g = self.geometry()
+        self.pages[self.page] = (g.x(), g.y())
+
+    def to_dict(self):
+        return {"n": self.number,
+                "type": self.type,
+                "placements": [{'page':p, 'y':y} for (p, y)
+                               in self.pages.items()],
+                "x": self.x(),
                 "y": self.y(),
                 "rubric": self.rubric,
                 "objects": self.objects,

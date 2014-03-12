@@ -103,7 +103,12 @@ class QObjectElem(QtGui.QStandardItem):
         self.oid = oid
         self.block_id = block_id
         oid_parts = self.oid.split('-', 4)
-        self.type = oid_parts[-1]
+        # there can be two types of oids: normal ones, consisting of 5
+        # sections: book-page-zonenum-objnum-type
+        # and inner object's ids, consisting of 4 sections:
+        # book-page-zonenum-type
+        self.type = oid_parts[-1] if len(oid_parts) == 5 else \
+            "inner_" + oid_parts[-1]
         self.zone_num = oid_parts[2]
         self.page = int(oid_parts[1])
         self.name = name
@@ -117,6 +122,10 @@ class QObjectElem(QtGui.QStandardItem):
     @property
     def is_autoplaced(self):
         return self.zone_num == '00'
+
+    @property
+    def is_inner(self):
+        return "inner_" in self.type
 
     @property
     def zone_id(self):
@@ -136,13 +145,12 @@ class QZone(QStatefulElem):
     def __init__(self, parent, type, objects, name=""):
         super(QZone, self).__init__(type)
         self.parent = parent
-        self.type = type
         self.name = name
         self.rubric = objects[0].rubric if len(objects) > 0 else ""
         self.number = objects[0].zone_num if len(objects) > 0 else ""
         # a list of child objects
         self.objects = objects
-        self.setText(type + name)
+        self.setText(self.rubric + name)
         self.setEditable(False)
         for obj in self.objects:
             self.appendRow(obj)
@@ -169,6 +177,12 @@ class QZone(QStatefulElem):
     def is_autoplaced(self):
         if len(self.objects) > 0:
             return self.objects[0].is_autoplaced
+        return False
+
+    @property
+    def is_inner(self):
+        if len(self.objects) > 0:
+            return self.objects[0].is_inner
         return False
 
     def objects_as_dictslist(self):
@@ -272,7 +286,6 @@ class QMarkerTocElem(QTocElem):
             key_type = auto.zone_id
             zone = { "rel-start": self.get_start(key_type),
                      "rel-end": self.get_end(key_type),
-                     "type": auto.type,
                      "rubric": auto.pdf_rubric,
                      "zone-id": auto.zone_id,
                      "page": auto.page,
