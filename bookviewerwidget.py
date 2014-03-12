@@ -306,7 +306,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.actionSetVerticalRuler.setEnabled(True)
             self.actionSetHorizontalRuler.setEnabled(True)
         else:
-            self.controller.set_normal_marker_mode()
+            self.controller.set_normal_markup_mode()
             self.toolbarpart.autozone_button.setEnabled(True)
             self.actionSetVerticalRuler.setEnabled(False)
             self.actionSetHorizontalRuler.setEnabled(False)
@@ -429,7 +429,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         total_pages = self.controller.get_total_pages()
         if total_pages == 0:
             return
-        if self.controller.go_to_page(pagenum - 1):
+        if self.controller.go_to_page(pagenum):
             self.pageNum = pagenum
             self.nextPage_button.setEnabled(not self.pageNum == total_pages)
             self.prevPage_button.setEnabled(not self.pageNum == 1)
@@ -463,7 +463,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if self.mode == self.SECTION_MODE:
             self.controller.set_normal_section_mode()
         else:
-            self.controller.set_normal_marker_mode()
+            self.controller.set_normal_markup_mode()
 
     def set_horizontal_ruler_state(self):
         self.actionSetVerticalRuler.setChecked(False)

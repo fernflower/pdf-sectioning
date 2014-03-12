@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from collections import OrderedDict
-from PyQt4 import QtCore
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import MarkCreator, QRulerMark
 from tocelem import QTocElem, QMarkerTocElem, QZone
@@ -111,7 +110,7 @@ class BookController(object):
         # no zones here
         self.hide_zones(self.pagenum)
 
-    def set_normal_marker_mode(self):
+    def set_normal_markup_mode(self):
         self.operational_mode = self.MODE_MARKER
         self.mark_mode = self.MODE_MARK
         # no rulers here
@@ -202,6 +201,8 @@ class BookController(object):
             return None
         return self.dp.curr_page(self.scale)
 
+    # returns start\end marks and zones visible on page page_num in this mode
+    # doesn't care about rulers
     def get_page_marks(self, page_num, mode):
         try:
             if mode == self.MODE_SECTIONS:
@@ -378,7 +379,7 @@ class BookController(object):
             for m in sorted(self.paragraphs[pagenum]["marks"],
                             key=lambda m:m.y()):
                 para_key = m.cas_id
-                y = self.transform_to_pdf_coords(m.geometry()).y()
+                y = self.transform_to_pdf_coords(m.y())
                 mark = {"page" : m.page,
                         "name" : m.name,
                         "y": y}
@@ -389,7 +390,7 @@ class BookController(object):
                                                 "zones": []}
         for cas_id in self.paragraph_marks.keys():
             for z in self.paragraph_marks[cas_id]["zones"]:
-                y = self.transform_to_pdf_coords(z.geometry()).y()
+                y = self.transform_to_pdf_coords(z.y())
                 pdf_paragraphs[cas_id]["zones"].append(z.to_dict())
 
         # pass first page orientation
@@ -441,9 +442,9 @@ class BookController(object):
             self.scale = new_scale
             coeff = new_scale / old_scale
             # have to adjust ALL items including rulers
-            for page_key in self.paragraphs.keys():
-                markslist = self.paragraphs[page_key]["marks"] + \
-                            self.paragraphs[page_key]["zones"]
+            for cas_id in self.paragraph_marks.keys():
+                markslist = list(self.paragraph_marks[cas_id]["marks"]) + \
+                    self.paragraph_marks[cas_id]["zones"]
                 for m in markslist:
                     m.adjust(coeff)
             # now rulers
@@ -537,22 +538,19 @@ class BookController(object):
                     self.paragraphs[pagenum]["zones"])
         map(lambda m: m.show(), show_marks)
 
-    def transform_to_pdf_coords(self, rect):
+    def transform_to_pdf_coords(self, coord_value):
         img = self.dp.curr_page()
         if img is None:
-            return QtCore.QRectF(0, 0, 0, 0)
-        return QtCore.QRectF(
-                      rect.x() / self.scale,
-                      rect.y() / self.scale,
-                      rect.width() / self.scale,
-                      rect.height() / self.scale)
+            return 0
+        return coord_value / self.scale
 
+    # here 1st page has number 1
     def go_to_page(self, pagenum):
         # hide selections on this page
         self.hide_page_marks(self.pagenum)
         # show selections on page we are switching to
-        self.show_page_marks(pagenum + 1)
-        return self.dp.go_to_page(pagenum)
+        self.show_page_marks(pagenum)
+        return self.dp.go_to_page(pagenum - 1)
 
     # move all currently selected elems
     def move(self, delta, point_tuple):
@@ -672,6 +670,12 @@ class BookController(object):
     def delete_ruler(self, ruler):
         self.rulers.remove(ruler)
         return True
+
+    # create and add to global rulers a new ruler
+    def add_ruler(self, ruler_data):
+        ruler = self.mc.make_ruler_mark(**ruler_data)
+        self.rulers.append(ruler)
+        return ruler
 
     # add mark to a correct place (start comes first, end - second)
     def add_mark(self, mark_data):
@@ -794,6 +798,7 @@ class BookController(object):
             mark_type = self._get_available_marks(key)
             if not mark_type:
                 return None
+            # TODO perhaps both mark's and ruler's creation can be unified
             mark_data = {"pos": pos,
                          "parent": mark_parent,
                          "cas_id": toc_elem.cas_id,
@@ -804,11 +809,13 @@ class BookController(object):
                          "corrections": self._get_corrections()}
             mark = self.add_mark(mark_data)
         elif self.is_ruler_mode():
-            mark = self.mc.make_ruler_mark(pos, mark_parent, "",
-                                           self.delete_funcs["ruler"],
-                                           self.mark_mode,
-                                           corrections=self._get_corrections())
-            self.rulers.append(mark)
+            ruler_data = {"pos": pos,
+                          "parent": mark_parent,
+                          "name": u"",
+                          "delete_func": self.delete_funcs["ruler"],
+                          "type": self.mark_mode,
+                          "corrections": self._get_corrections()}
+            mark = self.add_ruler(ruler_data)
         return mark
 
     def _create_mark_marker_mode(self, pos, mark_parent):

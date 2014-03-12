@@ -130,7 +130,6 @@ class QMark(QtGui.QWidget):
     def select(self, value):
         self.is_selected = value
 
-    # get start-y coordinate
     def y(self):
         return self.geometry().y()
 
@@ -151,7 +150,7 @@ class QMark(QtGui.QWidget):
 
     def intersects(self, rect_tuple):
         x1, y1, x2, y2 = rect_tuple
-        rect = QtCore.QRect(QtCore.QPoint(x1, y1,), QtCore.QPoint(x2, y2))
+        rect = QtCore.QRect(QtCore.QPoint(x1, y1), QtCore.QPoint(x2, y2))
         return self.geometry().intersects(rect)
 
     def move(self, delta):
@@ -199,11 +198,10 @@ class QRulerMark(QMark):
     ORIENT_HORIZONTAL = "horizontal"
     ORIENT_VERTICAL = "vertical"
 
-    def __init__(self, pos, parent, name, delete_func, orientation,
+    def __init__(self, pos, parent, name, delete_func, type,
                  corrections):
         super(QRulerMark, self).__init__(pos, parent, name, delete_func,
                                          corrections)
-        self.type = orientation
         # label is not needed, so have to overload all methods using it,
         # escpecialling those which do repainting
         self.label.hide()
@@ -304,9 +302,8 @@ def make_paragraph_mark(pos, parent, cas_id, name, page, delete_func, type,
     return MARKS_DICT[type](pos, parent, cas_id, name, page, delete_func,
                             corrections)
 
-def make_ruler_mark(pos, parent, name, delete_func, orientation,
-                    corrections=(0, 0)):
-    return MARKS_DICT[orientation](pos, parent, name, delete_func, corrections)
+def make_ruler_mark(pos, parent, name, delete_func, type, corrections=(0, 0)):
+    return MARKS_DICT[type](pos, parent, name, delete_func, corrections)
 
 def make_zone_mark(pos, parent, cas_id, zone_id, page,
                    delete_func, objects, rubric, margin,
@@ -364,6 +361,14 @@ class QZoneMark(QParagraphMark):
                                 self.icon_height)
         self.mark.setGeometry(geometry)
         self.mark.show()
+
+    def adjust(self, scale):
+        rect = self.geometry()
+        self.mark.setGeometry(rect.x() * scale,
+                              rect.y() * scale,
+                              rect.width(),
+                              rect.height())
+        self._adjust_to_mark()
 
     def show(self):
         super(QZoneMark, self).show()

@@ -60,6 +60,9 @@ class MockMark(object):
         self.delete_func = kwargs.get("delete_func") or None
         self.zone_id = kwargs.get("zone_id") or None
         self.type = kwargs.get("type") or None
+        # no such attribute in real Mark Class, useful when testing hide\show
+        # functions
+        self.is_shown = True
 
     @property
     def name(self):
@@ -73,9 +76,11 @@ class MockMark(object):
         self.page = page
 
     def show(self):
+        self.is_shown = True
         return "shown!"
 
     def hide(self):
+        self.is_shown = False
         return "hidden!"
 
     def adjust(self, scale):
@@ -176,6 +181,12 @@ class DocLoaderTest(unittest.TestCase):
                     "type": "end"}
         self.controller.add_mark(start_data)
         self.controller.add_mark(end_data)
+        ruler_data = {"pos": (4, 80),
+                      "parent": "MockParent",
+                      "name": u"",
+                      "delete_func": self.controller.delete_funcs["ruler"],
+                      "type": "horizontal"}
+        self.controller.add_ruler(ruler_data)
         # now place zone manually
         zone_data = {"pos": (55, 50),
                      "parent": "MockParent",
@@ -321,6 +332,14 @@ class DocLoaderTest(unittest.TestCase):
         self.assertEqual(self.controller.paragraph_marks[m_zone.cas_id],
                          {"marks": (start, end),
                           "zones": [ptz, auto_con, m_zone]})
+        # check add ruler
+        ruler_data = {"pos": (4, 80),
+                      "parent": "MockParent",
+                      "name": u"",
+                      "delete_func": self.controller.delete_funcs["ruler"],
+                      "type": "horizontal"}
+        ruler = self.controller.add_ruler(ruler_data)
+        self.assertTrue(ruler in self.controller.get_rulers())
 
     def test_delete_marks(self):
         # TODO here deletion from main controller structures, paragraphs and
@@ -463,6 +482,41 @@ class DocLoaderTest(unittest.TestCase):
         self.assertTupleEqual(self.controller.verify_brackets(),
                               (False, end))
 
+    def test_go_to_page(self):
+        # test show\hide marks functionality here as well
+        self._fill_with_data()
+        self.controller.go_to_page(6)
+        self.assertEqual(self.controller.pagenum, 6)
+        # make sure that no marks other than those that should be on page 6 are
+        # shown.
+        # Section mode -> only start\end and rulers;
+        # Markup mode -> start\end and marks, no rulers
+        self.controller.set_normal_section_mode()
+        self.assertTrue(self.controller.is_section_mode())
+        # make sure that all rulers are visible regardless of page we are on
+        self.assertTrue(all(r.is_shown for r in self.controller.rulers))
+        # in sections mode all start\end marks shown
+        self.assertTrue(all(m.is_shown for m in
+                            self.controller.paragraphs[6]["marks"]))
+        # no zones in sections mode
+        self.assertTrue(all(not z.is_shown for z in
+                            self.controller.paragraphs[6]["zones"]))
+        self.controller.go_to_page(25)
+        mark = self.controller.find_any_at_point((2, 199))
+        self.assertTrue(mark.is_end())
+        # in markup mode start\end + zones, no rulers
+        self.controller.set_normal_markup_mode()
+        self.assertTrue(self.controller.is_markup_mode())
+        self.assertTrue(all(m.is_shown for m in
+                            self.controller.paragraphs[7]["marks"]))
+        self.assertTrue(all(z.is_shown for z in
+                            self.controller.paragraphs[7]["zones"]))
+        self.assertTrue(all(not r.is_shown for r in self.controller.rulers))
+        # check that no start\end can be found and so modified
+        self.controller.go_to_page(5)
+        mark = self.controller.find_any_at_point((2, 11))
+        self.assertTrue(mark.is_zone())
+
     def test_find_and_viewport_functions(self):
         # first test find_at_point functions
         self._fill_with_data()
@@ -480,41 +534,31 @@ class DocLoaderTest(unittest.TestCase):
                                                      "lesson:bla-bla-bla")
         # start\end marks can be placed anywhere
         self.assertTrue(in_viewport)
-        self.controller.set_normal_marker_mode()
+        self.controller.set_normal_markup_mode()
         self.assertTrue(self.controller.is_markup_mode())
         self.controller.go_to_page(6)
-        self.assertEqual(self.controller.pagenum, 7)
+        self.assertEqual(self.controller.pagenum, 6)
         self.assertTrue(self.controller.is_in_viewport((8, 30),
                                                        "lesson:bla-bla-bla"))
         self.controller.go_to_page(2)
         # have no marks here, should not be able to put any
-        self.assertEqual(self.controller.pagenum, 3)
         self.assertFalse(self.controller.is_in_viewport((8, 30),
                                                         "lesson:bla-bla-bla"))
-        self.controller.go_to_page(24)
-        self.assertEqual(self.controller.pagenum, 25)
+        self.controller.go_to_page(25)
         # try to place zone mark after end of paragraph and fail
         self.assertFalse(self.controller.is_in_viewport((8, 300),
                                                         "lesson:bla-bla-bla"))
 
-
-    def test_show_hide_marks(self):
-        # test go to page functionality here as well
-        # FIXME perhaps have to make clearer that pages are enumerated from 1
-        # in controller and from 0 in document processor
-        self.controller.go_to_page(6)
-        self.assertEqual(self.controller.pagenum, 7)
-
-    def test_rulers(self):
+    # Below high level functions' logic will be tested
+    # For further testing more Mock objects necessary: Toc Controller and
+    # TocElem at least
+    def mark_creation_on_click(self):
         pass
 
     def test_move(self):
         pass
 
-    # here different functins that include racalculation (transform to pdf,
-    # zoom etc) will be tested
-    # FIXME again, some refactor might be needed
-    def test_recalc_functions(self):
+    def test_selected(self):
         pass
 
 if __name__ == '__main__':
