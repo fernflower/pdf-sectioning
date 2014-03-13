@@ -162,6 +162,12 @@ def main():
     filename = parse_args()
     st = SectionTool("config")
     toc, display_name = st.get_cms_course_toc()
+    #import codecs
+    #import json
+    #with codecs.open("tests/course-data", "w", "utf-8") as f:
+        #for e in toc:
+            #f.write(json.dumps(e))
+            #f.write("\n")
 
     # show window
     app = QtGui.QApplication(sys.argv)

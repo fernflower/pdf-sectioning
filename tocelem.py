@@ -107,10 +107,10 @@ class QObjectElem(QtGui.QStandardItem):
         # sections: book-page-zonenum-objnum-type
         # and inner object's ids, consisting of 4 sections:
         # book-page-zonenum-type
-        self.type = oid_parts[-1] if len(oid_parts) == 5 else \
-            "inner_" + oid_parts[-1]
-        self.zone_num = oid_parts[2]
-        self.page = int(oid_parts[1])
+        # INNER ZONE MUST HAVE DIFFERENT SECTION ID (ex. inner_section)
+        self.type = oid_parts[-1]
+        self.zone_num = oid_parts[2] if len(oid_parts) > 3 else ""
+        self.page = int(oid_parts[1]) if len(oid_parts) > 3 else 0
         self.name = name
         self.rubric = rubric
         self.setEditable(False)
@@ -125,7 +125,7 @@ class QObjectElem(QtGui.QStandardItem):
 
     @property
     def is_inner(self):
-        return "inner_" in self.type
+        return "inner" in self.type
 
     @property
     def zone_id(self):
@@ -142,18 +142,16 @@ class QObjectElem(QtGui.QStandardItem):
 
 # creates an item with objects as it's children
 class QZone(QStatefulElem):
-    def __init__(self, parent, type, objects, name=""):
+    def __init__(self, parent, type, objects):
         super(QZone, self).__init__(type)
         self.parent = parent
-        self.name = name
-        self.rubric = objects[0].rubric if len(objects) > 0 else ""
         self.number = objects[0].zone_num if len(objects) > 0 else ""
         # a list of child objects
         self.objects = objects
-        self.setText(self.rubric + name)
         self.setEditable(False)
         for obj in self.objects:
             self.appendRow(obj)
+        self.setText(self.zone_id)
 
     @property
     def cas_id(self):
@@ -284,8 +282,8 @@ class QMarkerTocElem(QTocElem):
         result = []
         for auto in self.autozones:
             key_type = auto.zone_id
-            zone = { "rel-start": self.get_start(key_type),
-                     "rel-end": self.get_end(key_type),
+            zone = { "rel-start": self._get_start(key_type),
+                     "rel-end": self._get_end(key_type),
                      "rubric": auto.pdf_rubric,
                      "zone-id": auto.zone_id,
                      "page": auto.page,
@@ -318,14 +316,14 @@ class QMarkerTocElem(QTocElem):
         map(lambda z: z.select(),
             [z for z in self.zones if z.page == page])
 
-    def get_start(self, zone):
+    def _get_start(self, zone):
         start_present = [z.zone_id for z in self.autozones
                          if z.zone_id in self.start_autozones]
         if zone not in start_present:
             return None
         return start_present.index(zone) * ZONE_ICONS[zone].height()
 
-    def get_end(self, zone):
+    def _get_end(self, zone):
         end_present = [z.zone_id for z in self.autozones
                        if z.zone_id in self.end_autozones]
         if zone not in end_present:

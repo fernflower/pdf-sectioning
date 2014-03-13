@@ -1,75 +1,11 @@
 # -*- coding: utf-8 -*-
 import unittest
-import sys
 from documentprocessor import DocumentProcessor
 from bookcontroller import BookController
 from bookviewerwidget import BookViewerWidget
 from sectiontool import SectionTool
+from toccontrollertest import MockTocController
 
-
-class MockTocElem(object):
-    def __init__(self, cas_id, zone_id, objects, **kwargs):
-        self.cas_id = cas_id
-        self.name = "mock toc %s" % cas_id
-        self.zone_id = zone_id
-        self.objects = objects
-        self.number = kwargs.get("number") or "no_number"
-        self.pdf_rubric = kwargs.get("pdf_rubric") or "no_rubric"
-        self.is_inner = kwargs.get("inner") or False
-
-    def objects_as_dictslist(self):
-        return self.objects
-
-
-class MockTocController(object):
-    def __init__(self):
-        self.active_elem = None
-
-    @property
-    def is_anything_selected(self):
-        return self.active_elem is not None
-
-    @property
-    def is_zone_selected(self):
-        return self.is_anything_selected and \
-            self.active_elem.zone_id is not None
-
-    def get_elem(self, cas_id, mode):
-        return None
-
-    def set_state(self, value, cas_id, is_ok=False, braces_err=False):
-        pass
-
-    def set_default_state(self, cas_id):
-        pass
-
-    def process_zone_added(self, zone):
-        print "%s has been added" % zone.name
-
-    def get_autoplaced_zones(self, cas_id):
-        return [{"type": "repeat",
-                 "rel-start": 0,
-                 "rel-end": None,
-                 "rubric": "dic",
-                 "zone-id": "dic",
-                 "page": 12,
-                 "objects":[ {"oid": "195-12-01-01-int",
-                              "block-id": "some block id"} ] },
-                {"type": "single",
-                 "rel-start": None,
-                 "rel-end": -20,
-                 "rubric": "con",
-                 "zone-id": "con",
-                 "page": 15,
-                 "objects": [{"oid": "195-15-00-01-con",
-                              "block-id": "qqqq"}]}]
-
-    def process_zone_deleted(self, zone):
-        print "%s has been deleted" % zone.name
-
-    # not present in real Toc Controller, but useful for testing
-    def select(self, cas_id, zone_id=None, objects=None, **kwargs):
-        self.active_elem = MockTocElem(cas_id, zone_id, objects, **kwargs)
 
 # an object representing mark but without all QWidget stuff
 class MockMark(object):
@@ -203,7 +139,7 @@ class MockMarkCreator(object):
 
 
 # figure out that cas-xml is loaded and parsed properly
-class DocLoaderTest(unittest.TestCase):
+class BookControllerTest(unittest.TestCase):
 
     def _fill_with_data(self):
         start_data = {"pos": (0, 10),
@@ -247,7 +183,7 @@ class DocLoaderTest(unittest.TestCase):
         self.controller.autozones("MockParent")
 
     def setUp(self):
-        super(DocLoaderTest, self).setUp()
+        super(BookControllerTest, self).setUp()
         self.markup_file = "tests/native-test.xml"
         self.display_name = "Chemistry-8 course"
         self.pdf_file = "tests/chemistry8.pdf"
