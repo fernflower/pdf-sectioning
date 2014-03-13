@@ -302,6 +302,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.spinBox.setValue(self.mark_to_navigate.page)
 
     def on_tab_switched(self, new_tab):
+        # deselect all previously selected elements
+        self.controller.deselect_all()
         if new_tab == 0:
             self.controller.set_normal_section_mode()
             self.toolbarpart.autozone_button.setEnabled(False)
