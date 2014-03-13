@@ -245,17 +245,10 @@ class TocController(object):
         zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
         if zone_elem:
             zone_elem.set_finished(True)
-        # if all zones have been added, mark TocElem as finished as well
-        self.current_toc_elem = self._get_markup_elem(zone.cas_id)
-        self.current_toc_elem.set_finished(
-            self.current_toc_elem.all_zones_placed)
 
     def process_zone_deleted(self, zone):
         zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
         zone_elem.set_finished(False)
-        # mark toc_elem as unfinished or not started
-        toc_elem = self._get_markup_elem(zone.cas_id)
-        toc_elem.set_finished(False)
 
     def process_mode_switch(self, old_mode, new_mode):
         old_toc = self._get_selected(old_mode)

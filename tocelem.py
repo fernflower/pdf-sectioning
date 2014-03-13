@@ -18,7 +18,6 @@ class QStatefulElem(QtGui.QStandardItem):
         self.name = name
         self.state = self.STATE_NOT_STARTED
         self.setEditable(False)
-        self.update()
 
     def set_finished(self, value):
         if value:
@@ -67,7 +66,6 @@ class QTocElem(QStatefulElem):
         self.cas_id = cas_id
         self.state = self.STATE_NOT_STARTED
         self.setEditable(False)
-        self.update()
 
     def update(self):
         # set widget design according to it's state
@@ -198,6 +196,11 @@ class QZone(QStatefulElem):
     def is_on_page(self, page):
         return self.page == page
 
+    def set_finished(self, value):
+        super(QZone, self).set_finished(value)
+        # notify parent that state has changed
+        self.parent.notify_state_changed(self)
+
 
 class QAutoZoneContainer(QStatefulElem):
     def __init__(self, parent):
@@ -296,15 +299,6 @@ class QMarkerTocElem(QTocElem):
     def get_zone(self, zone_id):
         return next((z for z in self.zones if z.zone_id == zone_id), None)
 
-    def set_finished(self, value):
-        if value:
-            self.state = self.STATE_FINISHED
-        else:
-            self.state = self.STATE_NOT_STARTED
-        if self.auto:
-            self.auto.set_finished(self.auto.all_zones_placed)
-        self.update()
-
     def _set_selectable(self, value):
         self.setSelectable(value)
         for zone in self.zones:
@@ -315,6 +309,12 @@ class QMarkerTocElem(QTocElem):
             [z for z in self.zones if z.page != page])
         map(lambda z: z.select(),
             [z for z in self.zones if z.page == page])
+
+    def notify_state_changed(self, zone):
+        if zone.is_autoplaced:
+            self.auto.set_finished(self.auto.all_zones_placed)
+        self.set_finished(self.all_zones_placed)
+        self.update()
 
     def _get_start(self, zone):
         start_present = [z.zone_id for z in self.autozones

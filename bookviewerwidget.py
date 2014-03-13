@@ -150,7 +150,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.menuTools.addAction(self.actionSetVerticalRuler)
 
     def init_widgets(self):
-        self.showMaximized()
         self.imageLabel = QImageLabel(self, self.controller,
                                       self.toc_controller)
         self.imageLabel.setScaledContents(True)
@@ -217,6 +216,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.progress_bar.hide()
         self.progress_text.hide()
         self._set_appearance()
+        # make window occupy all screen
+        screen = QtGui.QDesktopWidget().screenGeometry()
+        self.setGeometry(0, 0, screen.width() * 0.9, screen.height() * 0.9)
 
     def _fill_views(self):
         for mode in [self.SECTION_MODE, self.MARKUP_MODE]:

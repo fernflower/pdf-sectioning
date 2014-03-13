@@ -174,3 +174,17 @@ class TocControllerTest(unittest.TestCase):
         inner_zone = markup_toc.get_zone("01innerpic")
         self.assertTrue(inner_zone.is_inner)
         self.assertTrue(len(inner_zone.objects) == 1)
+        # test auto zone container (have dic, train and control)
+        self.assertEqual(len(markup_toc.auto.zones), 3)
+        ## test that finished\unfinished state changes correctly
+        for zone in markup_toc.zones:
+            zone.set_finished(True)
+        self.assertTrue(markup_toc.is_finished())
+        self.assertTrue(markup_toc.auto.is_finished())
+        markup_toc.auto.zones[0].set_finished(False)
+        self.assertFalse(markup_toc.auto.is_finished())
+        self.assertFalse(markup_toc.is_finished())
+        # now mark it as finished again
+        markup_toc.auto.zones[0].set_finished(True)
+        self.assertTrue(markup_toc.auto.is_finished())
+        self.assertTrue(markup_toc.is_finished())
