@@ -560,19 +560,6 @@ class BookControllerTest(unittest.TestCase):
         self.assertTrue(inner_zone is not None)
         self.assertTrue(inner_zone.is_inner())
 
-    # binding to ruler has to be tested here as well as ruler deletion when
-    # moved outside vieport
-    def test_move(self):
-        pass
-
-    def test_toc_controller(self):
-        # here stuff like correct selectioning will be handled, esp.
-        # current_toc_elem and active elem
-        pass
-
-    # TODO have to write tests for correct TocElem creation (oid parsing and so
-    # on). Perhaps in a different module
-
 
 if __name__ == '__main__':
     unittest.main()

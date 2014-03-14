@@ -156,12 +156,14 @@ class QMark(QtGui.QWidget):
         rect = QtCore.QRect(QtCore.QPoint(x1, y1), QtCore.QPoint(x2, y2))
         return self.geometry().intersects(rect)
 
+    def _calc_move(self, (delta_x, delta_y)):
+        x, y, w, h = self.geometry_as_tuple()
+        return (x, y + delta_y, w, h)
+
+    # here delta is a tuple (x, y)
     def move(self, delta):
-        g = self.mark.geometry()
-        self.mark.setGeometry(g.x(),
-                              g.y() + delta.y(),
-                              g.width(),
-                              g.height())
+        x, y, w, h = self._calc_move(delta)
+        self.mark.setGeometry(x, y, w, h)
         self._adjust_to_mark()
 
     def delete(self):
@@ -230,14 +232,14 @@ class QRulerMark(QMark):
 
 
 class QHorizontalRuler(QRulerMark):
-    def __init__(self, pos, parent, name, delete_func, corrections):
+    def __init__(self, pos, parent, delete_func, corrections, name=""):
         (pos_x, pos_y) = pos
         super(QRulerMark, self).__init__((0, pos_y), parent, name,
                                          delete_func, corrections)
 
 
 class QVerticalRuler(QRulerMark):
-    def __init__(self, pos, parent, name, delete_func, corrections):
+    def __init__(self, pos, parent, delete_func, corrections, name=""):
         (pos_x, pos_y) = pos
         super(QRulerMark, self).__init__((pos_x, 0), parent, name,
                                          delete_func, corrections)
@@ -246,13 +248,9 @@ class QVerticalRuler(QRulerMark):
                                             parent.height()))
         self.set_geometry(vert_rect)
 
-    def move(self, delta):
-        g = self.mark.geometry()
-        self.mark.setGeometry(g.x() + delta.x(),
-                              g.y(),
-                              g.width(),
-                              g.height())
-        self._adjust_to_mark()
+    def _calc_move(self, (delta_x, delta_y)):
+        x, y, w, h = self.geometry_as_tuple()
+        return (x + delta_x, y, w, h)
 
     def adjust(self, scale):
         rect = self.geometry()
@@ -305,8 +303,10 @@ def make_paragraph_mark(pos, parent, cas_id, name, page, delete_func, type,
     return MARKS_DICT[type](pos, parent, cas_id, name, page, delete_func,
                             corrections)
 
-def make_ruler_mark(pos, parent, name, delete_func, type, corrections=(0, 0)):
-    return MARKS_DICT[type](pos, parent, name, delete_func, corrections)
+def make_ruler_mark(pos, parent, delete_func, type,
+                    corrections=(0, 0), name=u""):
+    return MARKS_DICT[type](pos=pos, parent=parent, name=name,
+                            delete_func=delete_func, corrections=corrections)
 
 def make_zone_mark(pos, parent, cas_id, zone_id, page,
                    delete_func, objects, rubric, margin,
@@ -317,7 +317,7 @@ def make_zone_mark(pos, parent, cas_id, zone_id, page,
                          delete_func, objects, rubric,
                          margin, corrections, auto, number)
     elif inner:
-        return QInnerZoneMark(pos, parent, cas_id, zone_is, page,
+        return QInnerZoneMark(pos, parent, cas_id, zone_id, page,
                               delete_func, objects, rubric, pages)
     return QPassThroughZoneMark(pos, parent, cas_id, zone_id, page,
                                 delete_func, objects, rubric,
@@ -471,6 +471,10 @@ class QInnerZoneMark(QZoneMark):
                                              rubric, "", (0, 0), False, True)
         self.type = "inner"
         self.initial_pos = pos
+        # pos is set by x and y
+        self.set_geometry(QtCore.QRect(pos[0], pos[1],
+                                       self.geometry().width(),
+                                       self.geometry().height()))
         self.pages = {page: self.initial_pos}
         if pages:
             for p, pos in pages.items():
@@ -485,9 +489,12 @@ class QInnerZoneMark(QZoneMark):
         self.set_geometry(QtCore.QRect(self.pages[self.page][0],
                                        self.pages[self.page][1],
                                        g.width(), g.height()))
+    def _calc_move(self, (delta_x, delta_y)):
+        x, y, w, h = self.geometry_as_tuple()
+        return (x + delta_x, y + delta_y, w, h)
 
     def move(self, delta):
-        super(QPassThroughZoneMark, self).move(delta)
+        super(QInnerZoneMark, self).move(delta)
         g = self.geometry()
         self.pages[self.page] = (g.x(), g.y())
 

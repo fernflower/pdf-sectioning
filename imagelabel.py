@@ -151,7 +151,7 @@ class QImageLabel(QtGui.QLabel):
         delta = QtCore.QPoint(event.pos().x() - self.coordinates.x(),
                               event.pos().y() - self.coordinates.y())
         self.coordinates = event.pos()
-        self.controller.move(delta, self.coordinates_as_tuple)
+        self.controller.move((delta.x(), delta.y()), self.coordinates_as_tuple)
         self.update()
 
     def keyPressEvent(self, event):

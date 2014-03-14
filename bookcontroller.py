@@ -587,8 +587,9 @@ class BookController(object):
                                                   not ok_braces)
             return
         # else move as usual
-        if all(map(lambda m: self.is_in_viewport((m.x() + delta.x(),
-                                                  m.y() + delta.y())), \
+        delta_x, delta_y = delta
+        if all(map(lambda m: self.is_in_viewport((m.x() + delta_x,
+                                                  m.y() + delta_y)), \
                    self.selected_marks)):
             self.any_unsaved_changes = True
             for m in self.selected_marks:
@@ -811,7 +812,6 @@ class BookController(object):
         elif self.is_ruler_mode():
             ruler_data = {"pos": pos,
                           "parent": mark_parent,
-                          "name": u"",
                           "delete_func": self.delete_funcs["ruler"],
                           "type": self.mark_mode,
                           "corrections": self._get_corrections()}
