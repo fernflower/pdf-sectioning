@@ -141,9 +141,7 @@
   <action name="actionLoad_pdf">
    <property name="icon">
     <iconset>
-     <normaloff>buttons/Load_file.png</normaloff>
-     <activeon>buttons/Load_file_hover.png</activeon>
-     <selectedon>buttons/Load_file_pressed.png</selectedon>buttons/Load_file.png</iconset>
+     <normaloff>buttons/button_wafer.png</normaloff>buttons/button_wafer.png</iconset>
    </property>
    <property name="text">
     <string>Загрузить pdf</string>
@@ -153,6 +151,9 @@
    </property>
    <property name="toolTip">
     <string>Загрузить pdf</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
    </property>
   </action>
   <action name="actionPrev_page">
@@ -176,7 +177,7 @@
   <action name="actionSmartSave">
    <property name="icon">
     <iconset>
-     <normaloff>buttons/Save.png</normaloff>buttons/Save.png</iconset>
+     <normaloff>buttons/button_wafer.png</normaloff>buttons/button_wafer.png</iconset>
    </property>
    <property name="text">
     <string>Сохранить как ...</string>
@@ -185,7 +186,7 @@
   <action name="actionLoad_markup">
    <property name="icon">
     <iconset>
-     <normaloff>buttons/Load_markup.png</normaloff>buttons/Load_markup.png</iconset>
+     <normaloff>buttons/button_wafer.png</normaloff>buttons/button_wafer.png</iconset>
    </property>
    <property name="text">
     <string>Загрузить разметку</string>
@@ -194,7 +195,7 @@
   <action name="actionSetHorizontalRuler">
    <property name="icon">
     <iconset>
-     <normaloff>buttons/Horisontal_ruler.png</normaloff>buttons/Horisontal_ruler.png</iconset>
+     <normaloff>buttons/button_wafer.png</normaloff>buttons/button_wafer.png</iconset>
    </property>
    <property name="text">
     <string>Установить горизонтальный разделитель</string>
@@ -206,7 +207,7 @@
   <action name="actionSetVerticalRuler">
    <property name="icon">
     <iconset>
-     <normaloff>buttons/Vertical_ruler.png</normaloff>buttons/Vertical_ruler.png</iconset>
+     <normaloff>buttons/button_wafer.png</normaloff>buttons/button_wafer.png</iconset>
    </property>
    <property name="text">
     <string>Установить вертикальный разделитель</string>

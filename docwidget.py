@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'layout.ui'
 #
-# Created: Fri Feb 14 17:21:02 2014
+# Created: Fri Mar 14 17:37:06 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -81,10 +81,9 @@ class Ui_MainWindow(object):
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
         self.actionLoad_pdf = QtGui.QAction(MainWindow)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Load_file.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        icon.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Load_file_pressed.png")), QtGui.QIcon.Selected, QtGui.QIcon.On)
-        icon.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Load_file_hover.png")), QtGui.QIcon.Active, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/button_wafer.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionLoad_pdf.setIcon(icon)
+        self.actionLoad_pdf.setMenuRole(QtGui.QAction.NoRole)
         self.actionLoad_pdf.setObjectName(_fromUtf8("actionLoad_pdf"))
         self.actionPrev_page = QtGui.QAction(MainWindow)
         icon1 = QtGui.QIcon()
@@ -97,24 +96,16 @@ class Ui_MainWindow(object):
         self.actionNext_page.setIcon(icon2)
         self.actionNext_page.setObjectName(_fromUtf8("actionNext_page"))
         self.actionSmartSave = QtGui.QAction(MainWindow)
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Save.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionSmartSave.setIcon(icon3)
+        self.actionSmartSave.setIcon(icon)
         self.actionSmartSave.setObjectName(_fromUtf8("actionSmartSave"))
         self.actionLoad_markup = QtGui.QAction(MainWindow)
-        icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Load_markup.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionLoad_markup.setIcon(icon4)
+        self.actionLoad_markup.setIcon(icon)
         self.actionLoad_markup.setObjectName(_fromUtf8("actionLoad_markup"))
         self.actionSetHorizontalRuler = QtGui.QAction(MainWindow)
-        icon5 = QtGui.QIcon()
-        icon5.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Horisontal_ruler.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionSetHorizontalRuler.setIcon(icon5)
+        self.actionSetHorizontalRuler.setIcon(icon)
         self.actionSetHorizontalRuler.setObjectName(_fromUtf8("actionSetHorizontalRuler"))
         self.actionSetVerticalRuler = QtGui.QAction(MainWindow)
-        icon6 = QtGui.QIcon()
-        icon6.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Vertical_ruler.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionSetVerticalRuler.setIcon(icon6)
+        self.actionSetVerticalRuler.setIcon(icon)
         self.actionSetVerticalRuler.setObjectName(_fromUtf8("actionSetVerticalRuler"))
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
