@@ -4,6 +4,7 @@ import os
 from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from toolbarpart import Ui_ToolBarPart
+from settingsdialog import Ui_Dialog
 from imagelabel import QImageLabel
 from console import QConsole
 from stylesheets import GENERAL_STYLESHEET, BLACK_LABEL_STYLESHEET
@@ -41,6 +42,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.save_as_dialog = None
         self.file_exists_dialog = None
         self.wipe_all_dialog = None
+        self.settings_dialog = None
         self.init_actions()
         self.init_widgets()
         self.init_menubar()
@@ -195,9 +197,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionSetHorizontalRuler.setCheckable(True)
         # add all zoom values
         self.zoom_comboBox.addItems(self.controller.get_all_zoom_values())
-        # TODO will be changed soon
-        #self.tabWidget.setTabEnabled(1, False)
-        self.toolbarpart.changeIcons_button.setEnabled(False)
+        # TODO rename it!!! changeIcons -> settings
+        self.toolbarpart.changeIcons_button.setEnabled(True)
+        self.toolbarpart.changeIcons_button.clicked.connect(
+            self.change_settings)
         self.toolbarpart.autozone_button.setEnabled(False)
         self.toolbarpart.autozone_button.clicked.connect(self.autozones)
         # unfortunately could not assign actions as could not get rid of action
@@ -219,6 +222,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # make window occupy all screen
         screen = QtGui.QDesktopWidget().screenGeometry()
         self.setGeometry(0, 0, screen.width() * 0.9, screen.height() * 0.9)
+        # setup settings dialog
+        self.settings_dialog = QtGui.QDialog()
+        self.settings_dialog.ui = Ui_Dialog()
+        self.settings_dialog.ui.setupUi(self.settings_dialog)
+        self.settings_dialog.setWindowTitle(
+            QtCore.QString.fromUtf8(u"Настройки"))
 
     def _fill_views(self):
         for mode in [self.SECTION_MODE, self.MARKUP_MODE]:
@@ -288,6 +297,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.show_progress_bar(u"Автоматическое размещение зон ...")
         num = self.controller.autozones(self.imageLabel)
         self.hide_progress_bar()
+
+    def change_settings(self):
+        if self.show_settings_dialog():
+            print "yes!"
+        else:
+            print "no"
 
     # mind that this is called every time a view is clicked, not only on
     # selection
@@ -580,11 +595,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not self.save_as_dialog:
             self.save_as_dialog = QtGui.QFileDialog(self)
             self.save_as_dialog.setConfirmOverwrite(True)
+            self.save_as_dialog.setWindowTitle(
+                QtCore.QString.fromUtf8(u"Сохранить разметку"))
         extension = "xml" if self.controller.markup_finished else "unfinished"
         self.save_as_dialog.setDefaultSuffix(extension)
         self.save_as_dialog.setNameFilter("*." + extension)
-        self.save_as_dialog.setWindowTitle(
-            QtCore.QString.fromUtf8(u"Сохранить разметку"))
         self.save_as_dialog.exec_()
         filename = self.save_as_dialog.selectedFiles()[0] \
             if self.save_as_dialog.selectedFiles() else None
@@ -605,3 +620,30 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 return filename
             return None
         return filename
+
+    def show_settings_dialog(self):
+        # get fresh settings from controller and show them
+        self.settings_dialog.ui.cmsCourse_edit.setText(
+                self.controller.cms_course)
+        self.settings_dialog.ui.startZones_edit.setText(
+            ", ".join(z for z in self.controller.start_autozones))
+        self.settings_dialog.ui.endZones_edit.setText(
+            ", ".join(z for z in self.controller.end_autozones))
+        self.settings_dialog.ui.passthroughZones_edit.setText(
+            ", ".join(z for z in self.controller.passthrough_zones))
+        if self.controller.first_page == "l":
+            self.settings_dialog.ui.leftPage_radio.setChecked(True)
+        else:
+            self.settings_dialog.ui.rightPage_radio.setChecked(True)
+        if self.controller.has_right_margin():
+            self.settings_dialog.ui.rightMargin_checkbox.setChecked(True)
+        if self.controller.has_left_margin():
+            self.settings_dialog.ui.leftMargin_checkbox.setChecked(True)
+        self.settings_dialog.ui.login_edit.setText(self.controller.username)
+        self.settings_dialog.ui.password_edit.setEchoMode(
+            QtGui.QLineEdit.Password)
+        self.settings_dialog.ui.password_edit.setText(self.controller.password)
+        result = self.settings_dialog.exec_()
+        if result == QtGui.QDialog.Accepted:
+            return True
+        return False

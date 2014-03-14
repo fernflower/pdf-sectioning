@@ -50,13 +50,8 @@ class BookController(object):
         # only for start\end marks, not rulers
         self.any_unsaved_changes = False
         # margins and first marked page orientation stuff
-        self.margins = params["margins"]
-        self.margin_width = params["margin-width"]
-        self.default_zone_width = params["zone-width"]
-        self.first_page = params["first-page"]
-        self.pass_through_zones = params["passthrough-zones"]
-        self.start_autozones = params["start-autozones"]
-        self.end_autozones = params["end-autozones"]
+        self.default_settings = params
+        self.settings_changed(self.default_settings)
         # delete funcs to be passed on different marks' construction
         self.delete_funcs = {"start_end": self.delete_mark,
                              "zone": self.delete_zone,
@@ -66,6 +61,25 @@ class BookController(object):
     @property
     def current_toc_elem(self):
         return self.toc_controller.active_elem
+
+    @property
+    def settings(self):
+        res = {"margins": self.margins,
+               "first-page": self.first_page,
+               "passthrough-zones": self.passthrough_zones,
+               "start-autozones": self.start_autozones,
+               "end-autozones": self.end_autozones}
+        if hasattr(self, "cms_course"):
+            res["cms-course"] = self.cms_course
+        return res
+
+    def settings_changed(self, new_settings):
+        for key in ["cms-course", "margins", "margin-width", "zone-width",
+                    "first-page", "passthrough-zones", "start-autozones",
+                    "end-autozones", "username", "password"]:
+            attr = key.replace('-', '_')
+            setattr(self, attr, new_settings.get(key) or \
+                    getattr(self, attr, None))
 
     # returns current page number + 1, as poppler ordering starts from 0, but
     # our first page has number 1
@@ -474,7 +488,7 @@ class BookController(object):
                 page = start.page if az["rubric"] in self.start_autozones \
                     else end.page
                 # create zone of proper type
-                pass_through = az["rubric"] in self.pass_through_zones
+                pass_through = az["rubric"] in self.passthrough_zones
                 pages = None
                 (pos_x, pos_y) = pos
                 if pass_through:
@@ -870,7 +884,7 @@ class BookController(object):
 
     # get (y-coordinate, width correction) for markup mode depending on margins
     def _get_corrections(self, margin=None, rubric=None):
-        width = self.default_zone_width \
+        width = self.zone_width \
             if not rubric else ZONE_ICONS[rubric].width()
         if not margin:
             if self.has_both_margins():
