@@ -83,7 +83,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             }
             QToolButton:hover {
                 background: url(%s_hover.png) top center no-repeat;
-                color: blue;
             }
             QToolButton:pressed, QToolButton:checked {
                         background: url(%s_pressed.png) top center no-repeat;
@@ -92,6 +91,30 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                         background: url(%s_disabled.png) top center no-repeat;
             }
         """ % (button_name, button_name, button_name, button_name)
+
+    def generate_menubutton_stylesheet(self, action, icon_file):
+        button = self.toolBar.widgetForAction(action)
+        button.setStyleSheet("""
+                             QToolButton:hover { border: none;
+                                                 color: gray } """)
+        icon_on = QtGui.QIcon()
+        icon_on.addPixmap(QtGui.QPixmap(
+            QtCore.QString.fromUtf8("%s.png" % icon_file)),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.On)
+        icon_on.addPixmap(QtGui.QPixmap(
+            QtCore.QString.fromUtf8("%s_hover.png" % icon_file)),
+            QtGui.QIcon.Active,
+            QtGui.QIcon.On)
+        icon_on.addPixmap(QtGui.QPixmap(
+            QtCore.QString.fromUtf8("%s_disabled.png" % icon_file)),
+            QtGui.QIcon.Disabled,
+            QtGui.QIcon.Off)
+        icon_on.addPixmap(QtGui.QPixmap(
+            QtCore.QString.fromUtf8("%s_pressed.png" % icon_file)),
+            QtGui.QIcon.Selected,
+            QtGui.QIcon.On)
+        action.setIcon(icon_on)
 
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
@@ -249,22 +272,26 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     # all work on colors and buttons' styles done here
     def _set_appearance(self):
         # here come toolbuttons created in designer
-        load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
-        load_markup = self.toolBar.widgetForAction(self.actionLoad_markup)
-        save = self.toolBar.widgetForAction(self.actionSmartSave)
-        hor_ruler = self.toolBar.widgetForAction(self.actionSetHorizontalRuler)
-        vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
+        #load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
+        #load_markup = self.toolBar.widgetForAction(self.actionLoad_markup)
+        #save = self.toolBar.widgetForAction(self.actionSmartSave)
+        #hor_ruler = self.toolBar.widgetForAction(self.actionSetHorizontalRuler)
+        #vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
         appearance = { self.toolbarpart.nextPage_button: 'buttons/Page_down',
                        self.toolbarpart.prevPage_button: 'buttons/Page_up',
-                       load_pdf: 'buttons/Load_file',
-                       load_markup: 'buttons/Load_markup',
-                       save: 'buttons/Save',
-                       vert_ruler: 'buttons/Vertical_ruler',
-                       hor_ruler: 'buttons/Horisontal_ruler',
                        self.toolbarpart.zoomIn_button: 'buttons/Plus',
                        self.toolbarpart.zoomOut_button: 'buttons/Minus',
                        self.toolbarpart.changeIcons_button: \
                           'buttons/Choose_icons'}
+        menubuttons = {
+            self.actionLoad_pdf: 'buttons/Load_file',
+            self.actionLoad_markup: 'buttons/Load_markup',
+            self.actionSmartSave: 'buttons/Save',
+            self.actionSetHorizontalRuler: 'buttons/Vertical_ruler',
+            self.actionSetVerticalRuler: 'buttons/Horisontal_ruler',
+        }
+        for (widget, iconfile) in menubuttons.items():
+            self.generate_menubutton_stylesheet(widget, iconfile)
         for (widget, style) in appearance.items():
             widget.setStyleSheet(self.generate_toolbutton_stylesheet(style))
         # all other stylesheets come here

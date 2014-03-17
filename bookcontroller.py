@@ -62,17 +62,6 @@ class BookController(object):
     def current_toc_elem(self):
         return self.toc_controller.active_elem
 
-    @property
-    def settings(self):
-        res = {"margins": self.margins,
-               "first-page": self.first_page,
-               "passthrough-zones": self.passthrough_zones,
-               "start-autozones": self.start_autozones,
-               "end-autozones": self.end_autozones}
-        if hasattr(self, "cms_course"):
-            res["cms-course"] = self.cms_course
-        return res
-
     def settings_changed(self, new_settings):
         for key in ["cms-course", "margins", "margin-width", "zone-width",
                     "first-page", "passthrough-zones", "start-autozones",
