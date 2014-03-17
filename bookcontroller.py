@@ -24,13 +24,12 @@ class BookController(object):
     VIEWPORT_DELTA = 5
     SELECT_DELTA = 12
 
-    def __init__(self, toc_controller, params, display_name, filename=None,
-                 mark_creator=None):
-        self.dp = DocumentProcessor(filename, display_name) \
+    def __init__(self, toc_controller, st, filename=None, mark_creator=None):
+        self.dp = DocumentProcessor(filename, st.display_name) \
             if filename else None
         self.toc_controller = toc_controller
         self.mc = mark_creator or MarkCreator()
-        self.display_name = display_name
+        self.display_name = st.display_name
         # marks per paragraph.
         # { paragraph_id: { marks: (start, end) }, zones: [] }
         self.paragraph_marks = {}
@@ -49,9 +48,11 @@ class BookController(object):
         self.mark_mode = self.MODE_MARK
         # only for start\end marks, not rulers
         self.any_unsaved_changes = False
-        # margins and first marked page orientation stuff
-        self.default_settings = params
-        self.settings_changed(self.default_settings)
+        self.settings_changed(st._defaults, True)
+        # login and password data have no defaults, have to be created here
+        self.login = ""
+        self.password = ""
+        self.cms_query_module = st
         # delete funcs to be passed on different marks' construction
         self.delete_funcs = {"start_end": self.delete_mark,
                              "zone": self.delete_zone,
@@ -62,13 +63,16 @@ class BookController(object):
     def current_toc_elem(self):
         return self.toc_controller.active_elem
 
-    def settings_changed(self, new_settings):
+    def settings_changed(self, new_settings, create_if_none=False):
         for key in ["cms-course", "margins", "margin-width", "zone-width",
                     "first-page", "passthrough-zones", "start-autozones",
                     "end-autozones", "username", "password"]:
             attr = key.replace('-', '_')
-            setattr(self, attr, new_settings.get(key) or \
-                    getattr(self, attr, None))
+            if create_if_none:
+                setattr(self, attr, new_settings.get(key) or \
+                        getattr(self, attr, None))
+            elif key in new_settings:
+                setattr(self, attr, new_settings.get(key))
 
     # returns current page number + 1, as poppler ordering starts from 0, but
     # our first page has number 1
@@ -123,6 +127,14 @@ class BookController(object):
         self.show_page_marks(self.pagenum)
 
     ### predicates section
+    def is_userdata_valid(self, login="", password=""):
+        login = login or self.login
+        password = password or self.password
+        if login == "" or password == "":
+            return False
+        # make a sample request to figure out if data is valid
+        return self.cms_query_module.validate_user_data(login,
+                                                        password)
 
     # validate that selection is in pdf's viewport
     def is_zone_placed(self, cas_id, zone_id):

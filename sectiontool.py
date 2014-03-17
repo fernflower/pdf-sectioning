@@ -20,9 +20,16 @@ class SectionToolError(Exception):
     pass
 
 class SectionTool(object):
+    DEFAULT_CONFIG = "config"
 
-    def __init__(self, config_filename):
-        self.parse_config(config_filename)
+    def __init__(self, config_filename=None):
+        self.config_data = {}
+        self.parse_config(config_filename or self.DEFAULT_CONFIG)
+        self.display_name = None
+
+    @property
+    def any_course_data(self):
+        return "cms-course" in self.config_data
 
     def parse_config(self, config_filename):
         with open(config_filename) as f:
@@ -32,12 +39,10 @@ class SectionTool(object):
                 for line in f.readlines() if not line.startswith('#')
             }
         if 'url' not in self.config_data.keys() or \
-                'resolve_url' not in self.config_data.keys():
+                'resolve_url' not in self.config_data.keys() or \
+                'ping-url' not in self.config_data.keys():
             raise SectionToolError(
-                "Base cms url and resolve-url must be set in config!")
-        if 'cms-course' not in self.config_data.keys():
-            raise SectionToolError(
-            "Cms-course id should be set in config (cms-course field)!")
+                "Some vital urls are missing in default config!!!")
 
         # a list of 2+ is returned as a list, but if [a] -> a (single elem) is
         # returned
@@ -72,14 +77,13 @@ class SectionTool(object):
                 'zone-width': 20,
                 'first-page': 'l'}
 
-    def _fetch_data(self, url):
+    def _fetch_data(self, url, login, password):
         storage = StringIO()
         c = pycurl.Curl()
         c.setopt(pycurl.URL, url)
         c.setopt(c.WRITEFUNCTION, storage.write)
         c.setopt(pycurl.USERPWD,
-                 self.config_data["username"] + ":" + \
-                 self.config_data["password"])
+                 login + ":" + password)
         # TODO find out how to use certificate
         c.setopt(pycurl.SSL_VERIFYPEER, 0)
         c.setopt(pycurl.SSL_VERIFYHOST, 0)
@@ -91,16 +95,26 @@ class SectionTool(object):
         c.close()
         return (code, data)
 
+    def validate_user_data(self, login, password):
+        url = self.config_data['ping-url'].rstrip('/')
+        code, data = self._fetch_data(url, str(login), str(password))
+        return code == 200
+
     # returns a list of {name, cas-id} in order of appearance in TOC
     def get_cms_course_toc(self):
+        if not self.any_course_data:
+            return []
         course_id = self.config_data['cms-course']
         course_url = self.config_data['url'].rstrip('/') + '/' + course_id
-        code, data = self._fetch_data(course_url)
+        login = self.config_data['username']
+        password = self.config_data['password']
+        code, data = self._fetch_data(course_url, login, password)
         if data:
             TOC_XPATH = "/is:course/is:lessons/is:lesson/@name"
             tree = etree.fromstring(data)
-            display_name = tree.xpath("/is:course/@display-name",
-                                      namespaces = {"is" : XHTML_NAMESPACE})[0]
+            self.display_name = tree.xpath(
+                "/is:course/@display-name",
+                namespaces = {"is" : XHTML_NAMESPACE})[0]
             lesson_ids = tree.xpath(TOC_XPATH,
                                     namespaces = {"is" : XHTML_NAMESPACE})
             # resolve names
@@ -118,16 +132,16 @@ class SectionTool(object):
             if resp.status != 200:
                 raise SectionToolError("Could not resolve lesson names!")
             resolved = loads(content)
-            objects =  [{"name": resolved[lesson_id], "cas-id": lesson_id,
-                         "objects": self.get_lesson_objects(lesson_id)} \
-                        for lesson_id in ids_to_resolve]
-            return (objects, display_name)
+            return [{"name": resolved[lesson_id], "cas-id": lesson_id,
+                     "objects": self._get_lesson_objects(lesson_id,
+                                                         login, password)} \
+                    for lesson_id in ids_to_resolve]
         else:
             raise SectionToolError("Check your url and user\password settings")
 
-    def get_lesson_objects(self, lesson_id):
+    def _get_lesson_objects(self, lesson_id, login, password):
         lesson_url = self.config_data['url'].rstrip('/') + '/' + lesson_id
-        code, data = self._fetch_data(lesson_url)
+        code, data = self._fetch_data(lesson_url, login, password)
         if data:
             PARAGRAPHS_XPATH = "/is:lesson/is:content/is:paragraph | /is:lesson/is:content/is:test"
             tree = etree.fromstring(data)
@@ -160,16 +174,15 @@ def main():
         return filename
 
     filename = parse_args()
-    st = SectionTool("config")
-    toc, display_name = st.get_cms_course_toc()
+    st = SectionTool()
+    toc = st.get_cms_course_toc()
 
     # show window
     app = QtGui.QApplication(sys.argv)
     toc_controller = TocController(toc, st.config_data["start-autozones"],
                                    st.config_data["end-autozones"])
     # here display name must be passed in order to create DP later
-    controller = BookController(toc_controller, st.config_data,
-                                display_name, filename)
+    controller = BookController(toc_controller, st, filename)
     ui_mw = BookViewerWidget(controller, toc_controller)
     ui_mw.show()
     sys.exit(app.exec_())

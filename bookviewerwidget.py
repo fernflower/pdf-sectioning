@@ -4,11 +4,11 @@ import os
 from PyQt4 import QtGui, QtCore
 from docwidget import Ui_MainWindow
 from toolbarpart import Ui_ToolBarPart
-from settingsdialog import Ui_Dialog
 from imagelabel import QImageLabel
 from console import QConsole
 from stylesheets import GENERAL_STYLESHEET, BLACK_LABEL_STYLESHEET
 from selectionviewcontroller import SelectionViewController
+from settings import Settings
 
 
 class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
@@ -246,11 +246,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         screen = QtGui.QDesktopWidget().screenGeometry()
         self.setGeometry(0, 0, screen.width() * 0.9, screen.height() * 0.9)
         # setup settings dialog
-        self.settings_dialog = QtGui.QDialog()
-        self.settings_dialog.ui = Ui_Dialog()
-        self.settings_dialog.ui.setupUi(self.settings_dialog)
-        self.settings_dialog.setWindowTitle(
-            QtCore.QString.fromUtf8(u"Настройки"))
+        self.settings_dialog = Settings(self.controller, self)
 
     def _fill_views(self):
         for mode in [self.SECTION_MODE, self.MARKUP_MODE]:
@@ -326,10 +322,22 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.hide_progress_bar()
 
     def change_settings(self):
-        if self.show_settings_dialog():
+        result, settings = self.settings_dialog.show_settings()
+        # save login anyway
+        if settings["login"] != "":
+            self.controller.login = settings["login"]
+        if result:
             print "yes!"
-        else:
-            print "no"
+            # have to validate received data
+            # TODO cms-course id validation\smart-search
+            for key in ["first-page", "cms-course"]:
+                if settings[key] == "":
+                    del settings[key]
+            for key in ["margins", "start-autozones", "end-autozones",
+                        "passthrough-zones"]:
+                if settings[key] == []:
+                    del settings[key]
+            self.controller.settings_changed(settings)
 
     # mind that this is called every time a view is clicked, not only on
     # selection
@@ -647,30 +655,3 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 return filename
             return None
         return filename
-
-    def show_settings_dialog(self):
-        # get fresh settings from controller and show them
-        self.settings_dialog.ui.cmsCourse_edit.setText(
-                self.controller.cms_course)
-        self.settings_dialog.ui.startZones_edit.setText(
-            ", ".join(z for z in self.controller.start_autozones))
-        self.settings_dialog.ui.endZones_edit.setText(
-            ", ".join(z for z in self.controller.end_autozones))
-        self.settings_dialog.ui.passthroughZones_edit.setText(
-            ", ".join(z for z in self.controller.passthrough_zones))
-        if self.controller.first_page == "l":
-            self.settings_dialog.ui.leftPage_radio.setChecked(True)
-        else:
-            self.settings_dialog.ui.rightPage_radio.setChecked(True)
-        if self.controller.has_right_margin():
-            self.settings_dialog.ui.rightMargin_checkbox.setChecked(True)
-        if self.controller.has_left_margin():
-            self.settings_dialog.ui.leftMargin_checkbox.setChecked(True)
-        self.settings_dialog.ui.login_edit.setText(self.controller.username)
-        self.settings_dialog.ui.password_edit.setEchoMode(
-            QtGui.QLineEdit.Password)
-        self.settings_dialog.ui.password_edit.setText(self.controller.password)
-        result = self.settings_dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
-            return True
-        return False
