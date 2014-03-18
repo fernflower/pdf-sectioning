@@ -106,7 +106,7 @@ class SectionTool(object):
             return []
         course_id = self.config_data['cms-course']
         course_url = self.config_data['url'].rstrip('/') + '/' + course_id
-        login = self.config_data['username']
+        login = self.config_data['login']
         password = self.config_data['password']
         code, data = self._fetch_data(course_url, login, password)
         if data:
@@ -123,7 +123,7 @@ class SectionTool(object):
             headers = {"Content-type" : "application/json; charset=UTF-8"}
             body = dumps(ids_to_resolve)
             http_obj = Http()
-            http_obj.add_credentials(self.config_data['username'],
+            http_obj.add_credentials(self.config_data['login'],
                                      self.config_data['password'])
             resp, content = http_obj.request(
                 uri=self.config_data["resolve_url"], method='POST',

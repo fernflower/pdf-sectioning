@@ -48,10 +48,14 @@ class BookController(object):
         self.mark_mode = self.MODE_MARK
         # only for start\end marks, not rulers
         self.any_unsaved_changes = False
-        self.settings_changed(st._defaults, True)
-        # login and password data have no defaults, have to be created here
-        self.login = ""
-        self.password = ""
+        print st.config_data
+        self.settings_changed(st.config_data, True)
+        # password data has no defaults, have to be created here
+        if not hasattr(self, "login"):
+            self.login = ""
+        # TODO FIXME should be present in final version but for debugging
+        # purposes pass password that we have in config
+        #self.password = ""
         self.cms_query_module = st
         # delete funcs to be passed on different marks' construction
         self.delete_funcs = {"start_end": self.delete_mark,
@@ -66,7 +70,7 @@ class BookController(object):
     def settings_changed(self, new_settings, create_if_none=False):
         for key in ["cms-course", "margins", "margin-width", "zone-width",
                     "first-page", "passthrough-zones", "start-autozones",
-                    "end-autozones", "username", "password"]:
+                    "end-autozones", "login", "password"]:
             attr = key.replace('-', '_')
             if create_if_none:
                 setattr(self, attr, new_settings.get(key) or \
@@ -381,6 +385,10 @@ class BookController(object):
                        self.paragraphs[page]["zones"])):
                 return margin
         return "lr"
+
+    def reload_course(self, new_course_id):
+        self.cms_course = new_course_id
+        self.delete_all()
 
     # returns full file name (with path) to file with markup
     def save(self, path_to_file, progress=None):

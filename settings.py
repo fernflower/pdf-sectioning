@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
 from settingsdialog import Ui_Dialog
+from addzonesdialog import Ui_addZones
+from zonetypes import ZONE_TYPES
 
 
 class Settings(QtGui.QDialog):
@@ -15,6 +17,17 @@ class Settings(QtGui.QDialog):
         self.wrong_userdata_dialog = None
         self.new_settings = None
         self.ui.buttonBox.clicked.connect(self._apply)
+        self.ui.addStart_button.clicked.connect(self._add_zone_clicked)
+        self.ui.addEnd_button.clicked.connect(self._add_zone_clicked)
+        self.ui.addPassthrough_button.clicked.connect(self._add_zone_clicked)
+        self.autozone_relations = {
+            self.ui.addStart_button: self.controller.start_autozones,
+            self.ui.addEnd_button: self.controller.end_autozones,
+            self.ui.addPassthrough_button: self.controller.passthrough_zones }
+
+    # split by comma and strip
+    def _get_zones(self, text):
+        return [z.strip() for z in text.split(",") if z != ""]
 
     def exec_(self):
         # if no login\password or bad data: deactivate other settings' tab
@@ -57,16 +70,9 @@ class Settings(QtGui.QDialog):
             new_margins.append("l")
         if self.ui.rightMargin_checkbox.isChecked():
             new_margins.append("r")
-        new_start = [z.strip() for z in \
-                     str(self.ui.startZones_edit.text()).\
-                     split(",") if z != ""]
-        new_end = [z.strip() for z in \
-                   str(self.ui.endZones_edit.text()).\
-                   split(",") if z != ""]
-        new_pass = [
-            z.strip() for z in \
-            str(self.ui.passthroughZones_edit.text()).\
-            split(",") if z != ""]
+        new_start = self._get_zones(str(self.ui.startZones_edit.text()))
+        new_end = self._get_zones(str(self.ui.endZones_edit.text()))
+        new_pass = self._get_zones(str(self.ui.passthroughZones_edit.text()))
         new_login = self.ui.login_edit.text()
         new_password = self.ui.password_edit.text()
         self.new_settings = {"cms-course": new_course,
@@ -94,6 +100,10 @@ class Settings(QtGui.QDialog):
             self.ui.bookData_tab.setEnabled(False)
             self.show_wrong_userdata_dialog()
 
+    def _add_zone_clicked(self):
+        dialog = ManageZonesDialog(self.autozone_relations[self.sender()])
+        dialog.exec_()
+
     def show_wrong_userdata_dialog(self):
         if not self.wrong_userdata_dialog:
             self.wrong_userdata_dialog = QtGui.QMessageBox(self.parent)
@@ -101,3 +111,51 @@ class Settings(QtGui.QDialog):
             self.wrong_userdata_dialog.setInformativeText(u"Убедитесь в корректности логина и пароля.")
             self.wrong_userdata_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
         self.wrong_userdata_dialog.exec_()
+
+
+class ManageZonesDialog(QtGui.QDialog):
+    ALL_ZONES_MODE = "all"
+    CHOSEN_ZONES_MODE = "chosen"
+
+    def __init__(self, chosen_zones):
+        super(ManageZonesDialog, self).__init__()
+        self.ui = Ui_addZones()
+        self.ui.setupUi(self)
+        def _fill_view(view, data):
+            model = QtGui.QStandardItemModel()
+            for item in data:
+                model.appendRow(QtGui.QStandardItem(item))
+            view.setModel(model)
+        _fill_view(self.ui.allZones_listview, ZONE_TYPES)
+        _fill_view(self.ui.chosenZones_listview, chosen_zones)
+        self.ui.add_button.clicked.connect(self.add_zone)
+        self.ui.remove_button.clicked.connect(self.remove_zone)
+        self.ui.up_button.clicked.connect(self.move_up)
+        self.ui.down_button.clicked.connect(self.move_down)
+        self.views = {self.ALL_ZONES_MODE: self.ui.allZones_listview,
+                      self.CHOSEN_ZONES_MODE: self.ui.chosenZones_listview}
+
+    def add_zone(self):
+        print "add zone"
+
+    def remove_zone(self):
+        print "remove zone"
+
+    def move_up(self):
+        print "up"
+
+    def move_down(self):
+        print "down"
+
+    def _get_selected(self, mode):
+        idx = self.views[mode].selectedIndexes()
+        if len(idx) > 0:
+            return self.views[mode].model().itemFromIndex(idx[0])
+        return None
+
+    def update(self):
+        super(ManageZonesDialog, self).update()
+        selected = self._get_selected(CHOSEN_ZONES_MODE)
+        print selected
+        self.ui.up_button.setEnabled(selected != [])
+        self.ui.down_button.setEnabled(selected != [])
