@@ -65,11 +65,11 @@ class Settings(QtGui.QDialog):
             new_first = "l"
         elif self.ui.rightPage_radio.isChecked():
             new_first = "r"
-        new_margins = []
+        new_margins = ""
         if self.ui.leftMargin_checkbox.isChecked():
-            new_margins.append("l")
+            new_margins = new_margins + "l"
         if self.ui.rightMargin_checkbox.isChecked():
-            new_margins.append("r")
+            new_margins = new_margins + "r"
         new_start = self._get_zones(str(self.ui.startZones_edit.text()))
         new_end = self._get_zones(str(self.ui.endZones_edit.text()))
         new_pass = self._get_zones(str(self.ui.passthroughZones_edit.text()))
@@ -135,17 +135,53 @@ class ManageZonesDialog(QtGui.QDialog):
         self.views = {self.ALL_ZONES_MODE: self.ui.allZones_listview,
                       self.CHOSEN_ZONES_MODE: self.ui.chosenZones_listview}
 
+    def get_zones(self, mode):
+        model = self.views[mode].model()
+        return [str(model.item(i).text()) for i in range(0, model.rowCount())]
+
+    def _add_zone(self, add_to_mode, remove_from_mode):
+        selected = self._get_selected(remove_from_mode)
+        model_add = self.views[add_to_mode].model()
+        model_remove = self.views[remove_from_mode].model()
+        if not selected:
+            return
+        # add to new list
+        if str(selected.text()) not in self.get_zones(add_to_mode):
+            model_add.appendRow(QtGui.QStandardItem(selected.text()))
+        # remove from old list
+        if str(selected.text()) in self.get_zones(remove_from_mode):
+            model_remove.removeRow(
+                self.get_zones(remove_from_mode).index(str(selected.text())))
+
+    def _move(self, delta):
+        selected = self._get_selected(self.CHOSEN_ZONES_MODE)
+        view = self.views[self.CHOSEN_ZONES_MODE]
+        if not selected:
+            return
+        view.selectionModel().clear()
+        row_num = self.get_zones(self.CHOSEN_ZONES_MODE).\
+            index(str(selected.text()))
+        if (row_num == 0 and delta < 0) or \
+                (row_num == view.model().rowCount() and delta > 0):
+            return
+        new_row_num = row_num + delta
+        row_items = view.model().takeRow(row_num)
+        view.model().insertRow(new_row_num, row_items)
+        view.selectionModel().select(view.model().item(new_row_num).index(),
+                                     view.selectionModel().Select)
+
     def add_zone(self):
-        print "add zone"
+        return self._add_zone(self.CHOSEN_ZONES_MODE, self.ALL_ZONES_MODE)
 
     def remove_zone(self):
-        print "remove zone"
+        return self._add_zone(self.ALL_ZONES_MODE, self.CHOSEN_ZONES_MODE)
 
     def move_up(self):
-        print "up"
+        self._move(-1)
 
     def move_down(self):
         print "down"
+        self._move(1)
 
     def _get_selected(self, mode):
         idx = self.views[mode].selectedIndexes()
@@ -154,8 +190,8 @@ class ManageZonesDialog(QtGui.QDialog):
         return None
 
     def update(self):
-        super(ManageZonesDialog, self).update()
         selected = self._get_selected(CHOSEN_ZONES_MODE)
         print selected
-        self.ui.up_button.setEnabled(selected != [])
-        self.ui.down_button.setEnabled(selected != [])
+        self.ui.up_button.setEnabled(selected is not None)
+        self.ui.down_button.setEnabled(selected is not None)
+        super(ManageZonesDialog, self).update()
