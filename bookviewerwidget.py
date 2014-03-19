@@ -330,11 +330,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             print "yes!"
             # have to validate received data
             # TODO cms-course id validation\smart-search
-            for key in ["first-page", "cms-course", "margins"]:
+            for key in ["first-page", "cms-course"]:
                 if settings[key] == "":
                     del settings[key]
             for key in ["start-autozones", "end-autozones",
-                        "passthrough-zones"]:
+                        "passthrough-zones", "margins"]:
                 if settings[key] == []:
                     del settings[key]
             self.controller.settings_changed(settings)

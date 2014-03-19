@@ -3,7 +3,7 @@ import unittest
 from documentprocessor import DocumentProcessor
 from bookcontroller import BookController
 from bookviewerwidget import BookViewerWidget
-from sectiontool import SectionTool
+from sectiontool import CmsQueryModule
 from toccontrollertest import MockTocController
 
 
@@ -187,12 +187,11 @@ class BookControllerTest(unittest.TestCase):
         self.markup_file = "tests/native-test.xml"
         self.display_name = "Chemistry-8 course"
         self.pdf_file = "tests/chemistry8.pdf"
-        self.st = SectionTool(u"tests/config-test")
+        self.cqm = CmsQueryModule(u"tests/config-test")
         self.mc = MockMarkCreator()
         self.toc_controller = MockTocController()
         self.controller = BookController(toc_controller=self.toc_controller,
-                                         params=self.st._defaults,
-                                         display_name=self.display_name,
+                                         cqm=self.cqm,
                                          filename=self.pdf_file,
                                          mark_creator=self.mc)
 

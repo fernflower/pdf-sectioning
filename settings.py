@@ -65,11 +65,11 @@ class Settings(QtGui.QDialog):
             new_first = "l"
         elif self.ui.rightPage_radio.isChecked():
             new_first = "r"
-        new_margins = ""
+        new_margins = []
         if self.ui.leftMargin_checkbox.isChecked():
-            new_margins = new_margins + "l"
+            new_margins.append("l")
         if self.ui.rightMargin_checkbox.isChecked():
-            new_margins = new_margins + "r"
+            new_margins.append("r")
         new_start = self._get_zones(str(self.ui.startZones_edit.text()))
         new_end = self._get_zones(str(self.ui.endZones_edit.text()))
         new_pass = self._get_zones(str(self.ui.passthroughZones_edit.text()))
@@ -162,7 +162,7 @@ class ManageZonesDialog(QtGui.QDialog):
         row_num = self.get_zones(self.CHOSEN_ZONES_MODE).\
             index(str(selected.text()))
         if (row_num == 0 and delta < 0) or \
-                (row_num == view.model().rowCount() and delta > 0):
+                (row_num == view.model().rowCount() - 1 and delta > 0):
             return
         new_row_num = row_num + delta
         row_items = view.model().takeRow(row_num)

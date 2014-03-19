@@ -16,10 +16,10 @@ XHTML_NAMESPACE = "http://internet-school.ru/abc"
 E = ElementMaker(namespace=XHTML_NAMESPACE,
                  nsmap={'is' : XHTML_NAMESPACE})
 
-class SectionToolError(Exception):
+class CmsQueryError(Exception):
     pass
 
-class SectionTool(object):
+class CmsQueryModule(object):
     DEFAULT_CONFIG = "config"
 
     def __init__(self, config_filename=None):
@@ -41,7 +41,7 @@ class SectionTool(object):
         if 'url' not in self.config_data.keys() or \
                 'resolve_url' not in self.config_data.keys() or \
                 'ping-url' not in self.config_data.keys():
-            raise SectionToolError(
+            raise CmsQueryError(
                 "Some vital urls are missing in default config!!!")
 
         # a list of 2+ is returned as a list, but if [a] -> a (single elem) is
@@ -130,14 +130,14 @@ class SectionTool(object):
                 headers=headers,
                 body=body)
             if resp.status != 200:
-                raise SectionToolError("Could not resolve lesson names!")
+                raise CmsQueryError("Could not resolve lesson names!")
             resolved = loads(content)
             return [{"name": resolved[lesson_id], "cas-id": lesson_id,
                      "objects": self._get_lesson_objects(lesson_id,
                                                          login, password)} \
                     for lesson_id in ids_to_resolve]
         else:
-            raise SectionToolError("Check your url and user\password settings")
+            raise CmsQueryError("Check your url and user\password settings")
 
     def _get_lesson_objects(self, lesson_id, login, password):
         lesson_url = self.config_data['url'].rstrip('/') + '/' + lesson_id
@@ -154,7 +154,7 @@ class SectionTool(object):
                                      namespaces = {"is" : XHTML_NAMESPACE})[0]
                      } for p in paragraphs]
         else:
-            raise SectionToolError("Could not get lesson's {} object list!".\
+            raise CmsQueryError("Could not get lesson's {} object list!".\
                                    format(lesson_id))
 
 
@@ -174,15 +174,15 @@ def main():
         return filename
 
     filename = parse_args()
-    st = SectionTool()
-    toc = st.get_cms_course_toc()
+    cqm = CmsQueryModule()
+    toc = cqm.get_cms_course_toc()
 
     # show window
     app = QtGui.QApplication(sys.argv)
-    toc_controller = TocController(toc, st.config_data["start-autozones"],
-                                   st.config_data["end-autozones"])
+    toc_controller = TocController(toc, cqm.config_data["start-autozones"],
+                                   cqm.config_data["end-autozones"])
     # here display name must be passed in order to create DP later
-    controller = BookController(toc_controller, st, filename)
+    controller = BookController(toc_controller, cqm, filename)
     ui_mw = BookViewerWidget(controller, toc_controller)
     ui_mw.show()
     sys.exit(app.exec_())

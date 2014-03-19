@@ -24,12 +24,12 @@ class BookController(object):
     VIEWPORT_DELTA = 5
     SELECT_DELTA = 12
 
-    def __init__(self, toc_controller, st, filename=None, mark_creator=None):
-        self.dp = DocumentProcessor(filename, st.display_name) \
+    def __init__(self, toc_controller, cqm, filename=None, mark_creator=None):
+        self.dp = DocumentProcessor(filename, cqm.display_name) \
             if filename else None
         self.toc_controller = toc_controller
         self.mc = mark_creator or MarkCreator()
-        self.display_name = st.display_name
+        self.display_name = cqm.display_name
         # marks per paragraph.
         # { paragraph_id: { marks: (start, end) }, zones: [] }
         self.paragraph_marks = {}
@@ -48,15 +48,14 @@ class BookController(object):
         self.mark_mode = self.MODE_MARK
         # only for start\end marks, not rulers
         self.any_unsaved_changes = False
-        print st.config_data
-        self.settings_changed(st.config_data, True)
+        self.settings_changed(cqm.config_data, True)
         # password data has no defaults, have to be created here
         if not hasattr(self, "login"):
             self.login = ""
         # TODO FIXME should be present in final version but for debugging
         # purposes pass password that we have in config
         #self.password = ""
-        self.cms_query_module = st
+        self.cms_query_module = cqm
         # delete funcs to be passed on different marks' construction
         self.delete_funcs = {"start_end": self.delete_mark,
                              "zone": self.delete_zone,

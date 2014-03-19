@@ -3,7 +3,7 @@ import unittest
 import json
 from PyQt4 import QtGui
 from tocelem import QObjectElem, QZone, QTocElem, QMarkerTocElem
-from sectiontool import SectionTool
+from sectiontool import CmsQueryModule
 
 
 class MockTocElem(object):
@@ -74,7 +74,7 @@ class MockTocController(object):
 class TocControllerTest(unittest.TestCase):
     def setUp(self):
         super(TocControllerTest, self).setUp()
-        self.defaults = SectionTool(u"tests/config-test")._defaults
+        self.defaults = CmsQueryModule(u"tests/config-test")._defaults
         self.course_data_file = u"tests/course-data"
 
     def _get_course_data(self):
