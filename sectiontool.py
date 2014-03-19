@@ -36,10 +36,11 @@ class CmsQueryModule(object):
             self.config_data = {
                 line.split('=', 2)[0].strip(' \"\'') : \
                 line.split('=', 2)[1].strip('\"\' \n') \
-                for line in f.readlines() if not line.startswith('#')
+                for line in f.readlines() if not \
+                (line.strip().startswith('#') or line.strip() == "")
             }
         if 'url' not in self.config_data.keys() or \
-                'resolve_url' not in self.config_data.keys() or \
+                'resolve-url' not in self.config_data.keys() or \
                 'ping-url' not in self.config_data.keys():
             raise CmsQueryError(
                 "Some vital urls are missing in default config!!!")
@@ -72,7 +73,7 @@ class CmsQueryModule(object):
         return {'passthrough-zones': PASS_THROUGH_ZONES,
                 'start-autozones': START_AUTOZONES,
                 'end-autozones': END_AUTOZONES,
-                'margins': 'lr',
+                'margins': ['l, r'],
                 'margin-width': 50,
                 'zone-width': 20,
                 'first-page': 'l'}
