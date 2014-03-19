@@ -2,6 +2,7 @@
 page*
 pages/
 *.pdf
+!tests/chemistry8.pdf
 .ropeproject
 *.pyc
 config*
