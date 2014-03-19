@@ -7,7 +7,6 @@ from toolbarpart import Ui_ToolBarPart
 from imagelabel import QImageLabel
 from console import QConsole
 from stylesheets import GENERAL_STYLESHEET, BLACK_LABEL_STYLESHEET
-from selectionviewcontroller import SelectionViewController
 from settings import Settings
 
 
