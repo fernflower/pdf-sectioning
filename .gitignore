@@ -8,3 +8,4 @@ config*
 !tests/config-test
 unfinished*
 *.unfinished
+env
