@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout_10">
    <item>
     <widget class="QTabWidget" name="settings_tabs">
      <property name="enabled">
@@ -217,19 +217,16 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>28</height>
+           <width>607</width>
+           <height>18</height>
           </size>
          </property>
         </spacer>
        </item>
        <item>
-        <layout class="QFormLayout" name="formLayout">
-         <property name="fieldGrowthPolicy">
-          <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-         </property>
-         <item row="0" column="0">
-          <layout class="QVBoxLayout" name="verticalLayout_2">
+        <layout class="QHBoxLayout" name="horizontalLayout_11">
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
             <widget class="QLabel" name="label_3">
              <property name="layoutDirection">
@@ -268,14 +265,32 @@
            </item>
           </layout>
          </item>
-         <item row="0" column="1">
-          <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
-            <widget class="QLineEdit" name="cmsCourse_edit">
-             <property name="frame">
-              <bool>true</bool>
-             </property>
-            </widget>
+            <layout class="QHBoxLayout" name="horizontalLayout_10">
+             <item>
+              <layout class="QVBoxLayout" name="verticalLayout">
+               <item>
+                <widget class="QLineEdit" name="cmsCourse_edit">
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="searchResults_combo"/>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QPushButton" name="search_button">
+               <property name="text">
+                <string>Найти</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <widget class="QGroupBox" name="first_page_group">
@@ -352,8 +367,8 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>13</height>
+           <width>607</width>
+           <height>10</height>
           </size>
          </property>
         </spacer>
@@ -365,8 +380,8 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>40</height>
+           <width>607</width>
+           <height>30</height>
           </size>
          </property>
         </spacer>
@@ -480,8 +495,8 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>22</height>
+           <width>607</width>
+           <height>13</height>
           </size>
          </property>
         </spacer>
@@ -491,6 +506,8 @@
       <zorder>verticalSpacer_2</zorder>
       <zorder>verticalSpacer_5</zorder>
       <zorder>verticalSpacer_3</zorder>
+      <zorder>searchResults_view</zorder>
+      <zorder>searchResults_combo</zorder>
      </widget>
     </widget>
    </item>

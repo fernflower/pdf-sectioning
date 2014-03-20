@@ -20,6 +20,8 @@ class Settings(QtGui.QDialog):
         self.ui.addStart_button.clicked.connect(self._add_zone_clicked)
         self.ui.addEnd_button.clicked.connect(self._add_zone_clicked)
         self.ui.addPassthrough_button.clicked.connect(self._add_zone_clicked)
+        self.ui.search_button.clicked.connect(self._find_cms_course)
+        self.ui.searchResults_combo.hide()
         self.autozone_relations = {
             self.ui.addStart_button: (self.controller.start_autozones,
                                       self.ui.startZones_edit),
@@ -31,6 +33,9 @@ class Settings(QtGui.QDialog):
     # split by comma and strip
     def _get_zones(self, text):
         return [z.strip() for z in text.split(",") if z != ""]
+
+    def _find_cms_course(self):
+        print "find it"
 
     def exec_(self):
         # if no login\password or bad data: deactivate other settings' tab
