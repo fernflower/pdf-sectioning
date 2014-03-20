@@ -47,6 +47,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.init_menubar()
         if self.controller.is_file_given():
             self._set_widgets_data_on_doc_load()
+        self.update()
 
     # properties of most typically used child widgets in order to write less
     # code
@@ -92,10 +93,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         """ % (button_name, button_name, button_name, button_name)
 
     def generate_menubutton_stylesheet(self, action, icon_file):
-        button = self.toolBar.widgetForAction(action)
-        button.setStyleSheet("""
-                             QToolButton:hover { border: none;
-                                                 color: gray } """)
         icon_on = QtGui.QIcon()
         icon_on.addPixmap(QtGui.QPixmap(
             QtCore.QString.fromUtf8("%s.png" % icon_file)),
@@ -114,6 +111,19 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             QtGui.QIcon.Selected,
             QtGui.QIcon.On)
         action.setIcon(icon_on)
+        button = self.toolBar.widgetForAction(action)
+        if button:
+            button.setStyleSheet("""
+                                QToolButton:hover { border: none;
+                                                    color: gray } """)
+        added_tool_button = \
+            next((b for b in [self.nextPage_button, self.prevPage_button] \
+                                    if b.defaultAction() == action), None)
+        if added_tool_button:
+            added_tool_button.setStyleSheet(
+                """
+                QToolButton { border: none;
+                              color: gray; } """)
 
     def init_actions(self):
         self.actionLoad_pdf.triggered.connect(self.open_file)
@@ -227,9 +237,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.toolbarpart.autozone_button.clicked.connect(self.autozones)
         # unfortunately could not assign actions as could not get rid of action
         # text displayed
-        self.prevPage_button.clicked.connect(self.prev_page)
+        self.prevPage_button.setDefaultAction(self.actionPrev_page)
         self.prevPage_button.setShortcut(QtCore.Qt.Key_Left)
-        self.nextPage_button.clicked.connect(self.next_page)
+        self.nextPage_button.setDefaultAction(self.actionNext_page)
         self.nextPage_button.setShortcut(QtCore.Qt.Key_Right)
         self.toolbarpart.zoomIn_button.clicked.connect(self.zoom_in)
         self.toolbarpart.zoomOut_button.clicked.connect(self.zoom_out)
@@ -267,14 +277,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     # all work on colors and buttons' styles done here
     def _set_appearance(self):
         # here come toolbuttons created in designer
-        #load_pdf = self.toolBar.widgetForAction(self.actionLoad_pdf)
-        #load_markup = self.toolBar.widgetForAction(self.actionLoad_markup)
-        #save = self.toolBar.widgetForAction(self.actionSmartSave)
-        #hor_ruler = self.toolBar.widgetForAction(self.actionSetHorizontalRuler)
-        #vert_ruler = self.toolBar.widgetForAction(self.actionSetVerticalRuler)
-        appearance = { self.toolbarpart.nextPage_button: 'buttons/Page_down',
-                       self.toolbarpart.prevPage_button: 'buttons/Page_up',
-                       self.toolbarpart.zoomIn_button: 'buttons/Plus',
+        appearance = { self.toolbarpart.zoomIn_button: 'buttons/Plus',
                        self.toolbarpart.zoomOut_button: 'buttons/Minus',
                        self.toolbarpart.changeIcons_button: \
                           'buttons/Choose_icons'}
@@ -284,7 +287,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.actionSmartSave: 'buttons/Save',
             self.actionSetHorizontalRuler: 'buttons/Vertical_ruler',
             self.actionSetVerticalRuler: 'buttons/Horisontal_ruler',
+            self.actionNext_page: 'buttons/Page_down',
+            self.actionPrev_page: 'buttons/Page_up'
         }
+        print menubuttons
         for (widget, iconfile) in menubuttons.items():
             self.generate_menubutton_stylesheet(widget, iconfile)
         for (widget, style) in appearance.items():
@@ -570,6 +576,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionForced_delete_selection.setEnabled(anything_selected)
         self.actionDelete_all.setEnabled(self.controller.any_unsaved_changes)
         self.actionSave.setEnabled(self.last_open_doc_name is not None)
+        for action in [self.actionLoad_markup, self.actionSave,
+                       self.actionSaveAs, self.actionSmartSave,
+                       self.actionSetHorizontalRuler,
+                       self.actionSetVerticalRuler]:
+            action.setEnabled(self.controller.cms_course is not None)
+        for widget in [self.nextPage_button, self.prevPage_button,
+                       self.toolbarpart.zoomIn_button,
+                       self.toolbarpart.zoomOut_button, self.spinBox,
+                       self.zoom_comboBox]:
+            widget.setEnabled(self.controller.is_file_given())
 
     ## all possible dialogs go here
     # general politics: returns True if can proceed with anything after

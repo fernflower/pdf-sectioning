@@ -101,6 +101,11 @@ class CmsQueryModule(object):
         code, data = self._fetch_data(url, str(login), str(password))
         return code == 200
 
+    def search_for_course(self, name_part, login, password):
+        if not self.validate_user_data(login, password):
+            return []
+
+
     # returns a list of {name, cas-id} in order of appearance in TOC
     def get_cms_course_toc(self):
         if not self.any_course_data:

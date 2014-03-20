@@ -21,9 +21,12 @@ class Settings(QtGui.QDialog):
         self.ui.addEnd_button.clicked.connect(self._add_zone_clicked)
         self.ui.addPassthrough_button.clicked.connect(self._add_zone_clicked)
         self.autozone_relations = {
-            self.ui.addStart_button: self.controller.start_autozones,
-            self.ui.addEnd_button: self.controller.end_autozones,
-            self.ui.addPassthrough_button: self.controller.passthrough_zones }
+            self.ui.addStart_button: (self.controller.start_autozones,
+                                      self.ui.startZones_edit),
+            self.ui.addEnd_button: (self.controller.end_autozones,
+                                    self.ui.endZones_edit),
+            self.ui.addPassthrough_button: (self.controller.passthrough_zones,
+                                            self.ui.passthroughZones_edit) }
 
     # split by comma and strip
     def _get_zones(self, text):
@@ -101,8 +104,12 @@ class Settings(QtGui.QDialog):
             self.show_wrong_userdata_dialog()
 
     def _add_zone_clicked(self):
-        dialog = ManageZonesDialog(self.autozone_relations[self.sender()])
-        dialog.exec_()
+        dialog = ManageZonesDialog(self.autozone_relations[self.sender()][0])
+        new_data = dialog.exec_()
+        # TODO warning dialog that all zone data will be lost must appear
+        self.autozone_relations[self.sender()] = \
+            (new_data, self.autozone_relations[self.sender()][1])
+        self.autozone_relations[self.sender()][1].setText(", ".join(new_data))
 
     def show_wrong_userdata_dialog(self):
         if not self.wrong_userdata_dialog:
@@ -121,23 +128,54 @@ class ManageZonesDialog(QtGui.QDialog):
         super(ManageZonesDialog, self).__init__()
         self.ui = Ui_addZones()
         self.ui.setupUi(self)
+        self.views = {self.ALL_ZONES_MODE: self.ui.allZones_listview,
+                      self.CHOSEN_ZONES_MODE: self.ui.chosenZones_listview}
         def _fill_view(view, data):
             model = QtGui.QStandardItemModel()
             for item in data:
                 model.appendRow(QtGui.QStandardItem(item))
             view.setModel(model)
-        _fill_view(self.ui.allZones_listview, ZONE_TYPES)
+            # connect update func as well
+            view.connect(
+                view.selectionModel(),
+                QtCore.SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
+                self.update)
+        _fill_view(self.ui.allZones_listview,
+                   [zt for zt in ZONE_TYPES if zt not in chosen_zones])
         _fill_view(self.ui.chosenZones_listview, chosen_zones)
+        self.ui.allZones_listview.setCurrentIndex(
+            self.ui.allZones_listview.model().item(0).index())
         self.ui.add_button.clicked.connect(self.add_zone)
         self.ui.remove_button.clicked.connect(self.remove_zone)
         self.ui.up_button.clicked.connect(self.move_up)
         self.ui.down_button.clicked.connect(self.move_down)
-        self.views = {self.ALL_ZONES_MODE: self.ui.allZones_listview,
-                      self.CHOSEN_ZONES_MODE: self.ui.chosenZones_listview}
+
+    def exec_(self):
+        super(ManageZonesDialog, self).exec_()
+        return self.get_zones(self.CHOSEN_ZONES_MODE)
 
     def get_zones(self, mode):
         model = self.views[mode].model()
         return [str(model.item(i).text()) for i in range(0, model.rowCount())]
+
+    def add_zone(self):
+        return self._add_zone(self.CHOSEN_ZONES_MODE, self.ALL_ZONES_MODE)
+
+    def remove_zone(self):
+        return self._add_zone(self.ALL_ZONES_MODE, self.CHOSEN_ZONES_MODE)
+
+    def move_up(self):
+        self._move(-1)
+
+    def move_down(self):
+        print "down"
+        self._move(1)
+
+    def _get_selected(self, mode):
+        idx = self.views[mode].selectedIndexes()
+        if len(idx) > 0:
+            return self.views[mode].model().itemFromIndex(idx[0])
+        return None
 
     def _add_zone(self, add_to_mode, remove_from_mode):
         selected = self._get_selected(remove_from_mode)
@@ -163,6 +201,8 @@ class ManageZonesDialog(QtGui.QDialog):
             index(str(selected.text()))
         if (row_num == 0 and delta < 0) or \
                 (row_num == view.model().rowCount() - 1 and delta > 0):
+            view.selectionModel().select(selected.index(),
+                                         view.selectionModel().Select)
             return
         new_row_num = row_num + delta
         row_items = view.model().takeRow(row_num)
@@ -170,28 +210,16 @@ class ManageZonesDialog(QtGui.QDialog):
         view.selectionModel().select(view.model().item(new_row_num).index(),
                                      view.selectionModel().Select)
 
-    def add_zone(self):
-        return self._add_zone(self.CHOSEN_ZONES_MODE, self.ALL_ZONES_MODE)
-
-    def remove_zone(self):
-        return self._add_zone(self.ALL_ZONES_MODE, self.CHOSEN_ZONES_MODE)
-
-    def move_up(self):
-        self._move(-1)
-
-    def move_down(self):
-        print "down"
-        self._move(1)
-
-    def _get_selected(self, mode):
-        idx = self.views[mode].selectedIndexes()
-        if len(idx) > 0:
-            return self.views[mode].model().itemFromIndex(idx[0])
-        return None
-
     def update(self):
-        selected = self._get_selected(CHOSEN_ZONES_MODE)
-        print selected
-        self.ui.up_button.setEnabled(selected is not None)
-        self.ui.down_button.setEnabled(selected is not None)
+        # clear selection in other view
+        for button in [self.ui.up_button, self.ui.down_button,
+                       self.ui.remove_button]:
+            button.setEnabled(
+                self._get_selected(self.CHOSEN_ZONES_MODE) is not None)
+        self.ui.add_button.setEnabled(
+            self._get_selected(self.ALL_ZONES_MODE) is not None)
+        for viewmode in self.views:
+            if not self.views[viewmode].hasFocus() and \
+                    self.views[viewmode].selectionModel() != self.sender():
+                self.views[viewmode].clearSelection()
         super(ManageZonesDialog, self).update()

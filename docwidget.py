@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'layout.ui'
 #
-# Created: Fri Mar 14 17:37:06 2014
+# Created: Thu Mar 20 19:25:15 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -77,6 +77,8 @@ class Ui_MainWindow(object):
         self.menuHelp.setObjectName(_fromUtf8("menuHelp"))
         MainWindow.setMenuBar(self.menubar)
         self.toolBar = QtGui.QToolBar(MainWindow)
+        self.toolBar.setMovable(False)
+        self.toolBar.setFloatable(True)
         self.toolBar.setObjectName(_fromUtf8("toolBar"))
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
         self.actionLoad_pdf = QtGui.QAction(MainWindow)
@@ -85,16 +87,6 @@ class Ui_MainWindow(object):
         self.actionLoad_pdf.setIcon(icon)
         self.actionLoad_pdf.setMenuRole(QtGui.QAction.NoRole)
         self.actionLoad_pdf.setObjectName(_fromUtf8("actionLoad_pdf"))
-        self.actionPrev_page = QtGui.QAction(MainWindow)
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Page_up.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionPrev_page.setIcon(icon1)
-        self.actionPrev_page.setObjectName(_fromUtf8("actionPrev_page"))
-        self.actionNext_page = QtGui.QAction(MainWindow)
-        icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(_fromUtf8("buttons/Page_down.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionNext_page.setIcon(icon2)
-        self.actionNext_page.setObjectName(_fromUtf8("actionNext_page"))
         self.actionSmartSave = QtGui.QAction(MainWindow)
         self.actionSmartSave.setIcon(icon)
         self.actionSmartSave.setObjectName(_fromUtf8("actionSmartSave"))
@@ -137,8 +129,6 @@ class Ui_MainWindow(object):
         self.actionLoad_pdf.setText(_translate("MainWindow", "Загрузить pdf", None))
         self.actionLoad_pdf.setIconText(_translate("MainWindow", "Загрузить pdf", None))
         self.actionLoad_pdf.setToolTip(_translate("MainWindow", "Загрузить pdf", None))
-        self.actionPrev_page.setText(_translate("MainWindow", "Предыдущая страница", None))
-        self.actionNext_page.setText(_translate("MainWindow", "Следующая страница", None))
         self.actionSmartSave.setText(_translate("MainWindow", "Сохранить как ...", None))
         self.actionLoad_markup.setText(_translate("MainWindow", "Загрузить разметку", None))
         self.actionSetHorizontalRuler.setText(_translate("MainWindow", "Установить горизонтальный разделитель", None))

@@ -703,8 +703,6 @@ class BookController(object):
     # add mark to a correct place (start comes first, end - second)
     def add_mark(self, mark_data):
         mark = self.mc.make_paragraph_mark(**mark_data)
-        toc_elem = self.toc_controller.get_elem(mark.cas_id,
-                                                self.operational_mode)
         self._add_paragraph_mark(mark)
         try:
             (start, end) = self.paragraph_marks[mark.cas_id]["marks"]

@@ -124,6 +124,12 @@
    <property name="windowTitle">
     <string>toolBar</string>
    </property>
+   <property name="movable">
+    <bool>false</bool>
+   </property>
+   <property name="floatable">
+    <bool>true</bool>
+   </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
    </attribute>
@@ -154,24 +160,6 @@
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>
-   </property>
-  </action>
-  <action name="actionPrev_page">
-   <property name="icon">
-    <iconset>
-     <normaloff>buttons/Page_up.png</normaloff>buttons/Page_up.png</iconset>
-   </property>
-   <property name="text">
-    <string>Предыдущая страница</string>
-   </property>
-  </action>
-  <action name="actionNext_page">
-   <property name="icon">
-    <iconset>
-     <normaloff>buttons/Page_down.png</normaloff>buttons/Page_down.png</iconset>
-   </property>
-   <property name="text">
-    <string>Следующая страница</string>
    </property>
   </action>
   <action name="actionSmartSave">
