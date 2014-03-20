@@ -332,7 +332,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if settings["login"] != "":
             self.controller.login = settings["login"]
         if result:
-            print "yes!"
             # have to validate received data
             # TODO cms-course id validation\smart-search
             for key in ["first-page", "cms-course"]:
@@ -342,7 +341,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                         "passthrough-zones", "margins"]:
                 if settings[key] == []:
                     del settings[key]
+            self.show_progress_bar(u"Применение настроек...")
             self.controller.settings_changed(settings)
+            self.hide_progress_bar()
 
     # mind that this is called every time a view is clicked, not only on
     # selection

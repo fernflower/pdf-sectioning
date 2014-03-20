@@ -102,6 +102,11 @@ class TocController(object):
         else:
             return self.markup_toc_elems
 
+    def reload_course(self, new_toc):
+        self.course_toc = new_toc
+        self.fill_with_data(self.MODE_SECTIONS)
+        self.fill_with_data(self.MODE_MARKUP)
+
     # return either TocElem or Zone; if clicked on a container like AutoZone,
     # then return TocElem as well. In order to get element to operate with from
     # TocController this property should be used

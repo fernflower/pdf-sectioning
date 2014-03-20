@@ -43,7 +43,6 @@ class CmsQueryModule(object):
             }
         if any(map(lambda param: param not in self.config_data.keys(),
                     ['url', 'resolve-url', 'ping-url', 'search-url'])):
-            print self.config_data
             raise CmsQueryError(
                 "Some vital urls are missing in default config!!!")
 
@@ -81,7 +80,6 @@ class CmsQueryModule(object):
     def _fetch_data(self, url, login, password):
         storage = StringIO()
         c = pycurl.Curl()
-        print url
         c.setopt(pycurl.URL, url)
         c.setopt(c.WRITEFUNCTION, storage.write)
         c.setopt(pycurl.USERPWD,
@@ -112,16 +110,15 @@ class CmsQueryModule(object):
         if not data:
             return []
         data = json.loads(data)
-        return [(elem["display_name"],
-                 urllib.unquote(elem["encoded_name"]))
+        return [(elem["display_name"], urllib.unquote(elem["encoded_name"]))
                 for elem in data["documents"]]
 
     # returns a list of {name, cas-id} in order of appearance in TOC
-    def get_cms_course_toc(self):
-        if not self.any_course_data:
+    def get_cms_course_toc(self, course_id=None):
+        if not self.any_course_data and not course_id:
             return []
-        course_id = self.config_data['cms-course']
-        course_url = self.config_data['url'].rstrip('/') + '/' + course_id
+        course_id = course_id or self.config_data['cms-course']
+        course_url = self.config_data['url'].rstrip('/') + '/' + course_id.encode('utf-8')
         login = self.config_data['login']
         password = self.config_data['password']
         code, data = self._fetch_data(course_url, login, password)
@@ -142,7 +139,7 @@ class CmsQueryModule(object):
             http_obj.add_credentials(self.config_data['login'],
                                      self.config_data['password'])
             resp, content = http_obj.request(
-                uri=self.config_data["resolve_url"], method='POST',
+                uri=self.config_data["resolve-url"], method='POST',
                 headers=headers,
                 body=body)
             if resp.status != 200:

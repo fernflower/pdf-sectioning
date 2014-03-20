@@ -66,6 +66,7 @@ class BookController(object):
     def current_toc_elem(self):
         return self.toc_controller.active_elem
 
+    # cms-course is passed only if it differs
     def settings_changed(self, new_settings, create_if_none=False):
         for key in ["cms-course", "margins", "margin-width", "zone-width",
                     "first-page", "passthrough-zones", "start-autozones",
@@ -75,7 +76,15 @@ class BookController(object):
                 setattr(self, attr, new_settings.get(key) or \
                         getattr(self, attr, None))
             elif key in new_settings:
-                setattr(self, attr, new_settings.get(key))
+                if key == "cms-course" and self.cms_course != new_settings[key]:
+                    self.delete_all()
+                    new_toc = self.cms_query_module.get_cms_course_toc(
+                        new_settings["cms-course"])
+                    self.toc_controller.reload_course(new_toc)
+                else:
+                    setattr(self, attr, new_settings.get(key) \
+                            if new_settings.get(key) != getattr(self, attr) \
+                            else getattr(self, attr))
 
     # returns current page number + 1, as poppler ordering starts from 0, but
     # our first page has number 1
@@ -384,10 +393,6 @@ class BookController(object):
                        self.paragraphs[page]["zones"])):
                 return margin
         return "lr"
-
-    def reload_course(self, new_course_id):
-        self.cms_course = new_course_id
-        self.delete_all()
 
     # returns full file name (with path) to file with markup
     def save(self, path_to_file, progress=None):
