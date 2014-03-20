@@ -16,11 +16,18 @@ class Settings(QtGui.QDialog):
         self.setWindowTitle(QtCore.QString.fromUtf8(u"Настройки"))
         self.wrong_userdata_dialog = None
         self.new_settings = None
+        self.search_result = []
+        self.chosen_course_id = None
         self.ui.buttonBox.clicked.connect(self._apply)
         self.ui.addStart_button.clicked.connect(self._add_zone_clicked)
         self.ui.addEnd_button.clicked.connect(self._add_zone_clicked)
         self.ui.addPassthrough_button.clicked.connect(self._add_zone_clicked)
-        self.ui.search_button.clicked.connect(self._find_cms_course)
+        self.ui.cmsCourse_edit.connect(self.ui.cmsCourse_edit,
+                                       QtCore.SIGNAL("returnPressed()"),
+                                       self._on_search_started)
+        self.ui.searchResults_combo.connect(self.ui.searchResults_combo,
+                                            QtCore.SIGNAL("currentIndexChanged(int)"),
+                                            self._on_course_chosen)
         self.ui.searchResults_combo.hide()
         self.autozone_relations = {
             self.ui.addStart_button: (self.controller.start_autozones,
@@ -34,8 +41,22 @@ class Settings(QtGui.QDialog):
     def _get_zones(self, text):
         return [z.strip() for z in text.split(",") if z != ""]
 
-    def _find_cms_course(self):
-        print "find it"
+    def _on_course_chosen(self, index):
+        self.chosen_course_id = self.search_result[index][1]
+        self.ui.cmsCourse_edit.setText(self.search_result[index][0])
+
+    def _on_search_started(self):
+        # clear results field
+        name_part = unicode(self.ui.cmsCourse_edit.text())
+        self._find_cms_course(name_part)
+
+    def _find_cms_course(self, namepart):
+        # clear old data
+        self.ui.searchResults_combo.clear()
+        self.search_result = self.controller.find_course(namepart)
+        self.ui.searchResults_combo.show()
+        self.ui.searchResults_combo.\
+            addItems([n[0] for n in self.search_result])
 
     def exec_(self):
         # if no login\password or bad data: deactivate other settings' tab
@@ -90,7 +111,8 @@ class Settings(QtGui.QDialog):
                              "end-autozones": new_end,
                              "passthrough-zones": new_pass,
                              "password": new_password,
-                             "login": new_login}
+                             "login": new_login,
+                             "cms-course": self.chosen_course_id or ""}
         print self.new_settings
         return (self.controller.is_userdata_valid(new_login, new_password),
                 self.new_settings)

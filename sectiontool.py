@@ -1,5 +1,7 @@
 import pycurl
+import urllib
 import sys
+import json
 from PyQt4 import QtGui, QtCore
 from json import dumps, loads
 from httplib2 import Http
@@ -39,14 +41,12 @@ class CmsQueryModule(object):
                 for line in f.readlines() if not \
                 (line.strip().startswith('#') or line.strip() == "")
             }
-        if 'url' not in self.config_data.keys() or \
-                'resolve-url' not in self.config_data.keys() or \
-                'ping-url' not in self.config_data.keys():
+        if any(map(lambda param: param not in self.config_data.keys(),
+                    ['url', 'resolve-url', 'ping-url', 'search-url'])):
+            print self.config_data
             raise CmsQueryError(
                 "Some vital urls are missing in default config!!!")
 
-        # a list of 2+ is returned as a list, but if [a] -> a (single elem) is
-        # returned
         def _check_against(key, against):
             return  [e.strip() for e in self.config_data[key].split(',')
                      if e.strip() in against]
@@ -81,6 +81,7 @@ class CmsQueryModule(object):
     def _fetch_data(self, url, login, password):
         storage = StringIO()
         c = pycurl.Curl()
+        print url
         c.setopt(pycurl.URL, url)
         c.setopt(c.WRITEFUNCTION, storage.write)
         c.setopt(pycurl.USERPWD,
@@ -104,7 +105,16 @@ class CmsQueryModule(object):
     def search_for_course(self, name_part, login, password):
         if not self.validate_user_data(login, password):
             return []
-
+        url = self.config_data['search-url'] + "?" + \
+            "name_filter={}&labels=course&excluded_names=&sort=name".\
+            format(urllib.quote(name_part.encode('utf-8')))
+        code, data = self._fetch_data(url, login, password)
+        if not data:
+            return []
+        data = json.loads(data)
+        return [(elem["display_name"],
+                 urllib.unquote(elem["encoded_name"]))
+                for elem in data["documents"]]
 
     # returns a list of {name, cas-id} in order of appearance in TOC
     def get_cms_course_toc(self):

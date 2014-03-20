@@ -574,6 +574,11 @@ class BookController(object):
         self.show_page_marks(pagenum)
         return self.dp.go_to_page(pagenum - 1)
 
+    def find_course(self, name_part):
+        return self.cms_query_module.search_for_course(name_part,
+                                                       self.login,
+                                                       self.password)
+
     # move all currently selected elems
     def move(self, delta, point_tuple):
         # if only one mark is selected at a time, the check whether we want to

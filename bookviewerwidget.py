@@ -570,12 +570,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # update console data
         # TODO it might not be here, think of a better place
         self.update_console_data()
-        # set actions enabled\disabled depending on current situation
-        anything_selected = self.controller.selected_marks_and_rulers != []
-        self.actionDelete_selection.setEnabled(anything_selected)
-        self.actionForced_delete_selection.setEnabled(anything_selected)
-        self.actionDelete_all.setEnabled(self.controller.any_unsaved_changes)
-        self.actionSave.setEnabled(self.last_open_doc_name is not None)
         for action in [self.actionLoad_markup, self.actionSave,
                        self.actionSaveAs, self.actionSmartSave,
                        self.actionSetHorizontalRuler,
@@ -586,6 +580,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                        self.toolbarpart.zoomOut_button, self.spinBox,
                        self.zoom_comboBox]:
             widget.setEnabled(self.controller.is_file_given())
+        # set actions enabled\disabled depending on current situation
+        anything_selected = self.controller.selected_marks_and_rulers != []
+        self.actionDelete_selection.setEnabled(anything_selected)
+        self.actionForced_delete_selection.setEnabled(anything_selected)
+        self.actionDelete_all.setEnabled(self.controller.any_unsaved_changes)
+        self.actionSave.setEnabled(self.last_open_doc_name is not None)
 
     ## all possible dialogs go here
     # general politics: returns True if can proceed with anything after

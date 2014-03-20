@@ -47,6 +47,7 @@ class SettingsTest(unittest.TestCase):
             url = 'https://e-cms.igrade.ru/raw/'
             ping-url = 'https://e-cms.igrade.ru/cms'
             resolve-url = 'https://e-cms.igrade.ru/edit/resolve'
+            search-url = "blablabla"
         """
         with NamedTemporaryFile() as ok_config:
             ok_config.write(config_only_vital_data)

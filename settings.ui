@@ -20,7 +20,7 @@
       <bool>true</bool>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="userData_tab">
       <attribute name="title">
@@ -279,6 +279,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QLabel" name="label_9">
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QComboBox" name="searchResults_combo"/>
                </item>
               </layout>
@@ -506,8 +513,7 @@
       <zorder>verticalSpacer_2</zorder>
       <zorder>verticalSpacer_5</zorder>
       <zorder>verticalSpacer_3</zorder>
-      <zorder>searchResults_view</zorder>
-      <zorder>searchResults_combo</zorder>
+      <zorder>label_9</zorder>
      </widget>
     </widget>
    </item>
