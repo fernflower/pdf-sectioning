@@ -329,7 +329,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def change_settings(self):
         result, settings = self.settings_dialog.show_settings()
         # save login anyway
-        if settings["login"] != "":
+        if settings.get("login", "") != "":
             self.controller.login = settings["login"]
         if result:
             # have to validate received data

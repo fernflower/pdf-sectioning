@@ -24,7 +24,7 @@ class Settings(QtGui.QDialog):
         self.ui.addPassthrough_button.clicked.connect(self._add_zone_clicked)
         self.ui.cmsCourse_edit.connect(self.ui.cmsCourse_edit,
                                        QtCore.SIGNAL("returnPressed()"),
-                                       self._on_search_started)
+                                       self._find_cms_course)
         self.ui.searchResults_combo.connect(self.ui.searchResults_combo,
                                             QtCore.SIGNAL("currentIndexChanged(int)"),
                                             self._on_course_chosen)
@@ -45,13 +45,9 @@ class Settings(QtGui.QDialog):
         self.chosen_course_id = self.search_result[index][1]
         self.ui.cmsCourse_edit.setText(self.search_result[index][0])
 
-    def _on_search_started(self):
-        # clear results field
-        name_part = unicode(self.ui.cmsCourse_edit.text())
-        self._find_cms_course(name_part)
-
-    def _find_cms_course(self, namepart):
+    def _find_cms_course(self):
         # clear old data
+        namepart = unicode(self.ui.cmsCourse_edit.text())
         self.ui.searchResults_combo.clear()
         self.search_result = self.controller.find_course(namepart)
         self.ui.searchResults_combo.show()
@@ -84,7 +80,7 @@ class Settings(QtGui.QDialog):
         self.ui.password_edit.setEchoMode(
             QtGui.QLineEdit.Password)
         self.ui.password_edit.setText(self.controller.password)
-        super(Settings, self).exec_()
+        return super(Settings, self).exec_()
 
     def show_settings(self):
         result = self.exec_()

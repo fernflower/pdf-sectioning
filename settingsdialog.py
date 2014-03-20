@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'settings.ui'
 #
-# Created: Thu Mar 20 21:31:08 2014
+# Created: Fri Mar 21 03:12:32 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -229,7 +229,7 @@ class Ui_Dialog(object):
         self.verticalLayout_10.addWidget(self.buttonBox)
 
         self.retranslateUi(Dialog)
-        self.settings_tabs.setCurrentIndex(0)
+        self.settings_tabs.setCurrentIndex(1)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), Dialog.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
