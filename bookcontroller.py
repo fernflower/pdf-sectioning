@@ -29,7 +29,7 @@ class BookController(object):
             if filename else None
         self.toc_controller = toc_controller
         self.mc = mark_creator or MarkCreator()
-        self.display_name = cqm.display_name
+        self.display_name = cqm.display_name or ""
         # marks per paragraph.
         # { paragraph_id: { marks: (start, end) }, zones: [] }
         self.paragraph_marks = {}
@@ -77,9 +77,11 @@ class BookController(object):
                         getattr(self, attr, None))
             elif key in new_settings:
                 if key == "cms-course" and self.cms_course != new_settings[key]:
+                    print "old course %s, new course %s" % (self.cms_course, new_settings[key])
                     self.delete_all()
                     new_toc = self.cms_query_module.get_cms_course_toc(
                         new_settings["cms-course"])
+                    self.cms_course = new_settings["cms-course"]
                     self.toc_controller.reload_course(new_toc)
                 else:
                     setattr(self, attr, new_settings.get(key) \

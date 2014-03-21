@@ -81,12 +81,11 @@ class CmsQueryModule(object):
         storage = StringIO()
         c = pycurl.Curl()
         c.setopt(pycurl.URL, url)
-        c.setopt(c.WRITEFUNCTION, storage.write)
-        c.setopt(pycurl.USERPWD,
-                 login + ":" + password)
+        c.setopt(pycurl.USERPWD, login + ":" + password)
         # TODO find out how to use certificate
         c.setopt(pycurl.SSL_VERIFYPEER, 0)
         c.setopt(pycurl.SSL_VERIFYHOST, 0)
+        c.setopt(c.WRITEFUNCTION, storage.write)
         c.perform()
         code = c.getinfo(pycurl.HTTP_CODE)
         data = None
@@ -131,7 +130,7 @@ class CmsQueryModule(object):
             lesson_ids = tree.xpath(TOC_XPATH,
                                     namespaces = {"is" : XHTML_NAMESPACE})
             # resolve names
-            ids_to_resolve = [ "lesson:" + lesson_id \
+            ids_to_resolve = ["lesson:" + lesson_id \
                                  for lesson_id in lesson_ids]
             headers = {"Content-type" : "application/json; charset=UTF-8"}
             body = dumps(ids_to_resolve)

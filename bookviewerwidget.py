@@ -285,12 +285,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.actionLoad_pdf: 'buttons/Load_file',
             self.actionLoad_markup: 'buttons/Load_markup',
             self.actionSmartSave: 'buttons/Save',
+            self.actionSave: 'buttons/Save',
+            self.actionSaveAs: 'buttons/Save',
             self.actionSetHorizontalRuler: 'buttons/Vertical_ruler',
             self.actionSetVerticalRuler: 'buttons/Horisontal_ruler',
             self.actionNext_page: 'buttons/Page_down',
             self.actionPrev_page: 'buttons/Page_up'
         }
-        print menubuttons
         for (widget, iconfile) in menubuttons.items():
             self.generate_menubutton_stylesheet(widget, iconfile)
         for (widget, style) in appearance.items():
@@ -327,11 +328,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.hide_progress_bar()
 
     def change_settings(self):
-        result, settings = self.settings_dialog.show_settings()
+        settings = self.settings_dialog.show_settings()
         # save login anyway
         if settings.get("login", "") != "":
             self.controller.login = settings["login"]
-        if result:
+        if settings.get("password", None):
             # have to validate received data
             # TODO cms-course id validation\smart-search
             for key in ["first-page", "cms-course"]:
@@ -462,7 +463,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             return False
         self.show_progress_bar(u"Сохранение разметки ... ")
         self.controller.save(self.last_open_doc_name)
-        print self.last_open_doc_name
         self.hide_progress_bar()
 
     def save_as(self):
@@ -582,11 +582,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                        self.zoom_comboBox]:
             widget.setEnabled(self.controller.is_file_given())
         # set actions enabled\disabled depending on current situation
-        anything_selected = self.controller.selected_marks_and_rulers != []
-        self.actionDelete_selection.setEnabled(anything_selected)
-        self.actionForced_delete_selection.setEnabled(anything_selected)
-        self.actionDelete_all.setEnabled(self.controller.any_unsaved_changes)
-        self.actionSave.setEnabled(self.last_open_doc_name is not None)
+        if self.controller.is_file_given():
+            anything_selected = self.controller.selected_marks_and_rulers != []
+            self.actionDelete_selection.setEnabled(anything_selected)
+            self.actionForced_delete_selection.setEnabled(anything_selected)
+            self.actionDelete_all.setEnabled(self.controller.any_unsaved_changes)
+            self.actionSave.setEnabled(self.last_open_doc_name is not None)
 
     ## all possible dialogs go here
     # general politics: returns True if can proceed with anything after

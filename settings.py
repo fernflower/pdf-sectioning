@@ -15,7 +15,7 @@ class Settings(QtGui.QDialog):
         self.ui.setupUi(self)
         self.setWindowTitle(QtCore.QString.fromUtf8(u"Настройки"))
         self.wrong_userdata_dialog = None
-        self.new_settings = None
+        self.new_settings = {}
         self.search_result = []
         self.chosen_course_id = None
         self.ui.buttonBox.clicked.connect(self._apply)
@@ -36,6 +36,9 @@ class Settings(QtGui.QDialog):
                                     self.ui.endZones_edit),
             self.ui.addPassthrough_button: (self.controller.passthrough_zones,
                                             self.ui.passthroughZones_edit) }
+    @property
+    def apply_button(self):
+        return self.ui.buttonBox.button(QtGui.QDialogButtonBox.Apply)
 
     # split by comma and strip
     def _get_zones(self, text):
@@ -44,6 +47,7 @@ class Settings(QtGui.QDialog):
     def _on_course_chosen(self, index):
         self.chosen_course_id = self.search_result[index][1]
         self.ui.cmsCourse_edit.setText(self.search_result[index][0])
+        self.apply_button.setEnabled(True)
 
     def _find_cms_course(self):
         # clear old data
@@ -51,8 +55,13 @@ class Settings(QtGui.QDialog):
         self.ui.searchResults_combo.clear()
         self.search_result = self.controller.find_course(namepart)
         self.ui.searchResults_combo.show()
-        self.ui.searchResults_combo.\
-            addItems([n[0] for n in self.search_result])
+        if self.search_result == []:
+            self.ui.searchResults_combo.clear()
+            self.ui.cmsCourse_edit.setText(u"")
+            self.chosen_course_id = None
+        else:
+            self.ui.searchResults_combo.\
+                addItems([n[0] for n in self.search_result])
 
     def exec_(self):
         # if no login\password or bad data: deactivate other settings' tab
@@ -80,56 +89,58 @@ class Settings(QtGui.QDialog):
         self.ui.password_edit.setEchoMode(
             QtGui.QLineEdit.Password)
         self.ui.password_edit.setText(self.controller.password)
+        self.apply_button.setEnabled(False)
         return super(Settings, self).exec_()
 
     def show_settings(self):
         result = self.exec_()
-        new_course = self.ui.cmsCourse_edit.text()
-        new_first = ""
-        if self.ui.leftPage_radio.isChecked():
-            new_first = "l"
-        elif self.ui.rightPage_radio.isChecked():
-            new_first = "r"
-        new_margins = []
-        if self.ui.leftMargin_checkbox.isChecked():
-            new_margins.append("l")
-        if self.ui.rightMargin_checkbox.isChecked():
-            new_margins.append("r")
-        new_start = self._get_zones(str(self.ui.startZones_edit.text()))
-        new_end = self._get_zones(str(self.ui.endZones_edit.text()))
-        new_pass = self._get_zones(str(self.ui.passthroughZones_edit.text()))
-        new_login = self.ui.login_edit.text()
-        new_password = self.ui.password_edit.text()
-        self.new_settings = {"cms-course": new_course,
-                             "first-page": new_first,
-                             "margins": new_margins,
-                             "start-autozones": new_start,
-                             "end-autozones": new_end,
-                             "passthrough-zones": new_pass,
-                             "password": new_password,
-                             "login": new_login,
-                             "cms-course": self.chosen_course_id or ""}
-        print self.new_settings
-        return (self.controller.is_userdata_valid(new_login, new_password),
-                self.new_settings)
+        return self.new_settings
 
     def _apply(self, button):
         # close dialog when anything but apply is pressed
-        if not self.ui.buttonBox.buttonRole(button) == \
-                QtGui.QDialogButtonBox.ApplyRole:
+        if not button == self.apply_button:
             return
-        login = self.ui.login_edit.text()
-        password = self.ui.password_edit.text()
+        # disable apply
+        self.apply_button.setEnabled(False)
+        login = str(self.ui.login_edit.text())
+        password = str(self.ui.password_edit.text())
         if self.controller.is_userdata_valid(login, password):
+            # when apply pressed and userdata valid -> collect all info
             self.ui.bookData_tab.setEnabled(True)
+            new_course = self.ui.cmsCourse_edit.text()
+            new_first = ""
+            if self.ui.leftPage_radio.isChecked():
+                new_first = "l"
+            elif self.ui.rightPage_radio.isChecked():
+                new_first = "r"
+            new_margins = []
+            if self.ui.leftMargin_checkbox.isChecked():
+                new_margins.append("l")
+            if self.ui.rightMargin_checkbox.isChecked():
+                new_margins.append("r")
+            new_start = self._get_zones(str(self.ui.startZones_edit.text()))
+            new_end = self._get_zones(str(self.ui.endZones_edit.text()))
+            new_pass = self._get_zones(str(self.ui.passthroughZones_edit.text()))
+            self.new_settings = {"first-page": new_first,
+                                 "margins": new_margins,
+                                 "start-autozones": new_start,
+                                 "end-autozones": new_end,
+                                 "passthrough-zones": new_pass,
+                                 "password": password,
+                                 "login": login,
+                                 "cms-course": self.chosen_course_id or ""}
         else:
+            # if apply and userdata invalid -> save just login
             self.ui.bookData_tab.setEnabled(False)
+            self.new_settings = {"login": login}
             self.show_wrong_userdata_dialog()
 
     def _add_zone_clicked(self):
         dialog = ManageZonesDialog(self.autozone_relations[self.sender()][0])
+        old_data = self.autozone_relations[self.sender()][0]
         new_data = dialog.exec_()
         # TODO warning dialog that all zone data will be lost must appear
+        self.apply_button.setEnabled(new_data != old_data)
         self.autozone_relations[self.sender()] = \
             (new_data, self.autozone_relations[self.sender()][1])
         self.autozone_relations[self.sender()][1].setText(", ".join(new_data))
@@ -191,7 +202,6 @@ class ManageZonesDialog(QtGui.QDialog):
         self._move(-1)
 
     def move_down(self):
-        print "down"
         self._move(1)
 
     def _get_selected(self, mode):
