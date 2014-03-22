@@ -106,11 +106,25 @@ class DocumentProcessor(object):
     # filename = name of file with markup, NOT pdf
     def load_native_xml(self, filename):
         tree = etree.parse(filename)
+        SETTINGS_XPATH = "/is:object/is:text/is:ebook-pages/is:settings"
         PAGES_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-page"
         PARAGRAPHS_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-para"
+        settings = tree.xpath(SETTINGS_XPATH,
+                              namespaces = { "is" : XHTML_NAMESPACE})[0]
         paragraphs = tree.xpath(PARAGRAPHS_XPATH,
                            namespaces = { "is" : XHTML_NAMESPACE})
         out_paragraphs = {}
+        def _process_settings(param, text):
+            try:
+                return int(text)
+            except ValueError:
+                if param in ['start-autozones', 'margins',
+                             'end-autozones', 'passthrough-zones']:
+                    return text.split(',')
+                return text
+        book_settings = {e.xpath('local-name()'): \
+                         _process_settings(e.xpath('local-name()'), e.text)
+                         for e in settings.getchildren()}
         for paragraph in paragraphs:
             cas_id = paragraph.get("id")
             name = paragraph.get("name")
@@ -159,13 +173,22 @@ class DocumentProcessor(object):
                 zones.append(new_zone)
             out_paragraphs[cas_id] = { "marks": [start, end],
                                        "zones": zones }
-        return out_paragraphs
+        return (out_paragraphs, book_settings)
 
     # Paragraphs - a dict {cas-id : dict with all paragraph data}
-    def gen_native_xml(self, paragraphs, progress):
+    def gen_native_xml(self, paragraphs, settings, progress):
         PAGES = E("ebook-pages", src=self.filename)
         ICON_SET = E("ebook-icon-set")
         PAGES.append(ICON_SET)
+        # here save autozone settings
+        SETTINGS = E("settings")
+        for key in settings:
+            tag = E(key)
+            value = u",".join(p for p in settings[key]) \
+                if isinstance(settings[key], list) else settings[key]
+            tag.text = str(value)
+            SETTINGS.append(tag)
+        PAGES.append(SETTINGS)
         # add paragraphs info
         for cas_id, data in paragraphs.items():
             # make sure that no paragraphs are saved without end mark
@@ -265,9 +288,9 @@ class DocumentProcessor(object):
             png.save(name, "png")
         return filenames
 
-    def save_all(self, path_to_file, paragraphs, progress=None):
+    def save_all(self, path_to_file, paragraphs, settings, progress=None):
         with open(path_to_file, 'w') as fname:
-            fname.write(self.gen_native_xml(paragraphs, progress))
+            fname.write(self.gen_native_xml(paragraphs, settings, progress))
         return path_to_file
 
     def _is_in_pdf_bounds(self, pos_tuple, scale, viewport_delta):

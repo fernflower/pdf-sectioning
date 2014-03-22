@@ -44,6 +44,10 @@ class Settings(QtGui.QDialog):
     def _get_zones(self, text):
         return [z.strip() for z in text.split(",") if z != ""]
 
+    def _get_zones_text(self, zoneslist):
+        return ", ".join(z for z in zoneslist) if len(zoneslist) > 1 else \
+            str(zoneslist[0])
+
     def _on_course_chosen(self, index):
         self.chosen_course_id = self.search_result[index][1]
         self.ui.cmsCourse_edit.setText(self.search_result[index][0])
@@ -72,11 +76,11 @@ class Settings(QtGui.QDialog):
             self.ui.cmsCourse_edit.setText(
                     self.controller.cms_course)
         self.ui.startZones_edit.setText(
-            ", ".join(z for z in self.controller.start_autozones))
+            self._get_zones_text(self.controller.start_autozones))
         self.ui.endZones_edit.setText(
-            ", ".join(z for z in self.controller.end_autozones))
+            self._get_zones_text(self.controller.end_autozones))
         self.ui.passthroughZones_edit.setText(
-            ", ".join(z for z in self.controller.passthrough_zones))
+            self._get_zones_text(self.controller.passthrough_zones))
         if self.controller.first_page == "l":
             self.ui.leftPage_radio.setChecked(True)
         else:

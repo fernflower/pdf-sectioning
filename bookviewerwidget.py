@@ -571,12 +571,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # update console data
         # TODO it might not be here, think of a better place
         self.update_console_data()
-        for action in [self.actionLoad_markup, self.actionSave,
+        for action in [self.actionSave,
                        self.actionSaveAs, self.actionSmartSave,
                        self.actionSetHorizontalRuler,
                        self.actionSetVerticalRuler]:
             action.setEnabled(self.controller.cms_course is not None)
-        for widget in [self.nextPage_button, self.prevPage_button,
+        for widget in [self.actionLoad_markup,
+                       self.nextPage_button, self.prevPage_button,
                        self.toolbarpart.zoomIn_button,
                        self.toolbarpart.zoomOut_button, self.spinBox,
                        self.zoom_comboBox]:

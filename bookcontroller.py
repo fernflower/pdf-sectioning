@@ -66,7 +66,6 @@ class BookController(object):
     def current_toc_elem(self):
         return self.toc_controller.active_elem
 
-    # cms-course is passed only if it differs
     def settings_changed(self, new_settings, create_if_none=False):
         for key in ["cms-course", "margins", "margin-width", "zone-width",
                     "first-page", "passthrough-zones", "start-autozones",
@@ -88,6 +87,12 @@ class BookController(object):
                             if new_settings.get(key) != getattr(self, attr) \
                             else getattr(self, attr))
 
+    @property
+    def book_settings(self):
+        return {key: getattr(self, key.replace('-', '_')) \
+                    for key in ["cms-course", "margins", "margin-width",
+                                "first-page", "passthrough-zones",
+                                "start-autozones", "end-autozones"]}
     # returns current page number + 1, as poppler ordering starts from 0, but
     # our first page has number 1
     @property
@@ -343,7 +348,9 @@ class BookController(object):
         self.delete_all()
         # convert from QString
         filename = str(filename)
-        paragraphs = self.dp.load_native_xml(filename)
+        paragraphs, settings = self.dp.load_native_xml(filename)
+        print settings
+        self.settings_changed(settings)
         # generate start\end marks from paragraphs' data
         for i, (cas_id, data) in enumerate(paragraphs.items()):
             marks = data["marks"]
@@ -430,7 +437,7 @@ class BookController(object):
                 else ["r", "l"][pagenum % 2]
         self.any_unsaved_changes = False
         # if not all paragraphs have been marked -> add unfinished_ to filename
-        return self.dp.save_all(path_to_file, pdf_paragraphs)
+        return self.dp.save_all(path_to_file, pdf_paragraphs, self.book_settings)
 
     # add zone to zones on page zone.page AND to paragraph's zones
     # There might be no marks on pages, so have to check on pagenum's presence
