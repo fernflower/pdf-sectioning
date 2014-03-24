@@ -294,6 +294,9 @@
            </item>
            <item>
             <widget class="QGroupBox" name="first_page_group">
+             <property name="styleSheet">
+              <string notr="true">border:0</string>
+             </property>
              <property name="title">
               <string/>
              </property>
@@ -328,7 +331,10 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox">
+            <widget class="QGroupBox" name="margins_group">
+             <property name="styleSheet">
+              <string notr="true">border:0</string>
+             </property>
              <property name="title">
               <string/>
              </property>

@@ -67,32 +67,57 @@ class BookController(object):
         return self.toc_controller.active_elem
 
     def settings_changed(self, new_settings, create_if_none=False):
-        for key in ["cms-course", "margins", "margin-width", "zone-width",
-                    "first-page", "passthrough-zones", "start-autozones",
-                    "end-autozones", "login", "password"]:
+        changed = {}
+        old_settings = {}
+        if not create_if_none:
+            old_settings = self.book_settings
+        for key in ["cms-course", "display-name", "margins", "margin-width",
+                    "zone-width", "first-page", "passthrough-zones",
+                    "start-autozones", "end-autozones", "login", "password"]:
             attr = key.replace('-', '_')
             if create_if_none:
                 setattr(self, attr, new_settings.get(key) or \
                         getattr(self, attr, None))
             elif key in new_settings:
                 if key == "cms-course" and self.cms_course != new_settings[key]:
-                    print "old course %s, new course %s" % (self.cms_course, new_settings[key])
-                    self.delete_all()
+                    print "old course %s, new course %s" % \
+                        (self.cms_course, new_settings[key])
+                    if self.cms_course:
+                        self.delete_all()
                     new_toc = self.cms_query_module.get_cms_course_toc(
                         new_settings["cms-course"])
                     self.cms_course = new_settings["cms-course"]
                     self.toc_controller.reload_course(new_toc)
                 else:
-                    setattr(self, attr, new_settings.get(key) \
-                            if new_settings.get(key) != getattr(self, attr) \
-                            else getattr(self, attr))
+                    if new_settings[key] != getattr(self, attr, None):
+                        setattr(self, attr, new_settings[key])
+                        changed[key] = new_settings[key]
+        if not create_if_none:
+            self.adapt_to_new_settings(old_settings, changed)
+
+    def adapt_to_new_settings(self, old, new):
+        # adapt to margin type change
+        print "%s;;;;%s" % (old, new)
+        if "margins" in new:
+            old_margins = old["margins"]
+            new_margins = new["margins"]
+            change_margin = len(old_margins) == 2 and len(new_margins) == 1 or \
+                len(old_margins) == 1 and len(new_margins) == 1
+            for cas_id in self.paragraph_marks:
+                for z in self.paragraph_marks[cas_id]["zones"]:
+                    z.margin = new_margins[0] if change_margin else z.margin
+                    z.change_corrections(self._get_corrections(new_margins[0],
+                                                               z.rubric),
+                                         self.pagenum)
+        # adapt to autozone type change
 
     @property
     def book_settings(self):
         return {key: getattr(self, key.replace('-', '_')) \
                     for key in ["cms-course", "margins", "margin-width",
                                 "first-page", "passthrough-zones",
-                                "start-autozones", "end-autozones"]}
+                                "start-autozones", "end-autozones",
+                                "display-name"]}
     # returns current page number + 1, as poppler ordering starts from 0, but
     # our first page has number 1
     @property

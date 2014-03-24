@@ -48,6 +48,9 @@ class QMark(QtGui.QWidget):
     def is_inner_zone(self):
         return isinstance(self, QInnerZoneMark)
 
+    def change_corrections(self, new_corrections, curr_page):
+        pass
+
     # here corrections is a tuple
     #(l - left x-offset, that should be added to x,
     # r - right offset, added to width)
@@ -366,6 +369,13 @@ class QZoneMark(QParagraphMark):
                                 self.icon_height)
         self.mark.setGeometry(geometry)
         self.mark.show()
+
+    def change_corrections(self, new_corrections, page):
+        # to make not corrected if corrected
+        self.hide()
+        self.corrections = new_corrections
+        if self.should_show(page):
+            self.show()
 
     def adjust(self, scale):
         rect = self.geometry()

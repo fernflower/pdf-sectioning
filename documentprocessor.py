@@ -110,7 +110,9 @@ class DocumentProcessor(object):
         PAGES_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-page"
         PARAGRAPHS_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-para"
         settings = tree.xpath(SETTINGS_XPATH,
-                              namespaces = { "is" : XHTML_NAMESPACE})[0]
+                              namespaces = { "is" : XHTML_NAMESPACE})
+        if len(settings) > 0:
+            settings = settings[0]
         paragraphs = tree.xpath(PARAGRAPHS_XPATH,
                            namespaces = { "is" : XHTML_NAMESPACE})
         out_paragraphs = {}
@@ -124,7 +126,8 @@ class DocumentProcessor(object):
                 return text
         book_settings = {e.xpath('local-name()'): \
                          _process_settings(e.xpath('local-name()'), e.text)
-                         for e in settings.getchildren()}
+                         for e in settings.getchildren()} \
+            if len(settings) > 0 else {}
         for paragraph in paragraphs:
             cas_id = paragraph.get("id")
             name = paragraph.get("name")
@@ -186,7 +189,7 @@ class DocumentProcessor(object):
             tag = E(key)
             value = u",".join(p for p in settings[key]) \
                 if isinstance(settings[key], list) else settings[key]
-            tag.text = str(value)
+            tag.text = unicode(value)
             SETTINGS.append(tag)
         PAGES.append(SETTINGS)
         # add paragraphs info
@@ -249,7 +252,8 @@ class DocumentProcessor(object):
             PAGES.append(PAGE)
             if progress:
                 progress.setValue(page)
-        root = E.object(E.text(PAGES), **{"display-name": self.display_name})
+        root = E.object(E.text(PAGES),
+                        **{"display-name": settings["display-name"]})
         result = etree.tostring(root, pretty_print=True, encoding="utf-8")
         return result
 

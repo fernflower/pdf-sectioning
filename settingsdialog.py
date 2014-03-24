@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'settings.ui'
 #
-# Created: Fri Mar 21 03:12:32 2014
+# Created: Mon Mar 24 23:31:42 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -130,6 +130,7 @@ class Ui_Dialog(object):
         self.horizontalLayout_10.addWidget(self.search_button)
         self.verticalLayout_2.addLayout(self.horizontalLayout_10)
         self.first_page_group = QtGui.QGroupBox(self.bookData_tab)
+        self.first_page_group.setStyleSheet(_fromUtf8("border:0"))
         self.first_page_group.setTitle(_fromUtf8(""))
         self.first_page_group.setFlat(True)
         self.first_page_group.setCheckable(False)
@@ -144,20 +145,21 @@ class Ui_Dialog(object):
         self.rightPage_radio.setObjectName(_fromUtf8("rightPage_radio"))
         self.horizontalLayout_5.addWidget(self.rightPage_radio)
         self.verticalLayout_2.addWidget(self.first_page_group)
-        self.groupBox = QtGui.QGroupBox(self.bookData_tab)
-        self.groupBox.setTitle(_fromUtf8(""))
-        self.groupBox.setFlat(True)
-        self.groupBox.setObjectName(_fromUtf8("groupBox"))
-        self.horizontalLayout_4 = QtGui.QHBoxLayout(self.groupBox)
+        self.margins_group = QtGui.QGroupBox(self.bookData_tab)
+        self.margins_group.setStyleSheet(_fromUtf8("border:0"))
+        self.margins_group.setTitle(_fromUtf8(""))
+        self.margins_group.setFlat(True)
+        self.margins_group.setObjectName(_fromUtf8("margins_group"))
+        self.horizontalLayout_4 = QtGui.QHBoxLayout(self.margins_group)
         self.horizontalLayout_4.setContentsMargins(-1, -1, -1, 0)
         self.horizontalLayout_4.setObjectName(_fromUtf8("horizontalLayout_4"))
-        self.leftMargin_checkbox = QtGui.QCheckBox(self.groupBox)
+        self.leftMargin_checkbox = QtGui.QCheckBox(self.margins_group)
         self.leftMargin_checkbox.setObjectName(_fromUtf8("leftMargin_checkbox"))
         self.horizontalLayout_4.addWidget(self.leftMargin_checkbox)
-        self.rightMargin_checkbox = QtGui.QCheckBox(self.groupBox)
+        self.rightMargin_checkbox = QtGui.QCheckBox(self.margins_group)
         self.rightMargin_checkbox.setObjectName(_fromUtf8("rightMargin_checkbox"))
         self.horizontalLayout_4.addWidget(self.rightMargin_checkbox)
-        self.verticalLayout_2.addWidget(self.groupBox)
+        self.verticalLayout_2.addWidget(self.margins_group)
         self.horizontalLayout_11.addLayout(self.verticalLayout_2)
         self.verticalLayout_9.addLayout(self.horizontalLayout_11)
         spacerItem11 = QtGui.QSpacerItem(607, 10, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)

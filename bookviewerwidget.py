@@ -328,7 +328,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.hide_progress_bar()
 
     def change_settings(self):
-        settings = self.settings_dialog.show_settings()
+        any_markup = self.last_open_doc_name is not None
+        settings = self.settings_dialog.show_settings(any_markup)
         # save login anyway
         if settings.get("login", "") != "":
             self.controller.login = settings["login"]
@@ -336,11 +337,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             # have to validate received data
             # TODO cms-course id validation\smart-search
             for key in ["first-page", "cms-course"]:
-                if settings[key] == "":
+                if key in settings and settings[key] == "":
                     del settings[key]
             for key in ["start-autozones", "end-autozones",
                         "passthrough-zones", "margins"]:
-                if settings[key] == []:
+                if key in settings and settings[key] == []:
                     del settings[key]
             self.show_progress_bar(u"Применение настроек...")
             self.controller.settings_changed(settings)

@@ -23,27 +23,34 @@ class Settings(QtGui.QDialog):
         self.ui.addEnd_button.clicked.connect(self._add_zone_clicked)
         self.ui.addPassthrough_button.clicked.connect(self._add_zone_clicked)
         self.ui.search_button.clicked.connect(self._find_cms_course)
-        self.ui.cmsCourse_edit.connect(self.ui.cmsCourse_edit,
-                                       QtCore.SIGNAL("returnPressed()"),
-                                       self._find_cms_course)
         self.ui.searchResults_combo.connect(self.ui.searchResults_combo,
                                             QtCore.SIGNAL("currentIndexChanged(int)"),
                                             self._on_course_chosen)
+        self.ui.first_page_group.connect(self.ui.leftPage_radio,
+                                         QtCore.SIGNAL("toggled(bool)"),
+                                         self._enable_apply)
+        self.ui.margins_group.connect(self.ui.leftMargin_checkbox,
+                                      QtCore.SIGNAL("toggled(bool)"),
+                                      self._enable_apply)
+        self.ui.margins_group.connect(self.ui.rightMargin_checkbox,
+                                      QtCore.SIGNAL("toggled(bool)"),
+                                      self._enable_apply)
         self.ui.searchResults_combo.hide()
         self.autozone_relations = {
-            self.ui.addStart_button: (self.controller.start_autozones,
-                                      self.ui.startZones_edit),
-            self.ui.addEnd_button: (self.controller.end_autozones,
-                                    self.ui.endZones_edit),
-            self.ui.addPassthrough_button: (self.controller.passthrough_zones,
-                                            self.ui.passthroughZones_edit) }
+            self.ui.addStart_button: self.ui.startZones_edit,
+            self.ui.addEnd_button: self.ui.endZones_edit,
+            self.ui.addPassthrough_button: self.ui.passthroughZones_edit }
+
     @property
     def apply_button(self):
         return self.ui.buttonBox.button(QtGui.QDialogButtonBox.Apply)
 
+    def _enable_apply(self):
+        self.apply_button.setEnabled(True)
+
     # split by comma and strip
     def _get_zones(self, text):
-        return [z.strip() for z in text.split(",") if z != ""]
+        return [z.strip() for z in str(text).split(",") if z != ""]
 
     def _get_zones_text(self, zoneslist):
         return ", ".join(z for z in zoneslist) if len(zoneslist) > 1 else \
@@ -52,7 +59,7 @@ class Settings(QtGui.QDialog):
     def _on_course_chosen(self, index):
         self.chosen_course_id = self.search_result[index][1]
         self.ui.cmsCourse_edit.setText(self.search_result[index][0])
-        self.apply_button.setEnabled(True)
+        self._enable_apply()
 
     def _find_cms_course(self):
         # clear old data
@@ -69,13 +76,15 @@ class Settings(QtGui.QDialog):
                 addItems([n[0] for n in self.search_result])
 
     def exec_(self):
+        self.chosen_course_id = None
+        self.ui.cmsCourse_edit.setText(self.controller.display_name)
         # if no login\password or bad data: deactivate other settings' tab
         self.ui.bookData_tab.setEnabled(
             self.controller.is_userdata_valid())
         # get fresh settings from controller and show them
         if self.controller.cms_course:
-            self.ui.cmsCourse_edit.setText(
-                    self.controller.cms_course)
+            self.ui.cmsCourse_edit.setText(self.controller.display_name)
+            self.ui.searchResults_combo.hide()
         self.ui.startZones_edit.setText(
             self._get_zones_text(self.controller.start_autozones))
         self.ui.endZones_edit.setText(
@@ -97,7 +106,11 @@ class Settings(QtGui.QDialog):
         self.apply_button.setEnabled(False)
         return super(Settings, self).exec_()
 
-    def show_settings(self):
+    def show_settings(self, any_markup=False):
+        if any_markup:
+            self.ui.cmsCourse_edit.setEnabled(False)
+            self.ui.searchResults_combo.setEnabled(False)
+            self.ui.search_button.setEnabled(False)
         result = self.exec_()
         return self.new_settings
 
@@ -123,6 +136,7 @@ class Settings(QtGui.QDialog):
                 new_margins.append("l")
             if self.ui.rightMargin_checkbox.isChecked():
                 new_margins.append("r")
+            display_name = unicode(self.ui.cmsCourse_edit.text())
             new_start = self._get_zones(str(self.ui.startZones_edit.text()))
             new_end = self._get_zones(str(self.ui.endZones_edit.text()))
             new_pass = self._get_zones(str(self.ui.passthroughZones_edit.text()))
@@ -133,6 +147,7 @@ class Settings(QtGui.QDialog):
                                  "passthrough-zones": new_pass,
                                  "password": password,
                                  "login": login,
+                                 "display-name": display_name,
                                  "cms-course": self.chosen_course_id or ""}
         else:
             # if apply and userdata invalid -> save just login
@@ -141,14 +156,13 @@ class Settings(QtGui.QDialog):
             self.show_wrong_userdata_dialog()
 
     def _add_zone_clicked(self):
-        dialog = ManageZonesDialog(self.autozone_relations[self.sender()][0])
-        old_data = self.autozone_relations[self.sender()][0]
+        old_data = self._get_zones(
+            self.autozone_relations[self.sender()].text())
+        dialog = ManageZonesDialog(old_data)
         new_data = dialog.exec_()
-        # TODO warning dialog that all zone data will be lost must appear
         self.apply_button.setEnabled(new_data != old_data)
-        self.autozone_relations[self.sender()] = \
-            (new_data, self.autozone_relations[self.sender()][1])
-        self.autozone_relations[self.sender()][1].setText(", ".join(new_data))
+        self.autozone_relations[self.sender()].setText(
+            self._get_zones_text(new_data))
 
     def show_wrong_userdata_dialog(self):
         if not self.wrong_userdata_dialog:

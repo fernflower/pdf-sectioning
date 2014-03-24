@@ -122,6 +122,9 @@ class TocController(object):
                            brackets_err=False):
         cas_id = cas_id if cas_id else self.current_toc_elem
         if cas_id:
+            if not self._get_sections_elem(cas_id):
+                print "Sth FUCKING WRONG!!!! %s " % cas_id
+                return
             value = not mixed_up and not brackets_err and both_ends
             if mixed_up:
                 self._get_sections_elem(cas_id).set_mixed_up_marks()
