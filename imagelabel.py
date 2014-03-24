@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
-from paragraphmark import QStartParagraph, QEndParagraph, QParagraphMark, \
-    QRulerMark
 
 
 # this class manages all keys/mouse clicks and calls actions from page_viewer
@@ -122,16 +120,20 @@ class QImageLabel(QtGui.QLabel):
             self.last_selected = selected
 
         modifiers = QtGui.QApplication.keyboardModifiers()
-        # disable right mouse click as it shows context menu
+        # select elem under right click and show menu
         if event.buttons() == QtCore.Qt.RightButton:
+            any_mark = self.controller.find_any_at_point((event.pos().x(),
+                                                          event.pos().y()))
+            if any_mark and not any_mark.is_selected:
+                self.controller.deselect_all()
+                any_mark.toggle_selected()
             return super(QImageLabel, self).mousePressEvent(event)
         if event.buttons() == QtCore.Qt.LeftButton:
             selected = self.controller.find_any_at_point((event.pos().x(),
                                                           event.pos().y()))
             self.coordinates = event.pos()
             if selected:
-                if modifiers == QtCore.Qt.AltModifier and isinstance(selected,
-                                                                     QRulerMark):
+                if modifiers == QtCore.Qt.AltModifier and selected.is_ruler():
                     # try to create new mark and bind it to ruler
                     self.controller.deselect_all()
                     mark = self.controller._create_mark_on_click(

@@ -221,6 +221,7 @@ class TocController(object):
             model = QtGui.QStandardItemModel()
         for item in self.create_toc_elems(mode):
             model.appendRow(item)
+            item.set_not_started()
         view.setModel(model)
         if mode == self.MODE_MARKUP:
             dz = DisabledZoneDelegate(self)

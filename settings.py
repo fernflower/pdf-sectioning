@@ -22,6 +22,7 @@ class Settings(QtGui.QDialog):
         self.ui.addStart_button.clicked.connect(self._add_zone_clicked)
         self.ui.addEnd_button.clicked.connect(self._add_zone_clicked)
         self.ui.addPassthrough_button.clicked.connect(self._add_zone_clicked)
+        self.ui.search_button.clicked.connect(self._find_cms_course)
         self.ui.cmsCourse_edit.connect(self.ui.cmsCourse_edit,
                                        QtCore.SIGNAL("returnPressed()"),
                                        self._find_cms_course)

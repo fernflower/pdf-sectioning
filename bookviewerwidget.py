@@ -253,7 +253,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._set_appearance()
         # make window occupy all screen
         screen = QtGui.QDesktopWidget().screenGeometry()
-        self.setGeometry(0, 0, screen.width() * 0.9, screen.height() * 0.9)
+        #self.setGeometry(0, 0, screen.width() * 0.9, screen.height() * 0.9)
         # setup settings dialog
         self.settings_dialog = Settings(self.controller, self)
 
