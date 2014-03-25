@@ -57,8 +57,6 @@ class TocController(object):
         # view for two modes
         self.sections_view = None
         self.markup_view = None
-        self.start_autozones = start_autozones
-        self.end_autozones = end_autozones
 
     @property
     def is_zone_selected(self):
@@ -102,10 +100,20 @@ class TocController(object):
         else:
             return self.markup_toc_elems
 
-    def reload_course(self, new_toc):
+    def reload_course(self, new_toc, new_start, new_end, zones_only=False):
         self.course_toc = new_toc
-        self.fill_with_data(self.MODE_SECTIONS)
-        self.fill_with_data(self.MODE_MARKUP)
+        if not zones_only:
+            self.fill_with_data(self.MODE_SECTIONS, new_start, new_end)
+        self.fill_with_data(self.MODE_MARKUP, new_start, new_end)
+        # if zones_only get updated, then have to set apptopriate states so
+        # that zones can be placed and mtoc not hidden
+        for toc_elem in self.toc_elems:
+            if toc_elem.is_finished():
+                mtoc = self._get_markup_elem(toc_elem.cas_id)
+                mtoc._set_selectable(True)
+                mtoc.set_not_started()
+                self.markup_view.setRowHidden(mtoc.index().row(),
+                                              mtoc.index().parent(), False)
 
     # return either TocElem or Zone; if clicked on a container like AutoZone,
     # then return TocElem as well. In order to get element to operate with from
@@ -143,6 +151,8 @@ class TocController(object):
     def set_default_state(self, cas_id=None):
         cas_id = self.current_toc_elem.cas_id \
             if self.current_toc_elem else cas_id
+        if not self._get_sections_elem(cas_id):
+            return
         if cas_id:
             self._get_sections_elem(cas_id).set_not_started()
             self._get_markup_elem(cas_id).set_not_started()
@@ -157,7 +167,7 @@ class TocController(object):
     # returns a list of QTocElems (to fill a listView, for example)
     # has to return a new list all the time as items are owned by a model and
     # by calling
-    def create_toc_elems(self, mode):
+    def create_toc_elems(self, mode, start_autozones, end_autozones):
         if mode == self.MODE_SECTIONS:
             self.toc_elems = \
                 [ QTocElem(elem["name"], elem["cas-id"]) \
@@ -166,8 +176,8 @@ class TocController(object):
         else:
             self.markup_toc_elems = \
                 [ QMarkerTocElem(elem["name"], elem["cas-id"],
-                                 elem["objects"], self.start_autozones,
-                                 self.end_autozones)
+                                 elem["objects"], start_autozones,
+                                 end_autozones)
                 for elem in self.course_toc ]
             return self.markup_toc_elems
 
@@ -214,7 +224,14 @@ class TocController(object):
             return self.sections_view
         return self.markup_view
 
-    def fill_with_data(self, mode):
+    @property
+    def autozone_types(self):
+        autotypes = set()
+        for mtoc_elem in self.markup_toc_elems:
+            autotypes.update(mtoc_elem.autotypes)
+        return autotypes
+
+    def fill_with_data(self, mode, start_autozones, end_autozones):
         view = self.get_view_widget(mode)
         view.reset()
         model = view.model()
@@ -222,7 +239,7 @@ class TocController(object):
             model.clear()
         else:
             model = QtGui.QStandardItemModel()
-        for item in self.create_toc_elems(mode):
+        for item in self.create_toc_elems(mode, start_autozones, end_autozones):
             model.appendRow(item)
             item.set_not_started()
         view.setModel(model)

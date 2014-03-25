@@ -12,6 +12,7 @@ class QMark(QtGui.QWidget):
     # pos in a tuple (x, y)
     def __init__(self, pos, parent, name, delete_func, corrections):
         super(QMark, self).__init__(parent)
+        self.parent = parent
         self.corrections = corrections
         self.corrected = False
         self.is_selected = False

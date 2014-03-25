@@ -278,8 +278,19 @@ class QMarkerTocElem(QTocElem):
         return self.auto.zones if self.auto else []
 
     @property
+    def autotypes(self):
+        return set([z.zone_id for z in self.autozones])
+
+    @property
     def all_zones_placed(self):
         return all(map(lambda z: z.is_finished(), self.zones))
+
+    def set_not_started(self):
+        super(QMarkerTocElem, self).set_not_started()
+        if self.auto:
+            self.auto.set_not_started()
+        for zone in self.zones:
+            zone.set_not_started()
 
     def get_autozones_as_dict(self):
         result = []

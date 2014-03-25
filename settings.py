@@ -54,7 +54,7 @@ class Settings(QtGui.QDialog):
 
     def _get_zones_text(self, zoneslist):
         return ", ".join(z for z in zoneslist) if len(zoneslist) > 1 else \
-            str(zoneslist[0])
+            str(zoneslist[0] if len(zoneslist) > 0 else "")
 
     def _on_course_chosen(self, index):
         self.chosen_course_id = self.search_result[index][1]
@@ -106,6 +106,13 @@ class Settings(QtGui.QDialog):
         self.apply_button.setEnabled(False)
         return super(Settings, self).exec_()
 
+    def _let_modify_zonetypes(self, value):
+        for elem in [self.ui.startZones_edit, self.ui.addStart_button,
+                     self.ui.endZones_edit, self.ui.addEnd_button,
+                     self.ui.passthroughZones_edit,
+                     self.ui.addPassthrough_button]:
+            elem.setEnabled(value)
+
     def show_settings(self, any_markup=False):
         if any_markup:
             self.ui.cmsCourse_edit.setEnabled(False)
@@ -155,14 +162,27 @@ class Settings(QtGui.QDialog):
             self.new_settings = {"login": login}
             self.show_wrong_userdata_dialog()
 
+    @property
+    def markup_loaded(self):
+        return not self.ui.cmsCourse_edit.isEnabled()
+
     def _add_zone_clicked(self):
         old_data = self._get_zones(
             self.autozone_relations[self.sender()].text())
-        dialog = ManageZonesDialog(old_data)
+        except_zones = []
+        if self.sender() == self.ui.addEnd_button:
+            except_zones = self._get_zones(self.ui.startZones_edit.text())
+        all_zones = self.controller.autozone_types \
+            if self.markup_loaded else ZONE_TYPES
+        dialog = ManageZonesDialog(all_zones, old_data, except_zones)
         new_data = dialog.exec_()
-        self.apply_button.setEnabled(new_data != old_data)
+        self.apply_button.setEnabled(self.apply_button.isEnabled() or \
+                                     new_data != old_data)
         self.autozone_relations[self.sender()].setText(
             self._get_zones_text(new_data))
+        if self.sender() == self.ui.addStart_button:
+            new_end = [z for z in except_zones if z not in new_data]
+            self.ui.endZones_edit.setText(self._get_zones_text(new_end))
 
     def show_wrong_userdata_dialog(self):
         if not self.wrong_userdata_dialog:
@@ -177,7 +197,7 @@ class ManageZonesDialog(QtGui.QDialog):
     ALL_ZONES_MODE = "all"
     CHOSEN_ZONES_MODE = "chosen"
 
-    def __init__(self, chosen_zones):
+    def __init__(self, all_zones, chosen_zones, except_zones=[]):
         super(ManageZonesDialog, self).__init__()
         self.ui = Ui_addZones()
         self.ui.setupUi(self)
@@ -193,11 +213,14 @@ class ManageZonesDialog(QtGui.QDialog):
                 view.selectionModel(),
                 QtCore.SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
                 self.update)
-        _fill_view(self.ui.allZones_listview,
-                   [zt for zt in ZONE_TYPES if zt not in chosen_zones])
+        all_zones_data = [zt for zt in all_zones if zt not in chosen_zones \
+                            and zt not in except_zones]
+        _fill_view(self.ui.allZones_listview, all_zones_data)
         _fill_view(self.ui.chosenZones_listview, chosen_zones)
-        self.ui.allZones_listview.setCurrentIndex(
-            self.ui.allZones_listview.model().item(0).index())
+        # select first elem if any
+        if len(all_zones_data) > 0:
+            self.ui.allZones_listview.setCurrentIndex(
+                self.ui.allZones_listview.model().item(0).index())
         self.ui.add_button.clicked.connect(self.add_zone)
         self.ui.remove_button.clicked.connect(self.remove_zone)
         self.ui.up_button.clicked.connect(self.move_up)

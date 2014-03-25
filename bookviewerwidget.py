@@ -162,9 +162,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionForced_delete_selection.triggered.connect(
             self.delete_marks_forced)
         self.actionDelete_all = QtGui.QAction(
-            QtCore.QString.fromUtf8(u"Удалить текущую разметку"), self)
+            QtCore.QString.fromUtf8(u"Удалить текущую разметку целиком"), self)
         self.actionDelete_all.setShortcut('Ctrl+Shift+Delete')
         self.actionDelete_all.triggered.connect(self.delete_all)
+        self.actionDelete_all_zones = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Удалить текущую разметку зон"), self)
+        self.actionDelete_all_zones.triggered.connect(self.delete_all_zones)
+        self.actionDelete_all_autozones = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Удалить текущую разметку автозон"), self)
+        self.actionDelete_all_autozones.triggered.connect(
+            self.delete_all_autozones)
         self.actionClose = QtGui.QAction(
             QtCore.QString.fromUtf8(u"Выход"), self)
         self.actionClose.triggered.connect(self.close)
@@ -179,6 +186,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.menuFile.addAction(self.actionClose)
         self.menuEdit.addAction(self.actionDelete_selection)
         self.menuEdit.addAction(self.actionForced_delete_selection)
+        self.menuEdit.addAction(self.actionDelete_all_zones)
+        self.menuEdit.addAction(self.actionDelete_all_autozones)
         self.menuEdit.addAction(self.actionDelete_all)
         self.menuTools.addAction(self.actionSetHorizontalRuler)
         self.menuTools.addAction(self.actionSetVerticalRuler)
@@ -259,7 +268,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def _fill_views(self):
         for mode in [self.SECTION_MODE, self.MARKUP_MODE]:
-            self.toc_controller.fill_with_data(mode)
+            self.toc_controller.fill_with_data(mode,
+                                               self.controller.start_autozones,
+                                               self.controller.end_autozones)
 
     def show_progress_bar(self, text):
         QtGui.QApplication.setOverrideCursor(
@@ -339,10 +350,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             for key in ["first-page", "cms-course"]:
                 if key in settings and settings[key] == "":
                     del settings[key]
-            for key in ["start-autozones", "end-autozones",
-                        "passthrough-zones", "margins"]:
-                if key in settings and settings[key] == []:
-                    del settings[key]
             self.show_progress_bar(u"Применение настроек...")
             self.controller.settings_changed(settings)
             self.hide_progress_bar()
@@ -409,6 +416,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not self.show_wipe_all_dialog():
             return
         self.controller.delete_all()
+
+    def delete_all_zones(self):
+        if not self.show_wipe_all_dialog(delete_all=False):
+            return
+        self.controller.delete_all_zones()
+
+    def delete_all_autozones(self):
+        if not self.show_wipe_all_dialog(delete_all=False, auto=True):
+            return
+        self.controller.delete_all_autozones()
 
     def open_file(self):
         if self.controller.any_unsaved_changes and \
@@ -632,10 +649,13 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.cant_open_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
         self.cant_open_dialog.exec_()
 
-    def show_wipe_all_dialog(self):
+    def show_wipe_all_dialog(self, delete_all=True, auto=False):
         if not self.wipe_all_dialog:
             self.wipe_all_dialog = QtGui.QMessageBox(self)
-            self.wipe_all_dialog.setText(u"Удаление всех элементов разметки.")
+            text = u"Удаление всех элементов разметки." if delete_all else \
+                u"Удаление всех{}расставленных активных зон.".\
+                format(u" " if not auto else u" автоматически ")
+            self.wipe_all_dialog.setText(text)
             self.wipe_all_dialog.setInformativeText(
             u"Вы уверены, что хотите продолжить? Это действие нельзя отменить.")
             self.wipe_all_dialog.setStandardButtons(QtGui.QMessageBox.Yes |

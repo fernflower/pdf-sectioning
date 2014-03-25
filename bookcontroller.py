@@ -71,33 +71,41 @@ class BookController(object):
         old_settings = {}
         if not create_if_none:
             old_settings = self.book_settings
-        for key in ["cms-course", "display-name", "margins", "margin-width",
-                    "zone-width", "first-page", "passthrough-zones",
-                    "start-autozones", "end-autozones", "login", "password"]:
+        # This data is vital for course' reloading and has to be retrieved
+        # first
+        def _process_param(key):
             attr = key.replace('-', '_')
             if create_if_none:
                 setattr(self, attr, new_settings.get(key) or \
                         getattr(self, attr, None))
-            elif key in new_settings:
-                if key == "cms-course" and self.cms_course != new_settings[key]:
-                    print "old course %s, new course %s" % \
-                        (self.cms_course, new_settings[key])
-                    if self.cms_course:
-                        self.delete_all()
-                    new_toc = self.cms_query_module.get_cms_course_toc(
-                        new_settings["cms-course"])
-                    self.cms_course = new_settings["cms-course"]
-                    self.toc_controller.reload_course(new_toc)
-                else:
-                    if new_settings[key] != getattr(self, attr, None):
-                        setattr(self, attr, new_settings[key])
-                        changed[key] = new_settings[key]
+            elif key in new_settings and \
+                new_settings[key] != getattr(self, attr, None):
+                    setattr(self, attr, new_settings[key])
+                    changed[key] = new_settings[key]
+
+        for key in ["start-autozones", "end-autozones", "passthrough-zones",
+                    "display-name", "margins", "margin-width", "zone-width",
+                    "first-page", "login", "password"]:
+            _process_param(key)
+        # now deal with cms course and reload it if necessary
+        if not hasattr(self, "cms_course"):
+            self.cms_course = None
+        if "cms-course" in new_settings and \
+                self.cms_course != new_settings["cms-course"]:
+            if self.cms_course:
+                self.delete_all()
+            self.toc_raw = self.cms_query_module.get_cms_course_toc(
+                new_settings["cms-course"])
+            self.cms_course = new_settings["cms-course"]
+            self.toc_controller.reload_course(
+                self.toc_raw, self.start_autozones, self.end_autozones)
+
+        print changed
         if not create_if_none:
             self.adapt_to_new_settings(old_settings, changed)
 
     def adapt_to_new_settings(self, old, new):
         # adapt to margin type change
-        print "%s;;;;%s" % (old, new)
         if "margins" in new:
             old_margins = old["margins"]
             new_margins = new["margins"]
@@ -110,6 +118,35 @@ class BookController(object):
                                                                z.rubric),
                                          self.pagenum)
         # adapt to autozone type change
+        # if any auto zone has changed its type -> remove it and place
+        # autozones once more
+        if not any(key in new for key in \
+                   ["start-autozones", "end-autozones", "passthrough-zones"]):
+            print "no autozones change"
+            return
+        delete_types = set()
+        for key in ["start-autozones", "end-autozones", "passthrough-zones"]:
+            if key in new:
+                delete_types.update(new[key])
+        print delete_types
+        zone_parent = None
+        for auto_type in delete_types:
+            for cas_id in self.paragraph_marks:
+                if not zone_parent and \
+                        len(self.paragraph_marks[cas_id]["zones"]) > 0:
+                    zone_parent = self.paragraph_marks[cas_id]["zones"][0].parent
+                self.delete_marks(
+                    forced=True,
+                    marks=[z for z in self.paragraph_marks[cas_id]["zones"] \
+                           if z.auto])
+        self.toc_controller.reload_course(self.toc_raw, self.start_autozones,
+                                          self.end_autozones, zones_only=True)
+        # mark old zones as placed
+        for cas_id in self.paragraph_marks:
+            for z in self.paragraph_marks[cas_id]["zones"]:
+                self.toc_controller.process_zone_added(z)
+        # place autozones once again
+        self.autozones(zone_parent)
 
     @property
     def book_settings(self):
@@ -118,6 +155,10 @@ class BookController(object):
                                 "first-page", "passthrough-zones",
                                 "start-autozones", "end-autozones",
                                 "display-name"]}
+    @property
+    def autozone_types(self):
+        return self.toc_controller.autozone_types
+
     # returns current page number + 1, as poppler ordering starts from 0, but
     # our first page has number 1
     @property
@@ -412,6 +453,7 @@ class BookController(object):
                               "objects": z["objects"],
                               "margin": z["at"],
                               "pass_through": z["passthrough"],
+                              "auto": z["number"] == "00",
                               "corrections": self._get_corrections(
                                   z["at"], z["rubric"])
                              }
@@ -678,10 +720,21 @@ class BookController(object):
             r.destroy()
         self.rulers = []
 
+    def delete_all_zones(self):
+        for cas_id in self.paragraph_marks:
+            self.delete_marks(marks=self.paragraph_marks[cas_id]["zones"],
+                              forced=True)
+
+    def delete_all_autozones(self):
+        for cas_id in self.paragraph_marks:
+            auto = [z for z in self.paragraph_marks[cas_id]["zones"] if z.auto]
+            self.delete_marks(marks=auto, forced=True)
+
     # delete currently selected marks on current page. Destroy
     # widget here as well, after removing from all parallel data structures
     def delete_marks(self, forced=False, marks=None):
         marks = marks or self.selected_marks_and_rulers
+        deleted = 0
         for m in marks:
             if m.is_zone():
                 if forced:
@@ -704,6 +757,8 @@ class BookController(object):
             m.hide()
             if m.delete():
                 m.destroy()
+                deleted = deleted + 1
+        return deleted
 
     ### callbacks to be passed to Mark Widgets
 
