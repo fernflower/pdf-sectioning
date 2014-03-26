@@ -270,6 +270,14 @@ class QMarkerTocElem(QTocElem):
             self.zones.append(zone)
         for zone in self.end_autozones:
             _process_auto_zone(zone)
+        # if any other auto zones left (not belonging to start\end, place them
+        # here)
+        diff = set(auto_data.keys()) - \
+            set(self.start_autozones).union(self.end_autozones)
+        if diff != set([]):
+            print "No start\end binding for %s" % diff
+            for zone in diff:
+                _process_auto_zone(zone)
         # no modifications unless filled-in!
         self._set_selectable(False)
 
@@ -292,9 +300,11 @@ class QMarkerTocElem(QTocElem):
         for zone in self.zones:
             zone.set_not_started()
 
+    # only autozones that appear in start\end will be returned
     def get_autozones_as_dict(self):
         result = []
-        for auto in self.autozones:
+        for auto in [az for az in self.autozones if az.pdf_rubric in \
+                     self.start_autozones + self.end_autozones]:
             key_type = auto.zone_id
             zone = { "rel-start": self._get_start(key_type),
                      "rel-end": self._get_end(key_type),

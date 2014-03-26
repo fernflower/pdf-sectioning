@@ -188,7 +188,7 @@ class Settings(QtGui.QDialog):
         if not self.wrong_userdata_dialog:
             self.wrong_userdata_dialog = QtGui.QMessageBox(self.parent)
             self.wrong_userdata_dialog.setText(u"Некорректные пользовательские данные.")
-            self.wrong_userdata_dialog.setInformativeText(u"Убедитесь в корректности логина и пароля.")
+            self.wrong_userdata_dialog.setInformativeText(u"Убедитесь в правильности логина и пароля.")
             self.wrong_userdata_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
         self.wrong_userdata_dialog.exec_()
 
