@@ -18,6 +18,7 @@ class Settings(QtGui.QDialog):
         self.new_settings = {}
         self.search_result = []
         self.chosen_course_id = None
+        self.all_zones = []
         self.ui.buttonBox.clicked.connect(self._apply)
         self.ui.addStart_button.clicked.connect(self._add_zone_clicked)
         self.ui.addEnd_button.clicked.connect(self._add_zone_clicked)
@@ -35,7 +36,10 @@ class Settings(QtGui.QDialog):
         self.ui.margins_group.connect(self.ui.rightMargin_checkbox,
                                       QtCore.SIGNAL("toggled(bool)"),
                                       self._enable_apply)
+        self.ui.password_edit.textChanged.connect(self._enable_apply)
+        self.ui.login_edit.textChanged.connect(self._enable_apply)
         self.ui.searchResults_combo.hide()
+        self.ui.incorrectData_label.hide()
         self.autozone_relations = {
             self.ui.addStart_button: self.ui.startZones_edit,
             self.ui.addEnd_button: self.ui.endZones_edit,
@@ -76,7 +80,6 @@ class Settings(QtGui.QDialog):
                 addItems([n[0] for n in self.search_result])
 
     def exec_(self):
-        self.chosen_course_id = None
         self.ui.cmsCourse_edit.setText(self.controller.display_name)
         # if no login\password or bad data: deactivate other settings' tab
         self.ui.bookData_tab.setEnabled(
@@ -118,6 +121,8 @@ class Settings(QtGui.QDialog):
             self.ui.cmsCourse_edit.setEnabled(False)
             self.ui.searchResults_combo.setEnabled(False)
             self.ui.search_button.setEnabled(False)
+        self._let_modify_zonetypes(self.course_loaded or self.chosen_course_id is not None)
+        self.all_zones = self.controller.all_autozones or []
         result = self.exec_()
         return self.new_settings
 
@@ -125,11 +130,20 @@ class Settings(QtGui.QDialog):
         # close dialog when anything but apply is pressed
         if not button == self.apply_button:
             return
+        if not self.course_loaded and self.chosen_course_id:
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
+            self.controller.load_course(self.chosen_course_id)
+            self.all_zones = self.controller.all_autozones
+            print self.all_zones
+            QtGui.QApplication.restoreOverrideCursor()
+        # if course chosen -> let modify auto zones
+        self._let_modify_zonetypes(self.course_loaded or self.chosen_course_id is not None)
         # disable apply
         self.apply_button.setEnabled(False)
         login = str(self.ui.login_edit.text())
         password = str(self.ui.password_edit.text())
         if self.controller.is_userdata_valid(login, password):
+            self.ui.incorrectData_label.hide()
             # when apply pressed and userdata valid -> collect all info
             self.ui.bookData_tab.setEnabled(True)
             new_course = self.ui.cmsCourse_edit.text()
@@ -155,16 +169,17 @@ class Settings(QtGui.QDialog):
                                  "password": password,
                                  "login": login,
                                  "display-name": display_name,
-                                 "cms-course": self.chosen_course_id or ""}
+                                 "cms-course": self.chosen_course_id or "",
+                                 "all-autozones": self.all_zones}
         else:
             # if apply and userdata invalid -> save just login
             self.ui.bookData_tab.setEnabled(False)
             self.new_settings = {"login": login}
-            self.show_wrong_userdata_dialog()
+            self.ui.incorrectData_label.show()
 
     @property
-    def markup_loaded(self):
-        return not self.ui.cmsCourse_edit.isEnabled()
+    def course_loaded(self):
+        return self.controller.cms_course is not None
 
     def _add_zone_clicked(self):
         old_data = self._get_zones(
@@ -172,9 +187,7 @@ class Settings(QtGui.QDialog):
         except_zones = []
         if self.sender() == self.ui.addEnd_button:
             except_zones = self._get_zones(self.ui.startZones_edit.text())
-        all_zones = self.controller.autozone_types \
-            if self.markup_loaded else ZONE_TYPES
-        dialog = ManageZonesDialog(all_zones, old_data, except_zones)
+        dialog = ManageZonesDialog(self.all_zones, old_data, except_zones)
         new_data = dialog.exec_()
         self.apply_button.setEnabled(self.apply_button.isEnabled() or \
                                      new_data != old_data)
@@ -183,14 +196,6 @@ class Settings(QtGui.QDialog):
         if self.sender() == self.ui.addStart_button:
             new_end = [z for z in except_zones if z not in new_data]
             self.ui.endZones_edit.setText(self._get_zones_text(new_end))
-
-    def show_wrong_userdata_dialog(self):
-        if not self.wrong_userdata_dialog:
-            self.wrong_userdata_dialog = QtGui.QMessageBox(self.parent)
-            self.wrong_userdata_dialog.setText(u"Некорректные пользовательские данные.")
-            self.wrong_userdata_dialog.setInformativeText(u"Убедитесь в правильности логина и пароля.")
-            self.wrong_userdata_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
-        self.wrong_userdata_dialog.exec_()
 
 
 class ManageZonesDialog(QtGui.QDialog):

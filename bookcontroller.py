@@ -4,7 +4,7 @@ from collections import OrderedDict
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import MarkCreator, QRulerMark
 from tocelem import QTocElem, QMarkerTocElem
-from zonetypes import ZONE_ICONS
+from zonetypes import ZONE_ICONS, ZONE_TYPES
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
 # QImagelabel). Keeps track of paragraphs per page (parapraphs attr) and total
@@ -84,8 +84,8 @@ class BookController(object):
                     changed[key] = new_settings[key]
 
         for key in ["start-autozones", "end-autozones", "passthrough-zones",
-                    "display-name", "margins", "margin-width", "zone-width",
-                    "first-page", "login", "password"]:
+                    "all-autozones", "display-name", "margins",
+                    "margin-width", "zone-width", "first-page", "login", "password"]:
             _process_param(key)
         # now deal with cms course and reload it if necessary
         if not hasattr(self, "cms_course"):
@@ -94,8 +94,8 @@ class BookController(object):
                 self.cms_course != new_settings["cms-course"]:
             if self.cms_course:
                 self.delete_all()
-            self.toc_raw = self.cms_query_module.get_cms_course_toc(
-                new_settings["cms-course"])
+            self.toc_raw, self.all_autozones = \
+                self.cms_query_module.get_cms_course_toc(new_settings["cms-course"])
             self.cms_course = new_settings["cms-course"]
             self.toc_controller.reload_course(
                 self.toc_raw, self.start_autozones, self.end_autozones)
@@ -154,7 +154,7 @@ class BookController(object):
                     for key in ["cms-course", "margins", "margin-width",
                                 "first-page", "passthrough-zones",
                                 "start-autozones", "end-autozones",
-                                "display-name"]}
+                                "all-autozones","display-name"]}
     @property
     def autozone_types(self):
         return self.toc_controller.autozone_types
@@ -240,7 +240,8 @@ class BookController(object):
             return self._is_in_pdf_bounds(pos_tuple)
         else:
             # get mark's start\end and calculate available viewport
-            curr_cas_id = cas_id or self.current_toc_elem.cas_id
+            curr_cas_id = cas_id or \
+                self.current_toc_elem and self.current_toc_elem.cas_id
             if not curr_cas_id:
                 return False
             x, y = pos_tuple
@@ -295,6 +296,9 @@ class BookController(object):
         if self.dp:
             return self.dp.totalPages
         return 0
+
+    def load_course(self, course_id):
+        return self.settings_changed({"cms-course": course_id})
 
     def get_image(self):
         if not self.dp:

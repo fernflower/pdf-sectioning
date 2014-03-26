@@ -318,8 +318,8 @@ def make_zone_mark(pos, parent, cas_id, zone_id, page,
                    pass_through=False, pages=None, number="00"):
     if not pass_through:
         return QZoneMark(pos, parent, cas_id, zone_id, page,
-                         delete_func, objects, rubric,
-                         margin, corrections, auto, number)
+                         delete_func, objects, rubric, margin,
+                         number, corrections, auto)
     elif inner:
         return QInnerZoneMark(pos, parent, cas_id, zone_id, page,
                               delete_func, objects, rubric, pages)
@@ -342,8 +342,8 @@ class MarkCreator(object):
 # here type means zone type stored in xml (single, repeat etc)
 class QZoneMark(QParagraphMark):
     def __init__(self, pos, parent, cas_id, zone_id, page,
-                 delete_func, objects, rubric, margin, corrections=(0, 0),
-                 auto=False, pass_through=False, number="00"):
+                 delete_func, objects, rubric, margin, number,
+                 corrections=(0, 0), auto=False, pass_through=False):
         super(QZoneMark, self).__init__(pos, parent, cas_id, zone_id, page,
                                         delete_func, "single", corrections)
         self.auto = auto
@@ -439,7 +439,7 @@ class QPassThroughZoneMark(QZoneMark):
                                                    page,
                                                    delete_func,
                                                    objects,
-                                                   rubric, margin,
+                                                   rubric, margin, "00",
                                                    corrections, True, True)
         self.type = "repeat"
         (pos_x, pos_y) = pos
@@ -479,7 +479,7 @@ class QInnerZoneMark(QZoneMark):
                  objects, rubric, pages=None):
         super(QInnerZoneMark, self).__init__(pos, parent, cas_id, zone_id,
                                              page, delete_func, objects,
-                                             rubric, "", (0, 0), False, True)
+                                             rubric, "", "00", (0, 0), False, True)
         self.type = "inner"
         self.initial_pos = pos
         # pos is set by x and y

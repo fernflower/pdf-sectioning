@@ -117,12 +117,12 @@ class DocumentProcessor(object):
                            namespaces = { "is" : XHTML_NAMESPACE})
         out_paragraphs = {}
         def _process_settings(param, text):
+            if param in ['start-autozones', 'margins', 'all-autozones',
+                            'end-autozones', 'passthrough-zones']:
+                return text.split(',') if text else []
             try:
                 return int(text)
             except ValueError:
-                if param in ['start-autozones', 'margins',
-                             'end-autozones', 'passthrough-zones']:
-                    return text.split(',')
                 return text
         book_settings = {e.xpath('local-name()'): \
                          _process_settings(e.xpath('local-name()'), e.text)

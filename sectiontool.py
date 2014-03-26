@@ -144,12 +144,27 @@ class CmsQueryModule(object):
             if resp.status != 200:
                 raise CmsQueryError("Could not resolve lesson names!")
             resolved = loads(content)
-            return [{"name": resolved[lesson_id], "cas-id": lesson_id,
-                     "objects": self._get_lesson_objects(lesson_id,
-                                                         login, password)} \
-                    for lesson_id in ids_to_resolve]
+            toc = [{"name": resolved[lesson_id], "cas-id": lesson_id,
+                    "objects": self._get_lesson_objects(lesson_id, login, password)} \
+                   for lesson_id in ids_to_resolve]
+            auto_types = self._get_autozone_types(toc)
+            return (toc, auto_types)
         else:
             raise CmsQueryError("Check your url and user\password settings")
+
+    def _get_autozone_types(self, toc):
+        result = set()
+        def _get_autozone_type(oid):
+            zone_type = oid.split('-')[4]
+            if oid.split('-')[2] == "00":
+                return zone_type
+            return None
+        for para in toc:
+            for zt in para["objects"]:
+                zone_type = _get_autozone_type(zt["oid"])
+                if zone_type:
+                    result.add(zone_type)
+        return list(result)
 
     def _get_lesson_objects(self, lesson_id, login, password):
         lesson_url = self.config_data['url'].rstrip('/') + '/' + lesson_id
@@ -159,12 +174,13 @@ class CmsQueryModule(object):
             tree = etree.fromstring(data)
             paragraphs = tree.xpath(PARAGRAPHS_XPATH,
                                     namespaces = {"is" : XHTML_NAMESPACE})
-            return [{"oid": p.get("objectid"),
-                     "block-id": p.get("id"),
-                     "rubric": p.get("erubric"),
-                     "name": p.xpath("is:name/text()",
-                                     namespaces = {"is" : XHTML_NAMESPACE})[0]
-                     } for p in paragraphs]
+            objects = [{"oid": p.get("objectid"),
+                        "block-id": p.get("id"),
+                        "rubric": p.get("erubric"),
+                        "name": p.xpath("is:name/text()",
+                                        namespaces = {"is" : XHTML_NAMESPACE})[0]
+                        } for p in paragraphs]
+            return objects
         else:
             raise CmsQueryError("Could not get lesson's {} object list!".\
                                    format(lesson_id))

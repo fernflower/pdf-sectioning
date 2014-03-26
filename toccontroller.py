@@ -186,6 +186,8 @@ class TocController(object):
         toc_elem = self._get_markup_elem(cas_id)
         if toc_elem:
             return toc_elem.get_zone(zone_id)
+        else:
+            print "NO TOC ELEM FOR %s" % cas_id
 
     # finds toc elem ordernum by cas_id and returns corresponding QTocElem
     def get_elem(self, cas_id, mode):
@@ -274,7 +276,11 @@ class TocController(object):
 
     def process_zone_deleted(self, zone):
         zone_elem = self.get_zone_toc_elem(zone.cas_id, zone.zone_id)
-        zone_elem.set_finished(False)
+        if zone_elem:
+            zone_elem.set_finished(False)
+        else:
+            print zone.cas_id
+            print zone.name
 
     def process_mode_switch(self, old_mode, new_mode):
         old_toc = self._get_selected(old_mode)
