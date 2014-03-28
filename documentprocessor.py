@@ -245,15 +245,20 @@ class DocumentProcessor(object):
             margin = paragraphs["pages"][page]
             def _get_page_preview_str(page):
                 return "page-" + "0"*(3-len(str(page))) + str(page) + ".png"
-
+            def _get_fold(first_page, pagenum):
+                page_order = [first_page,
+                              next(x for x in ["l", "r"] if x != first_page)]
+                return page_order[(pagenum + 1) % 2 ]
+            fold = _get_fold(settings["first-page"], page)
             PAGE = E("ebook-page",
                      **{ "preview": _get_page_preview_str(page),
                          "n": str(page),
                          "width": str(self.width()),
                          "height": str(self.height()),
                          "hide": "false",
-                         "zone-margins": margin,
-                         "fold": margin })
+                        # FIXME
+                         "zone-margins": fold,
+                         "fold": fold })
             PAGES.append(PAGE)
             if progress:
                 progress.setValue(page)

@@ -315,7 +315,8 @@ def make_ruler_mark(pos, parent, delete_func, type,
 def make_zone_mark(pos, parent, cas_id, zone_id, page,
                    delete_func, objects, rubric, margin,
                    corrections=(0, 0), inner=False, auto=False,
-                   pass_through=False, pages=None, number="00"):
+                   pass_through=False, pages=None, number="00",
+                   recalc_corrections = None):
     if not pass_through:
         return QZoneMark(pos, parent, cas_id, zone_id, page,
                          delete_func, objects, rubric, margin,
@@ -325,7 +326,7 @@ def make_zone_mark(pos, parent, cas_id, zone_id, page,
                               delete_func, objects, rubric, pages)
     return QPassThroughZoneMark(pos, parent, cas_id, zone_id, page,
                                 delete_func, objects, rubric,
-                                margin, corrections, pages)
+                                margin, corrections, pages, recalc_corrections)
 
 # TODO reconsider this, there might be another way of testing bookcontroller
 class MarkCreator(object):
@@ -433,7 +434,7 @@ class QZoneMark(QParagraphMark):
 class QPassThroughZoneMark(QZoneMark):
     def __init__(self, pos, parent, cas_id, zone_id, page,
                  delete_func, objects, rubric, margin,
-                 corrections=(0, 0), pages=None):
+                 corrections=(0, 0), pages=None, recalc_corrections=None):
         super(QPassThroughZoneMark, self).__init__(pos, parent,
                                                    cas_id, zone_id,
                                                    page,
@@ -444,12 +445,16 @@ class QPassThroughZoneMark(QZoneMark):
         self.type = "repeat"
         (pos_x, pos_y) = pos
         self.initial_y = pos_y
+        self.recalc_corrections = recalc_corrections
         if pages:
             for p, y in pages.items():
                 if p not in self.pages.keys():
                     self.pages[p] = y
 
     def show(self):
+        # update corrections (depending on page)
+        if self.recalc_corrections:
+            self.corrections = self.recalc_corrections(self.page, self.rubric)
         super(QPassThroughZoneMark, self).show()
         if not self.should_show(self.page):
             return

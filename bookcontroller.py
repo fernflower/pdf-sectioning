@@ -66,6 +66,18 @@ class BookController(object):
     def current_toc_elem(self):
         return self.toc_controller.active_elem
 
+    # returns a string of current margins
+    @property
+    def current_margins(self):
+        return self.get_page_margins(self.pagenum)
+
+    def get_page_margins(self, pagenum):
+        if self.has_both_margins():
+            return "lr"
+        page_order = [self.first_page,
+                      next(x for x in ["l", "r"] if x != self.first_page)]
+        return page_order[(pagenum + 1) % 2]
+
     def settings_changed(self, new_settings, create_if_none=False):
         changed = {}
         old_settings = {}
@@ -107,14 +119,11 @@ class BookController(object):
     def adapt_to_new_settings(self, old, new):
         # adapt to margin type change
         if "margins" in new:
-            old_margins = old["margins"]
-            new_margins = new["margins"]
-            change_margin = len(old_margins) == 2 and len(new_margins) == 1 or \
-                len(old_margins) == 1 and len(new_margins) == 1
+            change_margin = old["margins"] != new["margins"]
             for cas_id in self.paragraph_marks:
                 for z in self.paragraph_marks[cas_id]["zones"]:
-                    z.margin = new_margins[0] if change_margin else z.margin
-                    z.change_corrections(self._get_corrections(new_margins[0],
+                    z.margin = new["margins"][0] if change_margin else z.margin
+                    z.change_corrections(self._get_corrections(new["margins"][0],
                                                                z.rubric),
                                          self.pagenum)
         # adapt to autozone type change
@@ -265,13 +274,16 @@ class BookController(object):
             return True
 
     def has_right_margin(self):
-        return "r" in self.margins
+        return "r" in self.current_margins
 
     def has_left_margin(self):
-        return "l" in self.margins
+        return "l" in self.current_margins
+
+    def has_one_margin(self):
+        return len(self.margins) == 1
 
     def has_both_margins(self):
-        return self.has_left_margin() and self.has_right_margin()
+        return len(self.margins) == 2
 
     def is_section_mode(self):
         return self.operational_mode == self.MODE_SECTIONS
@@ -459,7 +471,8 @@ class BookController(object):
                               "pass_through": z["passthrough"],
                               "auto": z["number"] == "00",
                               "corrections": self._get_corrections(
-                                  z["at"], z["rubric"])
+                                  z["at"], z["rubric"]),
+                              "recalc_corrections": self._recalc_corrections
                              }
                 zone = self.add_zone(zone_data)
                 if self.is_markup_mode and zone.should_show(self.pagenum):
@@ -503,6 +516,7 @@ class BookController(object):
         # pass first page orientation
         pdf_paragraphs["pages"] = OrderedDict()
         for page in range(1, self.dp.totalPages):
+            # TODO DAMMIT!!!! have to use first page info!
             pdf_paragraphs["pages"][page] = self._get_page_margin(page) \
                 if page in self.paragraphs.keys() \
                 else ["r", "l"][pagenum % 2]
@@ -576,10 +590,10 @@ class BookController(object):
                 elif az["rel-end"]:
                     # substract relative end from end-of-page y
                     pos = (0, end.y() + az["rel-end"] * self.scale)
-                margin = self._guess_margin(pos)
                 # autozones are bound to START\END, not PAGE NUM in oid!
                 page = start.page if az["rubric"] in self.start_autozones \
                     else end.page
+                margin = self._guess_margin(pos, page)
                 # create zone of proper type
                 pass_through = az["rubric"] in self.passthrough_zones
                 pages = None
@@ -605,6 +619,7 @@ class BookController(object):
                                                                   az["rubric"]),
                               "auto": True,
                               "pass_through": pass_through,
+                              "recalc_corrections": self._recalc_corrections,
                               "pages": pages }
                 zone = self.add_zone(zone_data)
                 count = count + 1
@@ -968,7 +983,8 @@ class BookController(object):
         return zone
 
     # pos is a tuple (x, y)
-    def _guess_margin(self, pos):
+    def _guess_margin(self, pos, pagenum=None):
+        pagenum = pagenum or self.pagenum
         (pos_x, pos_y) = pos
         if self.has_both_margins():
             if pos_x <= self.get_image().width() / 2:
@@ -976,7 +992,7 @@ class BookController(object):
             else:
                 return "r"
         # else only one margin
-        return self.margins[0]
+        return self.get_page_margins(pagenum)
 
     # Callback for on click marl creation, either start\end or ruler in SECTION
     # mode or a zone in MARKUP
@@ -990,6 +1006,9 @@ class BookController(object):
                     if self.is_section_mode() \
                     else self._create_mark_marker_mode(pos_tuple, mark_parent)
         return mark
+
+    def _recalc_corrections(self, page, rubric):
+        return self._get_corrections(self.get_page_margins(page), rubric)
 
     # get (y-coordinate, width correction) for markup mode depending on margins
     def _get_corrections(self, margin=None, rubric=None):

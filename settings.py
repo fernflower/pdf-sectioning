@@ -30,10 +30,7 @@ class Settings(QtGui.QDialog):
         self.ui.first_page_group.connect(self.ui.leftPage_radio,
                                          QtCore.SIGNAL("toggled(bool)"),
                                          self._enable_apply)
-        self.ui.margins_group.connect(self.ui.leftMargin_checkbox,
-                                      QtCore.SIGNAL("toggled(bool)"),
-                                      self._enable_apply)
-        self.ui.margins_group.connect(self.ui.rightMargin_checkbox,
+        self.ui.margins_group.connect(self.ui.one_margin,
                                       QtCore.SIGNAL("toggled(bool)"),
                                       self._enable_apply)
         self.ui.password_edit.textChanged.connect(self._enable_apply)
@@ -98,10 +95,10 @@ class Settings(QtGui.QDialog):
             self.ui.leftPage_radio.setChecked(True)
         else:
             self.ui.rightPage_radio.setChecked(True)
-        if self.controller.has_right_margin():
-            self.ui.rightMargin_checkbox.setChecked(True)
-        if self.controller.has_left_margin():
-            self.ui.leftMargin_checkbox.setChecked(True)
+        if self.controller.has_both_margins():
+            self.ui.two_margins.setChecked(True)
+        else:
+            self.ui.one_margin.setChecked(True)
         self.ui.login_edit.setText(self.controller.login)
         self.ui.password_edit.setEchoMode(
             QtGui.QLineEdit.Password)
@@ -153,10 +150,10 @@ class Settings(QtGui.QDialog):
             elif self.ui.rightPage_radio.isChecked():
                 new_first = "r"
             new_margins = []
-            if self.ui.leftMargin_checkbox.isChecked():
-                new_margins.append("l")
-            if self.ui.rightMargin_checkbox.isChecked():
-                new_margins.append("r")
+            if self.ui.one_margin.isChecked():
+                new_margins = [new_first]
+            else:
+                new_margins = ["l", "r"]
             display_name = unicode(self.ui.cmsCourse_edit.text())
             new_start = self._get_zones(str(self.ui.startZones_edit.text()))
             new_end = self._get_zones(str(self.ui.endZones_edit.text()))

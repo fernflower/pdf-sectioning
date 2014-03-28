@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'settings.ui'
 #
-# Created: Wed Mar 26 14:57:04 2014
+# Created: Sat Mar 29 01:29:42 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -160,12 +160,12 @@ class Ui_Dialog(object):
         self.horizontalLayout_4 = QtGui.QHBoxLayout(self.margins_group)
         self.horizontalLayout_4.setContentsMargins(-1, -1, -1, 0)
         self.horizontalLayout_4.setObjectName(_fromUtf8("horizontalLayout_4"))
-        self.leftMargin_checkbox = QtGui.QCheckBox(self.margins_group)
-        self.leftMargin_checkbox.setObjectName(_fromUtf8("leftMargin_checkbox"))
-        self.horizontalLayout_4.addWidget(self.leftMargin_checkbox)
-        self.rightMargin_checkbox = QtGui.QCheckBox(self.margins_group)
-        self.rightMargin_checkbox.setObjectName(_fromUtf8("rightMargin_checkbox"))
-        self.horizontalLayout_4.addWidget(self.rightMargin_checkbox)
+        self.one_margin = QtGui.QRadioButton(self.margins_group)
+        self.one_margin.setObjectName(_fromUtf8("one_margin"))
+        self.horizontalLayout_4.addWidget(self.one_margin)
+        self.two_margins = QtGui.QRadioButton(self.margins_group)
+        self.two_margins.setObjectName(_fromUtf8("two_margins"))
+        self.horizontalLayout_4.addWidget(self.two_margins)
         self.verticalLayout_2.addWidget(self.margins_group)
         self.horizontalLayout_11.addLayout(self.verticalLayout_2)
         self.verticalLayout_9.addLayout(self.horizontalLayout_11)
@@ -238,7 +238,7 @@ class Ui_Dialog(object):
         self.verticalLayout_10.addWidget(self.buttonBox)
 
         self.retranslateUi(Dialog)
-        self.settings_tabs.setCurrentIndex(0)
+        self.settings_tabs.setCurrentIndex(1)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), Dialog.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -255,8 +255,8 @@ class Ui_Dialog(object):
         self.search_button.setText(_translate("Dialog", "Найти", None))
         self.leftPage_radio.setText(_translate("Dialog", "левая", None))
         self.rightPage_radio.setText(_translate("Dialog", "правая", None))
-        self.leftMargin_checkbox.setText(_translate("Dialog", "слева", None))
-        self.rightMargin_checkbox.setText(_translate("Dialog", "справа", None))
+        self.one_margin.setText(_translate("Dialog", "с одной стороны", None))
+        self.two_margins.setText(_translate("Dialog", "с обеих сторон", None))
         self.label_6.setText(_translate("Dialog", "Автозоны, начало параграфа", None))
         self.label_7.setText(_translate("Dialog", "Автозоны, конец параграфа", None))
         self.label_8.setText(_translate("Dialog", "Сквозные автозоны", None))

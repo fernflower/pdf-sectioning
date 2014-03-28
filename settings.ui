@@ -20,7 +20,7 @@
       <bool>true</bool>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="userData_tab">
       <attribute name="title">
@@ -360,16 +360,16 @@
                <number>0</number>
               </property>
               <item>
-               <widget class="QCheckBox" name="leftMargin_checkbox">
+               <widget class="QRadioButton" name="one_margin">
                 <property name="text">
-                 <string>слева</string>
+                 <string>с одной стороны</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="rightMargin_checkbox">
+               <widget class="QRadioButton" name="two_margins">
                 <property name="text">
-                 <string>справа</string>
+                 <string>с обеих сторон</string>
                 </property>
                </widget>
               </item>
