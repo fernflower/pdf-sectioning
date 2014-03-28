@@ -337,12 +337,18 @@ class QMarkerTocElem(QTocElem):
         self.set_finished(self.all_zones_placed)
         self.update()
 
+    # TODO FIXME has to be set up somewhere else
+    @property
+    def _width_koeff(self):
+        return 1.5
+
     def _get_start(self, zone):
         start_present = [z.zone_id for z in self.autozones
                          if z.zone_id in self.start_autozones]
         if zone not in start_present:
             return None
-        return start_present.index(zone) * ZONE_ICONS[zone].height()
+        return start_present.index(zone) * ZONE_ICONS[zone].height() * \
+            self._width_koeff
 
     def _get_end(self, zone):
         end_present = [z.zone_id for z in self.autozones
@@ -350,4 +356,5 @@ class QMarkerTocElem(QTocElem):
         if zone not in end_present:
             return None
         mult = len(end_present) - end_present.index(zone)
-        return -ZONE_ICONS[zone].height() * mult
+        return -ZONE_ICONS[zone].height() * mult * self._width_koeff \
+            if mult != 1 else -ZONE_ICONS[zone].height()
