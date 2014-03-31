@@ -25,6 +25,9 @@ class Settings(QtGui.QDialog):
         self.ui.addPassthrough_button.clicked.connect(self._add_zone_clicked)
         self.ui.search_button.clicked.connect(self._find_cms_course)
         self.ui.searchResults_combo.connect(self.ui.searchResults_combo,
+                                            QtCore.SIGNAL("highlighted(int)"),
+                                            self._on_course_browsed)
+        self.ui.searchResults_combo.connect(self.ui.searchResults_combo,
                                             QtCore.SIGNAL("currentIndexChanged(int)"),
                                             self._on_course_chosen)
         self.ui.first_page_group.connect(self.ui.leftPage_radio,
@@ -57,10 +60,24 @@ class Settings(QtGui.QDialog):
         return ", ".join(z for z in zoneslist) if len(zoneslist) > 1 else \
             str(zoneslist[0] if len(zoneslist) > 0 else "")
 
-    def _on_course_chosen(self, index):
+    def _on_course_browsed(self, index):
+        print "browsed"
         self.chosen_course_id = self.search_result[index][1]
-        self.ui.cmsCourse_edit.setText(self.search_result[index][0])
-        self._enable_apply()
+
+    def _on_course_chosen(self, index):
+        # reload course only if no marks have been placed
+        if not self.controller.any_changes and self.chosen_course_id:
+            print "chosen course id is %s" % self.chosen_course_id
+            self.ui.cmsCourse_edit.setText(self.search_result[index][0])
+            self._enable_apply()
+            # load starts right after course is chosen if no changes have been
+            # made
+            QtGui.QApplication.setOverrideCursor(
+                QtGui.QCursor(QtCore.Qt.BusyCursor))
+            self.controller.load_course(self.chosen_course_id)
+            self.all_zones = self.controller.all_autozones
+            QtGui.QApplication.restoreOverrideCursor()
+            self._let_modify_zonetypes(self.course_loaded)
 
     def _find_cms_course(self):
         # clear old data
@@ -104,6 +121,9 @@ class Settings(QtGui.QDialog):
             QtGui.QLineEdit.Password)
         self.ui.password_edit.setText(self.controller.password)
         self.apply_button.setEnabled(False)
+        self.chosen_course_id = self.controller.cms_course
+        self.search_result = []
+        self.ui.searchResults_combo.clear()
         return super(Settings, self).exec_()
 
     def _let_modify_zonetypes(self, value):
@@ -118,8 +138,9 @@ class Settings(QtGui.QDialog):
             self.ui.cmsCourse_edit.setEnabled(False)
             self.ui.searchResults_combo.setEnabled(False)
             self.ui.search_button.setEnabled(False)
-        self._let_modify_zonetypes(self.course_loaded or self.chosen_course_id is not None)
+        self._let_modify_zonetypes(self.course_loaded)
         self.all_zones = self.controller.all_autozones or []
+        self.new_settings = {}
         result = self.exec_()
         return self.new_settings
 
@@ -127,14 +148,8 @@ class Settings(QtGui.QDialog):
         # close dialog when anything but apply is pressed
         if not button == self.apply_button:
             return
-        if not self.course_loaded and self.chosen_course_id:
-            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
-            self.controller.load_course(self.chosen_course_id)
-            self.all_zones = self.controller.all_autozones
-            print self.all_zones
-            QtGui.QApplication.restoreOverrideCursor()
         # if course chosen -> let modify auto zones
-        self._let_modify_zonetypes(self.course_loaded or self.chosen_course_id is not None)
+        self._let_modify_zonetypes(self.course_loaded)
         # disable apply
         self.apply_button.setEnabled(False)
         login = str(self.ui.login_edit.text())
@@ -176,7 +191,7 @@ class Settings(QtGui.QDialog):
 
     @property
     def course_loaded(self):
-        return self.controller.cms_course is not None
+        return self.chosen_course_id is not None
 
     def _add_zone_clicked(self):
         old_data = self._get_zones(

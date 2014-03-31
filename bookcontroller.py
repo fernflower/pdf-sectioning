@@ -71,6 +71,10 @@ class BookController(object):
     def current_margins(self):
         return self.get_page_margins(self.pagenum)
 
+    @property
+    def any_changes(self):
+        return self.paragraph_marks != {}
+
     def get_page_margins(self, pagenum):
         if self.has_both_margins():
             return "lr"
