@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'layout.ui'
 #
-# Created: Thu Mar 20 19:25:15 2014
+# Created: Tue Apr  1 15:49:49 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -120,19 +120,19 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Структура", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Разметка", None))
-        self.menuFile.setTitle(_translate("MainWindow", "File", None))
-        self.menuEdit.setTitle(_translate("MainWindow", "Edit", None))
-        self.menuTools.setTitle(_translate("MainWindow", "Tools", None))
-        self.menuView.setTitle(_translate("MainWindow", "View", None))
-        self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
+        self.menuFile.setTitle(_translate("MainWindow", "Файл", None))
+        self.menuEdit.setTitle(_translate("MainWindow", "Правка", None))
+        self.menuTools.setTitle(_translate("MainWindow", "Инструменты", None))
+        self.menuView.setTitle(_translate("MainWindow", "Вид", None))
+        self.menuHelp.setTitle(_translate("MainWindow", "Помощь", None))
         self.toolBar.setWindowTitle(_translate("MainWindow", "toolBar", None))
         self.actionLoad_pdf.setText(_translate("MainWindow", "Загрузить pdf", None))
         self.actionLoad_pdf.setIconText(_translate("MainWindow", "Загрузить pdf", None))
         self.actionLoad_pdf.setToolTip(_translate("MainWindow", "Загрузить pdf", None))
         self.actionSmartSave.setText(_translate("MainWindow", "Сохранить как ...", None))
         self.actionLoad_markup.setText(_translate("MainWindow", "Загрузить разметку", None))
-        self.actionSetHorizontalRuler.setText(_translate("MainWindow", "Установить горизонтальный разделитель", None))
-        self.actionSetHorizontalRuler.setIconText(_translate("MainWindow", "Установить горизонтальный разделитель", None))
-        self.actionSetVerticalRuler.setText(_translate("MainWindow", "Установить вертикальный разделитель", None))
-        self.actionSetVerticalRuler.setIconText(_translate("MainWindow", "Установить вертикальный разделитель", None))
+        self.actionSetHorizontalRuler.setText(_translate("MainWindow", "Установить горизонтальную направляющую", None))
+        self.actionSetHorizontalRuler.setIconText(_translate("MainWindow", "Установить горизонтальную направляющую", None))
+        self.actionSetVerticalRuler.setText(_translate("MainWindow", "Установить вертикальную направляющую", None))
+        self.actionSetVerticalRuler.setIconText(_translate("MainWindow", "Установить вертикальную направляющую", None))
 

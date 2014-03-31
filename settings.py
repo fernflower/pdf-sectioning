@@ -38,8 +38,8 @@ class Settings(QtGui.QDialog):
                                       self._enable_apply)
         self.ui.password_edit.textChanged.connect(self._enable_apply)
         self.ui.login_edit.textChanged.connect(self._enable_apply)
-        self.ui.searchResults_combo.hide()
         self.ui.incorrectData_label.hide()
+        self.ui.searchResults_combo.hide()
         self.autozone_relations = {
             self.ui.addStart_button: self.ui.startZones_edit,
             self.ui.addEnd_button: self.ui.endZones_edit,
@@ -67,6 +67,7 @@ class Settings(QtGui.QDialog):
             self.ui.cmsCourse_edit.setText(u"")
         else:
             self.chosen_course_id = self.search_result[index - 1][1]
+            self.ui.cmsCourse_edit.setText(self.search_result[index - 1][0])
 
     def _on_course_chosen(self, index):
         # reload course only if no marks have been placed
@@ -110,7 +111,7 @@ class Settings(QtGui.QDialog):
             self.chosen_course_id = None
         else:
             # add empty field
-            self.ui.searchResults_combo.addItem(u"Выберите название курса")
+            self.ui.searchResults_combo.addItem(u"Результаты поиска")
             self.ui.searchResults_combo.\
                 addItems([n[0] for n in self.search_result])
 

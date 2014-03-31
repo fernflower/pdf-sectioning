@@ -81,6 +81,9 @@
     </item>
     <item>
      <widget class="QSpinBox" name="pagesSpinBox">
+      <property name="focusPolicy">
+       <enum>Qt::StrongFocus</enum>
+      </property>
       <property name="buttonSymbols">
        <enum>QAbstractSpinBox::NoButtons</enum>
       </property>
@@ -111,19 +114,6 @@
     </item>
     <item>
      <widget class="QToolButton" name="zoomOut_button"/>
-    </item>
-    <item>
-     <spacer name="horizontalSpacer_3">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>13</width>
-        <height>22</height>
-       </size>
-      </property>
-     </spacer>
     </item>
     <item>
      <widget class="QComboBox" name="zoomComboBox"/>

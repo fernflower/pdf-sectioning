@@ -91,27 +91,27 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>Файл</string>
     </property>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Edit</string>
+     <string>Правка</string>
     </property>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
-     <string>Tools</string>
+     <string>Инструменты</string>
     </property>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>View</string>
+     <string>Вид</string>
     </property>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
-     <string>Help</string>
+     <string>Помощь</string>
     </property>
    </widget>
    <addaction name="menuFile"/>
@@ -186,10 +186,10 @@
      <normaloff>buttons/button_wafer.png</normaloff>buttons/button_wafer.png</iconset>
    </property>
    <property name="text">
-    <string>Установить горизонтальный разделитель</string>
+    <string>Установить горизонтальную направляющую</string>
    </property>
    <property name="iconText">
-    <string>Установить горизонтальный разделитель</string>
+    <string>Установить горизонтальную направляющую</string>
    </property>
   </action>
   <action name="actionSetVerticalRuler">
@@ -198,10 +198,10 @@
      <normaloff>buttons/button_wafer.png</normaloff>buttons/button_wafer.png</iconset>
    </property>
    <property name="text">
-    <string>Установить вертикальный разделитель</string>
+    <string>Установить вертикальную направляющую</string>
    </property>
    <property name="iconText">
-    <string>Установить вертикальный разделитель</string>
+    <string>Установить вертикальную направляющую</string>
    </property>
   </action>
  </widget>

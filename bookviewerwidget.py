@@ -130,7 +130,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionLoad_pdf.setShortcut('Ctrl+O')
         self.actionLoad_markup.triggered.connect(self.load_markup)
         self.actionLoad_markup.setShortcut('Ctrl+M')
-        self.actionLoad_markup.setEnabled(False)
         self.actionSave = QtGui.QAction(QtCore.QString.fromUtf8(u'Сохранить'),
                                         self)
         self.actionSave.triggered.connect(self.save)
@@ -175,6 +174,12 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionClose = QtGui.QAction(
             QtCore.QString.fromUtf8(u"Выход"), self)
         self.actionClose.triggered.connect(self.close)
+        # disable all actions on start
+        for act in [self.actionDelete_all, self.actionDelete_all_autozones,
+                    self.actionDelete_all_zones, self.actionLoad_markup,
+                    self.actionSave, self.actionDelete_selection,
+                    self.actionForced_delete_selection]:
+            act.setEnabled(False)
 
     # called after all actions and widgets are created
     def init_menubar(self):
@@ -298,8 +303,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.actionSmartSave: 'buttons/Save',
             self.actionSave: 'buttons/Save',
             self.actionSaveAs: 'buttons/Save',
-            self.actionSetHorizontalRuler: 'buttons/Vertical_ruler',
-            self.actionSetVerticalRuler: 'buttons/Horisontal_ruler',
+            self.actionSetHorizontalRuler: 'buttons/Horisontal_ruler',
+            self.actionSetVerticalRuler: 'buttons/Vertical_ruler',
             self.actionNext_page: 'buttons/Page_down',
             self.actionPrev_page: 'buttons/Page_up'
         }
@@ -325,6 +330,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         total_pages = self.controller.get_total_pages()
         self.spinBox.setRange(1, total_pages)
         self.actionLoad_markup.setEnabled(True)
+
+    @property
+    def settings_button(self):
+        return self.toolbarpart.changeIcons_button
 
     @property
     def mode(self):
@@ -566,10 +575,10 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.spinBox.setValue(self.pageNum - 1)
 
     def closeEvent(self, event):
-        #if self.controller.any_unsaved_changes and \
-                #not self.show_unsaved_data_dialog():
-            #event.ignore()
-        #else:
+        if self.controller.any_unsaved_changes and \
+                not self.show_unsaved_data_dialog():
+            event.ignore()
+        else:
             event.accept()
 
     def update_console_data(self):
@@ -579,10 +588,15 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     # only to be called from child
     def call_wheelEvent(self, event):
-        if event.delta() > 0:
-            self.prev_page()
-        elif event.delta() < 0:
-            self.next_page()
+        # if scrolled when no vertical scrollbar -> next page, otherwise scroll
+        # page
+        if not self.scrollArea.verticalScrollBar().isVisible():
+            if event.delta() > 0:
+                self.prev_page()
+            elif event.delta() < 0:
+                self.next_page()
+        else:
+            self.scrollArea.wheelEvent(event)
 
     def update(self):
         super(BookViewerWidget, self).update()
@@ -598,14 +612,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                        self.nextPage_button, self.prevPage_button,
                        self.toolbarpart.zoomIn_button,
                        self.toolbarpart.zoomOut_button, self.spinBox,
-                       self.zoom_comboBox]:
+                       self.zoom_comboBox, self.settings_button]:
             widget.setEnabled(self.controller.is_file_given())
         # set actions enabled\disabled depending on current situation
         if self.controller.is_file_given():
             anything_selected = self.controller.selected_marks_and_rulers != []
             self.actionDelete_selection.setEnabled(anything_selected)
             self.actionForced_delete_selection.setEnabled(anything_selected)
-            self.actionDelete_all.setEnabled(self.controller.any_unsaved_changes)
+            for act in [self.actionDelete_all, self.actionDelete_all_autozones,
+                        self.actionDelete_all_zones]:
+                act.setEnabled(self.controller.any_changes)
             self.actionSave.setEnabled(self.last_open_doc_name is not None)
 
     ## all possible dialogs go here

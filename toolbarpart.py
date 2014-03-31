@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ToolBarPart.ui'
 #
-# Created: Fri Feb 21 15:03:56 2014
+# Created: Tue Apr  1 15:18:19 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -54,6 +54,7 @@ class Ui_ToolBarPart(object):
         self.nextPage_button.setObjectName(_fromUtf8("nextPage_button"))
         self.horizontalLayout.addWidget(self.nextPage_button)
         self.pagesSpinBox = QtGui.QSpinBox(self.layoutWidget)
+        self.pagesSpinBox.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.pagesSpinBox.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)
         self.pagesSpinBox.setObjectName(_fromUtf8("pagesSpinBox"))
         self.horizontalLayout.addWidget(self.pagesSpinBox)
@@ -68,13 +69,11 @@ class Ui_ToolBarPart(object):
         self.zoomOut_button = QtGui.QToolButton(self.layoutWidget)
         self.zoomOut_button.setObjectName(_fromUtf8("zoomOut_button"))
         self.horizontalLayout.addWidget(self.zoomOut_button)
-        spacerItem3 = QtGui.QSpacerItem(13, 22, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem3)
         self.zoomComboBox = QtGui.QComboBox(self.layoutWidget)
         self.zoomComboBox.setObjectName(_fromUtf8("zoomComboBox"))
         self.horizontalLayout.addWidget(self.zoomComboBox)
-        spacerItem4 = QtGui.QSpacerItem(58, 22, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem4)
+        spacerItem3 = QtGui.QSpacerItem(58, 22, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem3)
 
         self.retranslateUi(ToolBarPart)
         QtCore.QMetaObject.connectSlotsByName(ToolBarPart)

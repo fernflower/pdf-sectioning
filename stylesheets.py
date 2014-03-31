@@ -46,15 +46,15 @@ GENERAL_STYLESHEET = \
     QTabWidget::pane { border: 1px solid rgb(58, 56, 56); }
     QTabBar::tab {
         background: solid rgb(81,81,81);
-        border: 2px solid rgb(45,45,45);
-        border-bottom-color: solid rgb(81,81,81);
+        border: 1px solid rgb(45,45,45);
+        border-bottom-color: rgb(81,81,81);
         border-top-left-radius: 5px;
         border-top-right-radius: 5px;
         min-width: 80px;
         padding: 12px;
     }
     QTabBar::tab::!selected {
-        border-bottom-color: solid rgb(45,45,45);
+        border-bottom-color: rgb(45,45,45);
         background: solid rgb(56,56,56)
     }
 

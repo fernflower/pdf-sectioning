@@ -17,7 +17,7 @@ class QImageLabel(QtGui.QLabel):
         self.controller = controller
         self.toc_controller = toc_controller
         # keep it here on order to pass some keyPressEvents to parent
-        self.parent = parent
+        self.bookviewer = parent
         self.last_selected = None
         self.cursor_overridden = False
         # for move event, to calculate delta
@@ -36,13 +36,13 @@ class QImageLabel(QtGui.QLabel):
 
     def wheelEvent(self, event):
         modifiers = QtGui.QApplication.keyboardModifiers()
-        if modifiers == QtCore.Qt.ControlModifier:
+        if modifiers == QtCore.Qt.AltModifier:
             scale = self.controller.zoom(event.delta())
             # notify parent that zoom has changed and combo box has to be
             # updated with new value
             self.emit(self.zoomed_signal, scale)
         else:
-            self.parent.call_wheelEvent(event)
+            self.bookviewer.call_wheelEvent(event)
 
     def _set_cursor(self, pos):
         # if over a ruler or mark - change cursor appropriately
@@ -98,7 +98,7 @@ class QImageLabel(QtGui.QLabel):
                 mark.paint_me(painter)
                 mark.update()
             self._set_cursor(self.mapFromGlobal(QtGui.QCursor.pos()))
-        self.parent.update()
+        self.bookviewer.update()
 
     def mousePressEvent(self, event):
         # general for both modes
