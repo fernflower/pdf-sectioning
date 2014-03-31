@@ -62,13 +62,20 @@ class Settings(QtGui.QDialog):
 
     def _on_course_browsed(self, index):
         print "browsed"
-        self.chosen_course_id = self.search_result[index][1]
+        if index == 0:
+            self.chosen_course_id = None
+            self.ui.cmsCourse_edit.setText(u"")
+        else:
+            self.chosen_course_id = self.search_result[index - 1][1]
 
     def _on_course_chosen(self, index):
         # reload course only if no marks have been placed
+        # index = 0 means that nothing has been chosen
+        if index == 0:
+            return
         if not self.controller.any_changes and self.chosen_course_id:
             print "chosen course id is %s" % self.chosen_course_id
-            self.ui.cmsCourse_edit.setText(self.search_result[index][0])
+            self.ui.cmsCourse_edit.setText(self.search_result[index - 1][0])
             self._enable_apply()
             # load starts right after course is chosen if no changes have been
             # made
@@ -77,7 +84,19 @@ class Settings(QtGui.QDialog):
             self.controller.load_course(self.chosen_course_id)
             self.all_zones = self.controller.all_autozones
             QtGui.QApplication.restoreOverrideCursor()
-            self._let_modify_zonetypes(self.course_loaded)
+            self._let_modify_zonetypes(True)
+            self._set_correct_zones_text()
+
+    # if any of the default values are not present in zoneslist, then remove
+    # these values from lineedit text
+    def _set_correct_zones_text(self):
+        autozones = self.controller.all_autozones
+        for (w, defaults) in \
+                [(self.ui.startZones_edit, self.controller.start_autozones),
+                 (self.ui.endZones_edit, self.controller.end_autozones),
+                 (self.ui.passthroughZones_edit, self.controller.passthrough_zones)]:
+            available_data = [z for z in defaults if z in autozones]
+            w.setText(self._get_zones_text(available_data))
 
     def _find_cms_course(self):
         # clear old data
@@ -90,6 +109,8 @@ class Settings(QtGui.QDialog):
             self.ui.cmsCourse_edit.setText(u"")
             self.chosen_course_id = None
         else:
+            # add empty field
+            self.ui.searchResults_combo.addItem(u"Выберите название курса")
             self.ui.searchResults_combo.\
                 addItems([n[0] for n in self.search_result])
 
@@ -122,8 +143,6 @@ class Settings(QtGui.QDialog):
         self.ui.password_edit.setText(self.controller.password)
         self.apply_button.setEnabled(False)
         self.chosen_course_id = self.controller.cms_course
-        self.search_result = []
-        self.ui.searchResults_combo.clear()
         return super(Settings, self).exec_()
 
     def _let_modify_zonetypes(self, value):
@@ -134,7 +153,7 @@ class Settings(QtGui.QDialog):
             elem.setEnabled(value)
 
     def show_settings(self, any_markup=False):
-        if any_markup:
+        if any_markup or self.controller.any_changes:
             self.ui.cmsCourse_edit.setEnabled(False)
             self.ui.searchResults_combo.setEnabled(False)
             self.ui.search_button.setEnabled(False)
@@ -191,23 +210,22 @@ class Settings(QtGui.QDialog):
 
     @property
     def course_loaded(self):
-        return self.chosen_course_id is not None
+        return self.chosen_course_id is not None or self.controller.any_changes
 
     def _add_zone_clicked(self):
+        non_intersecting = {self.ui.addStart_button: self.ui.endZones_edit,
+                            self.ui.addEnd_button: self.ui.startZones_edit}
         old_data = self._get_zones(
             self.autozone_relations[self.sender()].text())
-        except_zones = []
-        if self.sender() == self.ui.addEnd_button:
-            except_zones = self._get_zones(self.ui.startZones_edit.text())
+        # zones that should not appear in list of choices
+        except_zones = [] if self.sender() not in non_intersecting else \
+                self._get_zones(non_intersecting[self.sender()].text())
         dialog = ManageZonesDialog(self.all_zones, old_data, except_zones)
         new_data = dialog.exec_()
         self.apply_button.setEnabled(self.apply_button.isEnabled() or \
                                      new_data != old_data)
         self.autozone_relations[self.sender()].setText(
             self._get_zones_text(new_data))
-        if self.sender() == self.ui.addStart_button:
-            new_end = [z for z in except_zones if z not in new_data]
-            self.ui.endZones_edit.setText(self._get_zones_text(new_end))
 
 
 class ManageZonesDialog(QtGui.QDialog):

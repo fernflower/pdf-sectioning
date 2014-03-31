@@ -465,7 +465,14 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout">
              <item>
-              <widget class="QLineEdit" name="startZones_edit"/>
+              <widget class="QLineEdit" name="startZones_edit">
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QPushButton" name="addStart_button">
@@ -479,7 +486,14 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_2">
              <item>
-              <widget class="QLineEdit" name="endZones_edit"/>
+              <widget class="QLineEdit" name="endZones_edit">
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QPushButton" name="addEnd_button">
@@ -493,7 +507,14 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_3">
              <item>
-              <widget class="QLineEdit" name="passthroughZones_edit"/>
+              <widget class="QLineEdit" name="passthroughZones_edit">
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QPushButton" name="addPassthrough_button">

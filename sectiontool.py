@@ -155,8 +155,9 @@ class CmsQueryModule(object):
     def _get_autozone_types(self, toc):
         result = set()
         def _get_autozone_type(oid):
-            zone_type = oid.split('-')[4]
-            if oid.split('-')[2] == "00":
+            parts = oid.split('-')
+            zone_type = parts[4] if len(parts) > 4 else None
+            if zone_type and parts[2] == "00":
                 return zone_type
             return None
         for para in toc:

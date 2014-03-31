@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'settings.ui'
 #
-# Created: Sat Mar 29 01:29:42 2014
+# Created: Tue Apr  1 00:53:21 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -201,6 +201,8 @@ class Ui_Dialog(object):
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         self.startZones_edit = QtGui.QLineEdit(self.bookData_tab)
+        self.startZones_edit.setAcceptDrops(False)
+        self.startZones_edit.setReadOnly(True)
         self.startZones_edit.setObjectName(_fromUtf8("startZones_edit"))
         self.horizontalLayout.addWidget(self.startZones_edit)
         self.addStart_button = QtGui.QPushButton(self.bookData_tab)
@@ -210,6 +212,8 @@ class Ui_Dialog(object):
         self.horizontalLayout_2 = QtGui.QHBoxLayout()
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.endZones_edit = QtGui.QLineEdit(self.bookData_tab)
+        self.endZones_edit.setAcceptDrops(False)
+        self.endZones_edit.setReadOnly(True)
         self.endZones_edit.setObjectName(_fromUtf8("endZones_edit"))
         self.horizontalLayout_2.addWidget(self.endZones_edit)
         self.addEnd_button = QtGui.QPushButton(self.bookData_tab)
@@ -219,6 +223,8 @@ class Ui_Dialog(object):
         self.horizontalLayout_3 = QtGui.QHBoxLayout()
         self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
         self.passthroughZones_edit = QtGui.QLineEdit(self.bookData_tab)
+        self.passthroughZones_edit.setAcceptDrops(False)
+        self.passthroughZones_edit.setReadOnly(True)
         self.passthroughZones_edit.setObjectName(_fromUtf8("passthroughZones_edit"))
         self.horizontalLayout_3.addWidget(self.passthroughZones_edit)
         self.addPassthrough_button = QtGui.QPushButton(self.bookData_tab)
