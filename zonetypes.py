@@ -7,6 +7,8 @@ ZONE_TYPES = \
     ["dic", "tra", "con", "int", "bio", "tex", "sol", "pic", "sli", "ani",
      "vid", "aud", "tab", "dia", "mod", "map", "rul"]
 
+DEFAULT_ZONE_TYPES = ["dic", "tra", "con"]
+
 # autozones that must be placed near the start of the page in the order given
 START_AUTOZONES = ["dic"]
 

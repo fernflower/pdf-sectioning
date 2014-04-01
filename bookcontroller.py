@@ -4,7 +4,7 @@ from collections import OrderedDict
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import MarkCreator, QRulerMark
 from tocelem import QTocElem, QMarkerTocElem
-from zonetypes import ZONE_ICONS, ZONE_TYPES
+from zonetypes import ZONE_ICONS
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
 # QImagelabel). Keeps track of paragraphs per page (parapraphs attr) and total
@@ -100,8 +100,9 @@ class BookController(object):
                     changed[key] = new_settings[key]
 
         for key in ["start-autozones", "end-autozones", "passthrough-zones",
-                    "all-autozones", "display-name", "margins",
-                    "margin-width", "zone-width", "first-page", "login", "password"]:
+                    "all-autozones", "all-zones", "display-name",
+                    "margins", "margin-width", "zone-width",
+                    "first-page", "login", "password"]:
             _process_param(key)
         # now deal with cms course and reload it if necessary
         if not hasattr(self, "cms_course"):
@@ -167,7 +168,7 @@ class BookController(object):
                     for key in ["cms-course", "margins", "margin-width",
                                 "first-page", "passthrough-zones",
                                 "start-autozones", "end-autozones",
-                                "all-autozones","display-name"]}
+                                "all-autozones","display-name", "all-zones"]}
     @property
     def autozone_types(self):
         return self.toc_controller.autozone_types

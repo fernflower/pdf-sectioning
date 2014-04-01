@@ -11,7 +11,7 @@ from lxml.builder import ElementMaker
 from bookviewerwidget import BookViewerWidget
 from bookcontroller import BookController
 from toccontroller import TocController
-from zonetypes import ZONE_TYPES, PASS_THROUGH_ZONES, START_AUTOZONES, \
+from zonetypes import DEFAULT_ZONE_TYPES, PASS_THROUGH_ZONES, START_AUTOZONES, \
     END_AUTOZONES, MARGINS
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
@@ -60,7 +60,8 @@ class CmsQueryModule(object):
             if param in self.config_data.keys():
                 if param in ['passthrough-zones',
                              'start-autozones', 'end-autozones']:
-                    _set_given_or_dfl(param, _check_against(param, ZONE_TYPES))
+                    _set_given_or_dfl(param, _check_against(
+                        param, DEFAULT_ZONE_TYPES))
                 elif param == 'margins':
                     _set_given_or_dfl(param, _check_against(param, MARGINS))
             else:
@@ -72,6 +73,7 @@ class CmsQueryModule(object):
         return {'passthrough-zones': PASS_THROUGH_ZONES,
                 'start-autozones': START_AUTOZONES,
                 'end-autozones': END_AUTOZONES,
+                'all-zones': DEFAULT_ZONE_TYPES,
                 'margins': ['l, r'],
                 'margin-width': 50,
                 'zone-width': 20,

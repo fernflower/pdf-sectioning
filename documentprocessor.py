@@ -4,7 +4,7 @@ from PyQt4 import QtCore
 from popplerqt4 import Poppler
 from lxml import etree
 from lxml.builder import ElementMaker
-from zonetypes import ZONE_TYPES
+from zonetypes import DEFAULT_ZONE_TYPES
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
 
@@ -183,8 +183,9 @@ class DocumentProcessor(object):
     def gen_native_xml(self, paragraphs, settings, progress):
         PAGES = E("ebook-pages", src=self.filename)
         ICON_SET = E("ebook-icon-set")
+        all_zones = settings.get("all-zones", DEFAULT_ZONE_TYPES)
         # TODO perhaps should pass precisely icons used in markup, not all?
-        for icon_type in ZONE_TYPES:
+        for icon_type in all_zones:
             icon = E("ebook-icon", rubric=icon_type, src="%s.png" % icon_type)
             ICON_SET.append(icon)
         PAGES.append(ICON_SET)
