@@ -176,8 +176,7 @@ class TocController(object):
         else:
             self.markup_toc_elems = \
                 [ QMarkerTocElem(elem["name"], elem["cas-id"],
-                                 elem["objects"], start_autozones,
-                                 end_autozones)
+                                 elem["objects"], start_autozones, end_autozones)
                 for elem in self.course_toc ]
             return self.markup_toc_elems
 
@@ -215,10 +214,11 @@ class TocController(object):
         return next((e for e in self.current_toc_elems(mode) if e.is_error()),
                     None)
 
-    def get_autoplaced_zones(self, cas_id):
+    def get_autoplaced_zones(self, cas_id, icons_producer):
         # verify that everything ok with start\end
         if self._get_sections_elem(cas_id).is_finished():
-            return self._get_markup_elem(cas_id).get_autozones_as_dict()
+            return self._get_markup_elem(cas_id).\
+                get_autozones_as_dict(icons_producer)
         return []
 
     def get_view_widget(self, mode):

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 from PyQt4 import QtGui
 
 
@@ -20,5 +21,24 @@ PASS_THROUGH_ZONES = ["dic"]
 
 MARGINS = ["l", "r", "lr"]
 
-ZONE_ICONS = dict((zone_type, QtGui.QImage("buttons/Icons/icon_%s.png" % zone_type))
-                  for zone_type in ZONE_TYPES)
+
+class ZoneIconsProducer(object):
+    # TODO by now only ZONE_TYPES can be passed
+    def __init__(self, zones=ZONE_TYPES):
+        self.zone_types = zones
+        self.mock_icon = QtGui.QImage("buttons/Icons/missing.png")
+        self.zone_icons = {}
+
+        for zone_type in zones:
+            icon_file = "buttons/Icons/icon_%s.png" % zone_type
+            self.zone_icons[zone_type] = QtGui.QImage(icon_file) \
+                if os.path.isfile(icon_file) else self.mock_icon
+
+    # TODO later this will be changed as strict validation appears
+    def get(self, key):
+        if key in self.zone_types:
+            return self.zone_icons[key]
+        # return a mock object for unfinished types
+        else:
+            print "Warning: unknown zone type '%s'" % key
+            return self.mock_icon

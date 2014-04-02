@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
-from zonetypes import ZONE_ICONS
 
 
 class QMark(QtGui.QWidget):
@@ -313,20 +312,21 @@ def make_ruler_mark(pos, parent, delete_func, type,
                             delete_func=delete_func, corrections=corrections)
 
 def make_zone_mark(pos, parent, cas_id, zone_id, page,
-                   delete_func, objects, rubric, margin,
+                   delete_func, objects, rubric, margin, icon,
                    corrections=(0, 0), inner=False, auto=False,
                    pass_through=False, pages=None, number="00",
-                   recalc_corrections = None):
+                   recalc_corrections=None):
     if not pass_through:
         return QZoneMark(pos, parent, cas_id, zone_id, page,
                          delete_func, objects, rubric, margin,
-                         number, corrections, auto)
+                         number, icon, corrections, auto)
     elif inner:
         return QInnerZoneMark(pos, parent, cas_id, zone_id, page,
-                              delete_func, objects, rubric, pages)
+                              delete_func, objects, rubric, icon, pages)
     return QPassThroughZoneMark(pos, parent, cas_id, zone_id, page,
                                 delete_func, objects, rubric,
-                                margin, corrections, pages, recalc_corrections)
+                                margin, icon, corrections, pages,
+                                recalc_corrections)
 
 # TODO reconsider this, there might be another way of testing bookcontroller
 class MarkCreator(object):
@@ -343,7 +343,7 @@ class MarkCreator(object):
 # here type means zone type stored in xml (single, repeat etc)
 class QZoneMark(QParagraphMark):
     def __init__(self, pos, parent, cas_id, zone_id, page,
-                 delete_func, objects, rubric, margin, number,
+                 delete_func, objects, rubric, margin, number, icon,
                  corrections=(0, 0), auto=False, pass_through=False):
         super(QZoneMark, self).__init__(pos, parent, cas_id, zone_id, page,
                                         delete_func, "single", corrections)
@@ -359,16 +359,14 @@ class QZoneMark(QParagraphMark):
         self.objects = objects
         self.number = number
         self.zone_id = zone_id
-        self.icon_width = ZONE_ICONS[self.rubric].width()
-        self.icon_height = ZONE_ICONS[self.rubric].height()
         # destroy unnecessary rubberband
         mark_pos = self.mark.pos()
         self.mark.hide()
         self.mark.setParent(None)
         self.mark = QtGui.QLabel(zone_id, parent)
-        self.mark.setPixmap(QtGui.QPixmap.fromImage(ZONE_ICONS[self.rubric]))
-        geometry = QtCore.QRect(mark_pos.x(), mark_pos.y(), self.icon_width,
-                                self.icon_height)
+        self.mark.setPixmap(QtGui.QPixmap.fromImage(icon))
+        geometry = QtCore.QRect(mark_pos.x(), mark_pos.y(), icon.width(),
+                                icon.height())
         self.mark.setGeometry(geometry)
         self.mark.show()
 
@@ -433,14 +431,14 @@ class QZoneMark(QParagraphMark):
 
 class QPassThroughZoneMark(QZoneMark):
     def __init__(self, pos, parent, cas_id, zone_id, page,
-                 delete_func, objects, rubric, margin,
+                 delete_func, objects, rubric, margin, icon,
                  corrections=(0, 0), pages=None, recalc_corrections=None):
         super(QPassThroughZoneMark, self).__init__(pos, parent,
                                                    cas_id, zone_id,
                                                    page,
                                                    delete_func,
                                                    objects,
-                                                   rubric, margin, "00",
+                                                   rubric, margin, "00", icon,
                                                    corrections, True, True)
         self.type = "repeat"
         (pos_x, pos_y) = pos
@@ -481,10 +479,11 @@ class QPassThroughZoneMark(QZoneMark):
 
 class QInnerZoneMark(QZoneMark):
     def __init__(self, pos, parent, cas_id, zone_id, page, delete_func,
-                 objects, rubric, pages=None):
+                 objects, rubric, icon, pages=None):
         super(QInnerZoneMark, self).__init__(pos, parent, cas_id, zone_id,
                                              page, delete_func, objects,
-                                             rubric, "", "00", (0, 0), False, True)
+                                             rubric, "", "00", icon,
+                                             (0, 0), False, True)
         self.type = "inner"
         self.initial_pos = pos
         # pos is set by x and y

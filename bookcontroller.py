@@ -3,8 +3,8 @@
 from collections import OrderedDict
 from documentprocessor import DocumentProcessor, LoaderError
 from paragraphmark import MarkCreator, QRulerMark
-from tocelem import QTocElem, QMarkerTocElem
-from zonetypes import ZONE_ICONS
+from zonetypes import ZoneIconsProducer
+
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
 # QImagelabel). Keeps track of paragraphs per page (parapraphs attr) and total
@@ -61,6 +61,7 @@ class BookController(object):
         self.delete_funcs = {"start_end": self.delete_mark,
                              "zone": self.delete_zone,
                              "ruler": self.delete_ruler}
+        self.icons_producer = ZoneIconsProducer()
 
     ### properties section
     @property
@@ -470,6 +471,7 @@ class BookController(object):
                               "objects": z["objects"],
                               "margin": z["at"],
                               "pass_through": z["passthrough"],
+                              "icon": self.icons_producer.get(z["rubric"]),
                               "auto": z["number"] == "00",
                               "corrections": self._get_corrections(
                                   z["at"], z["rubric"]),
@@ -578,7 +580,8 @@ class BookController(object):
         # auto place ALL autozones in ALL paragraphs that have start\end marks
         count = 0
         for i, cas_id in enumerate(self.paragraph_marks.keys()):
-            autozones = self.toc_controller.get_autoplaced_zones(cas_id)
+            autozones = self.toc_controller.get_autoplaced_zones(cas_id,
+                                                                 self.icons_producer)
             (start, end) = self.paragraph_marks[cas_id]["marks"]
             for az in autozones:
                 # no autoplacement if zone already placed
@@ -619,6 +622,7 @@ class BookController(object):
                               "corrections":self._get_corrections(margin,
                                                                   az["rubric"]),
                               "auto": True,
+                              "icon": self.icons_producer.get(az["rubric"]),
                               "pass_through": pass_through,
                               "recalc_corrections": self._recalc_corrections,
                               "pages": pages }
@@ -977,6 +981,7 @@ class BookController(object):
                           "number": toc_elem.number,
                           "rubric": toc_elem.pdf_rubric,
                           "margin": margin,
+                          "icon": self.icons_producer.get(toc_elem.pdf_rubric),
                           "corrections": self._get_corrections(
                               margin, toc_elem.pdf_rubric),
                           "inner": toc_elem.is_inner}
@@ -1016,7 +1021,7 @@ class BookController(object):
     # get (y-coordinate, width correction) for markup mode depending on margins
     def _get_corrections(self, margin=None, rubric=None):
         width = self.zone_width \
-            if not rubric else ZONE_ICONS[rubric].width()
+            if not rubric else self.icons_producer.get(rubric).width()
         if not margin:
             if self.has_both_margins():
                 return (0, 2 * self.margin_width)

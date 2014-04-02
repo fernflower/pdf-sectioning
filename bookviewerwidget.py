@@ -358,6 +358,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 if key in settings and settings[key] == "":
                     del settings[key]
             self.show_progress_bar(u"Применение настроек...")
+            print settings
             self.controller.settings_changed(settings)
             self.hide_progress_bar()
 

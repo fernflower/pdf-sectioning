@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui, QtCore
 from stylesheets import GENERAL_STYLESHEET, LIST_ITEM_DESELECT
-from zonetypes import ZONE_ICONS
 
 
 class QStatefulElem(QtGui.QStandardItem):
@@ -301,13 +300,13 @@ class QMarkerTocElem(QTocElem):
             zone.set_not_started()
 
     # only autozones that appear in start\end will be returned
-    def get_autozones_as_dict(self):
+    def get_autozones_as_dict(self, icons_producer):
         result = []
         for auto in [az for az in self.autozones if az.pdf_rubric in \
                      self.start_autozones + self.end_autozones]:
             key_type = auto.zone_id
-            zone = { "rel-start": self._get_start(key_type),
-                     "rel-end": self._get_end(key_type),
+            zone = { "rel-start": self._get_start(key_type, icons_producer),
+                     "rel-end": self._get_end(key_type, icons_producer),
                      "rubric": auto.pdf_rubric,
                      "zone-id": auto.zone_id,
                      "page": auto.page,
@@ -342,19 +341,21 @@ class QMarkerTocElem(QTocElem):
     def _width_koeff(self):
         return 1.5
 
-    def _get_start(self, zone):
+    def _get_start(self, zone, icons_producer):
+        icon = icons_producer.get(zone)
         start_present = [z.zone_id for z in self.autozones
                          if z.zone_id in self.start_autozones]
         if zone not in start_present:
             return None
-        return start_present.index(zone) * ZONE_ICONS[zone].height() * \
+        return start_present.index(zone) * icon.height() * \
             self._width_koeff
 
-    def _get_end(self, zone):
+    def _get_end(self, zone, icons_producer):
+        icon = icons_producer.get(zone)
         end_present = [z.zone_id for z in self.autozones
                        if z.zone_id in self.end_autozones]
         if zone not in end_present:
             return None
         mult = len(end_present) - end_present.index(zone)
-        return -ZONE_ICONS[zone].height() * mult * self._width_koeff \
-            if mult != 1 else -ZONE_ICONS[zone].height()
+        return -1 * icon.height() * mult * self._width_koeff \
+            if mult != 1 else -1 * icon.height()
