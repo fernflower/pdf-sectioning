@@ -98,7 +98,10 @@ class CmsQueryModule(object):
 
     def validate_user_data(self, login, password):
         url = self.config_data['ping-url'].rstrip('/')
-        code, data = self._fetch_data(url, str(login), str(password))
+        # for some alternatively talented people who have russian
+        # usernames\passwords (everything might happen)
+        code, data = self._fetch_data(url, login.encode('utf-8'),
+                                           password.encode('utf-8'))
         return code == 200
 
     def search_for_course(self, name_part, login, password):
@@ -114,14 +117,25 @@ class CmsQueryModule(object):
         return [(elem["display_name"], urllib.unquote(elem["encoded_name"]))
                 for elem in data["documents"]]
 
+    # retrieve available zonetypes from ebook-defs
+    def get_zone_types(self, login, password):
+        defs_url = self.config_data['url'].rstrip('/') + '/object:ebook-defs'
+        code, data = self._fetch_data(defs_url, login, password)
+        all_zones = []
+        if data:
+            TYPE_XPATH = "/is:object/is:text/is:rubric-def/@oid-postfix"
+            all_zones = etree.fromstring(data).xpath(TYPE_XPATH,
+                                                namespaces = {"is": XHTML_NAMESPACE})
+            print all_zones
+        if not data or all_zones == []:
+            return self._defaults["all-zones"]
+
     # returns a list of {name, cas-id} in order of appearance in TOC
-    def get_cms_course_toc(self, course_id=None):
+    def get_cms_course_toc(self, login, password, course_id=None):
         if not self.any_course_data and not course_id:
             return []
         course_id = course_id or self.config_data['cms-course']
         course_url = self.config_data['url'].rstrip('/') + '/' + course_id.encode('utf-8')
-        login = self.config_data['login']
-        password = self.config_data['password']
         code, data = self._fetch_data(course_url, login, password)
         if data:
             TOC_XPATH = "/is:course/is:lessons/is:lesson/@name"
@@ -206,11 +220,10 @@ def main():
 
     filename = parse_args()
     cqm = CmsQueryModule()
-    toc = cqm.get_cms_course_toc()
 
     # show window
     app = QtGui.QApplication(sys.argv)
-    toc_controller = TocController(toc, cqm.config_data["start-autozones"],
+    toc_controller = TocController([], cqm.config_data["start-autozones"],
                                    cqm.config_data["end-autozones"])
     # here display name must be passed in order to create DP later
     controller = BookController(toc_controller, cqm, filename)

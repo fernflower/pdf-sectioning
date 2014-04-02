@@ -127,7 +127,10 @@ class QImageLabel(QtGui.QLabel):
             if any_mark and not any_mark.is_selected:
                 self.controller.deselect_all()
                 any_mark.toggle_selected()
-            return super(QImageLabel, self).mousePressEvent(event)
+            if any_mark:
+                self.last_selected = any_mark
+                return self.bookviewer.show_context_menu(self.mapToGlobal(
+                    event.pos()))
         if event.buttons() == QtCore.Qt.LeftButton:
             selected = self.controller.find_any_at_point((event.pos().x(),
                                                           event.pos().y()))

@@ -49,6 +49,14 @@ class Settings(QtGui.QDialog):
     def apply_button(self):
         return self.ui.buttonBox.button(QtGui.QDialogButtonBox.Apply)
 
+    @property
+    def login(self):
+        return str(self.ui.login_edit.text())
+
+    @property
+    def password(self):
+        return str(self.ui.password_edit.text())
+
     def _enable_apply(self):
         self.apply_button.setEnabled(True)
 
@@ -103,7 +111,9 @@ class Settings(QtGui.QDialog):
         # clear old data
         namepart = unicode(self.ui.cmsCourse_edit.text())
         self.ui.searchResults_combo.clear()
-        self.search_result = self.controller.find_course(namepart)
+        self.search_result = self.controller.find_course(namepart,
+                                                         self.login,
+                                                         self.password)
         self.ui.searchResults_combo.show()
         if self.search_result == []:
             self.ui.searchResults_combo.clear()
@@ -117,9 +127,6 @@ class Settings(QtGui.QDialog):
 
     def exec_(self):
         self.ui.cmsCourse_edit.setText(self.controller.display_name)
-        # if no login\password or bad data: deactivate other settings' tab
-        self.ui.bookData_tab.setEnabled(
-            self.controller.is_userdata_valid())
         # get fresh settings from controller and show them
         if self.controller.cms_course:
             self.ui.cmsCourse_edit.setText(self.controller.display_name)
@@ -142,6 +149,9 @@ class Settings(QtGui.QDialog):
         self.ui.password_edit.setEchoMode(
             QtGui.QLineEdit.Password)
         self.ui.password_edit.setText(self.controller.password)
+        # if no login\password or bad data: deactivate other settings' tab
+        self.ui.bookData_tab.setEnabled(
+            self.controller.is_userdata_valid(self.login, self.password))
         self.apply_button.setEnabled(False)
         self.chosen_course_id = self.controller.cms_course
         return super(Settings, self).exec_()
@@ -172,12 +182,13 @@ class Settings(QtGui.QDialog):
         self._let_modify_zonetypes(self.course_loaded)
         # disable apply
         self.apply_button.setEnabled(False)
-        login = str(self.ui.login_edit.text())
-        password = str(self.ui.password_edit.text())
+        login = unicode(self.ui.login_edit.text())
+        password = unicode(self.ui.password_edit.text())
         if self.controller.is_userdata_valid(login, password):
-            self.ui.incorrectData_label.hide()
+            if not self.ui.bookData_tab.isEnabled():
+                self.ui.incorrectData_label.hide()
+                self.ui.bookData_tab.setEnabled(True)
             # when apply pressed and userdata valid -> collect all info
-            self.ui.bookData_tab.setEnabled(True)
             new_course = self.ui.cmsCourse_edit.text()
             new_first = ""
             if self.ui.leftPage_radio.isChecked():

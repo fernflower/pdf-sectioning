@@ -236,8 +236,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.cmenu = QtGui.QMenu()
         self.cmenu.addAction(self.actionDelete_selection)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.connect(self, QtCore.SIGNAL("customContextMenuRequested(QPoint)"),
-                     self.show_context_menu)
         # make rulers' and modes buttons checkable
         self.actionSetVerticalRuler.setCheckable(True)
         self.actionSetHorizontalRuler.setCheckable(True)
@@ -408,10 +406,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.zoom_comboBox.setCurrentIndex(self.last_zoom_index)
             self.controller.zoom(delta, step_by_step=False)
 
-    # context menu fill be shownn only if sth is selected at the moment
+    # context menu fill be shown only if sth is selected at the moment
     def show_context_menu(self, point):
-        self.last_right_click = self.mapToGlobal(point)
-        self.cmenu.exec_(self.last_right_click)
+        self.cmenu.exec_(point)
 
     # delete currently selected marks on current page.
     def delete_marks(self):

@@ -50,6 +50,7 @@ class BookController(object):
         self.any_unsaved_changes = False
         self.settings_changed(cqm.config_data, True)
         # password data has no defaults, have to be created here
+        # here login\password is only stored to load in settings dialog.
         if not hasattr(self, "login"):
             self.login = ""
         # TODO FIXME should be present in final version but for debugging
@@ -112,7 +113,8 @@ class BookController(object):
             if self.cms_course:
                 self.delete_all()
             self.toc_raw, self.all_autozones = \
-                self.cms_query_module.get_cms_course_toc(new_settings["cms-course"])
+                self.cms_query_module.get_cms_course_toc(
+                    self.login, self.password, new_settings["cms-course"])
             self.cms_course = new_settings["cms-course"]
             self.toc_controller.reload_course(
                 self.toc_raw, self.start_autozones, self.end_autozones)
@@ -226,14 +228,8 @@ class BookController(object):
         self.show_page_marks(self.pagenum)
 
     ### predicates section
-    def is_userdata_valid(self, login="", password=""):
-        login = login or self.login
-        password = password or self.password
-        if login == "" or password == "":
-            return False
-        # make a sample request to figure out if data is valid
-        return self.cms_query_module.validate_user_data(login,
-                                                        password)
+    def is_userdata_valid(self, login, password):
+        return self.cms_query_module.validate_user_data(login, password)
 
     # validate that selection is in pdf's viewport
     def is_zone_placed(self, cas_id, zone_id):
@@ -679,10 +675,12 @@ class BookController(object):
         self.show_page_marks(pagenum)
         return self.dp.go_to_page(pagenum - 1)
 
-    def find_course(self, name_part):
-        return self.cms_query_module.search_for_course(name_part,
-                                                       self.login,
-                                                       self.password)
+    def find_course(self, name_part, login, password):
+        return self.cms_query_module.search_for_course(name_part, login,
+                                                       password)
+
+    def fetch_all_zones(self, login, password):
+        return self.cms_query_module.get_zone_types(login, password)
 
     # move all currently selected elems
     def move(self, delta, point_tuple):
