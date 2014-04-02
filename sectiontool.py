@@ -80,6 +80,10 @@ class CmsQueryModule(object):
                 'first-page': 'l'}
 
     def _fetch_data(self, url, login, password):
+        # for some alternatively talented people who have russian
+        # usernames\passwords (everything might happen)
+        login = login.encode('utf-8')
+        password = password.encode('utf-8')
         storage = StringIO()
         c = pycurl.Curl()
         c.setopt(pycurl.URL, url)
@@ -98,10 +102,7 @@ class CmsQueryModule(object):
 
     def validate_user_data(self, login, password):
         url = self.config_data['ping-url'].rstrip('/')
-        # for some alternatively talented people who have russian
-        # usernames\passwords (everything might happen)
-        code, data = self._fetch_data(url, login.encode('utf-8'),
-                                           password.encode('utf-8'))
+        code, data = self._fetch_data(url, login, password)
         return code == 200
 
     def search_for_course(self, name_part, login, password):

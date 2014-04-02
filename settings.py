@@ -51,11 +51,11 @@ class Settings(QtGui.QDialog):
 
     @property
     def login(self):
-        return str(self.ui.login_edit.text())
+        return unicode(self.ui.login_edit.text())
 
     @property
     def password(self):
-        return str(self.ui.password_edit.text())
+        return unicode(self.ui.password_edit.text())
 
     def _enable_apply(self):
         self.apply_button.setEnabled(True)
@@ -182,9 +182,7 @@ class Settings(QtGui.QDialog):
         self._let_modify_zonetypes(self.course_loaded)
         # disable apply
         self.apply_button.setEnabled(False)
-        login = unicode(self.ui.login_edit.text())
-        password = unicode(self.ui.password_edit.text())
-        if self.controller.is_userdata_valid(login, password):
+        if self.controller.is_userdata_valid(self.login, self.password):
             if not self.ui.bookData_tab.isEnabled():
                 self.ui.incorrectData_label.hide()
                 self.ui.bookData_tab.setEnabled(True)
@@ -209,8 +207,8 @@ class Settings(QtGui.QDialog):
                                  "start-autozones": new_start,
                                  "end-autozones": new_end,
                                  "passthrough-zones": new_pass,
-                                 "password": password,
-                                 "login": login,
+                                 "login": self.login,
+                                 "password": self.password,
                                  "display-name": display_name,
                                  "cms-course": self.chosen_course_id or "",
                                  "all-autozones": self.all_zones}
