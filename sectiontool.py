@@ -73,7 +73,7 @@ class CmsQueryModule(object):
         return {'passthrough-zones': PASS_THROUGH_ZONES,
                 'start-autozones': START_AUTOZONES,
                 'end-autozones': END_AUTOZONES,
-                'all-zones': DEFAULT_ZONE_TYPES,
+                'zonetypes': DEFAULT_ZONE_TYPES,
                 'margins': ['l, r'],
                 'margin-width': 50,
                 'zone-width': 20,
@@ -124,12 +124,13 @@ class CmsQueryModule(object):
         code, data = self._fetch_data(defs_url, login, password)
         all_zones = []
         if data:
-            TYPE_XPATH = "/is:object/is:text/is:rubric-def/@oid-postfix"
+            TYPE_XPATH = "/is:object/is:text/is:rubric-def/@oid-suffix"
             all_zones = etree.fromstring(data).xpath(TYPE_XPATH,
                                                 namespaces = {"is": XHTML_NAMESPACE})
-            print all_zones
         if not data or all_zones == []:
-            return self._defaults["all-zones"]
+            return self._defaults["zonetypes"]
+        else:
+            return all_zones
 
     # returns a list of {name, cas-id} in order of appearance in TOC
     def get_cms_course_toc(self, login, password, course_id=None):

@@ -3,7 +3,6 @@
 from PyQt4 import QtGui, QtCore
 from settingsdialog import Ui_Dialog
 from addzonesdialog import Ui_addZones
-from zonetypes import ZONE_TYPES
 
 
 class Settings(QtGui.QDialog):
@@ -18,7 +17,7 @@ class Settings(QtGui.QDialog):
         self.new_settings = {}
         self.search_result = []
         self.chosen_course_id = None
-        self.all_zones = []
+        self.all_autozones = []
         self.ui.buttonBox.clicked.connect(self._apply)
         self.ui.addStart_button.clicked.connect(self._add_zone_clicked)
         self.ui.addEnd_button.clicked.connect(self._add_zone_clicked)
@@ -91,7 +90,7 @@ class Settings(QtGui.QDialog):
             QtGui.QApplication.setOverrideCursor(
                 QtGui.QCursor(QtCore.Qt.BusyCursor))
             self.controller.load_course(self.chosen_course_id)
-            self.all_zones = self.controller.all_autozones
+            self.all_autozones = self.controller.all_autozones
             QtGui.QApplication.restoreOverrideCursor()
             self._let_modify_zonetypes(True)
             self._set_correct_zones_text()
@@ -169,7 +168,7 @@ class Settings(QtGui.QDialog):
             self.ui.searchResults_combo.setEnabled(False)
             self.ui.search_button.setEnabled(False)
         self._let_modify_zonetypes(self.course_loaded)
-        self.all_zones = self.controller.all_autozones or []
+        self.all_autozones = self.controller.all_autozones or []
         self.new_settings = {}
         result = self.exec_()
         return self.new_settings
@@ -211,7 +210,7 @@ class Settings(QtGui.QDialog):
                                  "password": self.password,
                                  "display-name": display_name,
                                  "cms-course": self.chosen_course_id or "",
-                                 "all-autozones": self.all_zones}
+                                 "all-autozones": self.all_autozones}
         else:
             # if apply and userdata invalid -> save just login
             self.ui.bookData_tab.setEnabled(False)
@@ -230,7 +229,7 @@ class Settings(QtGui.QDialog):
         # zones that should not appear in list of choices
         except_zones = [] if self.sender() not in non_intersecting else \
                 self._get_zones(non_intersecting[self.sender()].text())
-        dialog = ManageZonesDialog(self.all_zones, old_data, except_zones)
+        dialog = ManageZonesDialog(self.all_autozones, old_data, except_zones)
         new_data = dialog.exec_()
         self.apply_button.setEnabled(self.apply_button.isEnabled() or \
                                      new_data != old_data)

@@ -293,8 +293,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # here come toolbuttons created in designer
         appearance = { self.toolbarpart.zoomIn_button: 'buttons/Plus',
                        self.toolbarpart.zoomOut_button: 'buttons/Minus',
-                       self.toolbarpart.changeIcons_button: \
-                          'buttons/Choose_icons'}
+                       self.settings_button: 'buttons/Settings'}
         menubuttons = {
             self.actionLoad_pdf: 'buttons/Load_file',
             self.actionLoad_markup: 'buttons/Load_markup',
@@ -358,7 +357,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 if key in settings and settings[key] == "":
                     del settings[key]
             self.show_progress_bar(u"Применение настроек...")
-            print settings
             self.controller.settings_changed(settings)
             self.hide_progress_bar()
 

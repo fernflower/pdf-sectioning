@@ -61,9 +61,26 @@ class BookController(object):
         self.delete_funcs = {"start_end": self.delete_mark,
                              "zone": self.delete_zone,
                              "ruler": self.delete_ruler}
-        self.icons_producer = ZoneIconsProducer()
+        self._icons_producer = None
+        self._zonetypes = None
 
     ### properties section
+
+    @property
+    def icons_producer(self):
+        if not self._icons_producer:
+            self._icons_producer = ZoneIconsProducer(self.zonetypes)
+        return self._icons_producer
+
+    @property
+    def zonetypes(self):
+        # returns a list of zonetypes according to ebook-defs. Loaded once on
+        # first course or markup load
+        if not self._zonetypes:
+            self._zonetypes = self.cms_query_module.get_zone_types(
+                self.login, self.password)
+        return self._zonetypes
+
     @property
     def current_toc_elem(self):
         return self.toc_controller.active_elem
@@ -102,7 +119,7 @@ class BookController(object):
                     changed[key] = new_settings[key]
 
         for key in ["start-autozones", "end-autozones", "passthrough-zones",
-                    "all-autozones", "all-zones", "display-name",
+                    "all-autozones","display-name",
                     "margins", "margin-width", "zone-width",
                     "first-page", "login", "password"]:
             _process_param(key)
@@ -168,7 +185,7 @@ class BookController(object):
                     for key in ["cms-course", "margins", "margin-width",
                                 "first-page", "passthrough-zones",
                                 "start-autozones", "end-autozones",
-                                "all-autozones","display-name", "all-zones"]}
+                                "all-autozones","display-name", "zonetypes"]}
     @property
     def autozone_types(self):
         return self.toc_controller.autozone_types
@@ -678,9 +695,6 @@ class BookController(object):
     def find_course(self, name_part, login, password):
         return self.cms_query_module.search_for_course(name_part, login,
                                                        password)
-
-    def fetch_all_zones(self, login, password):
-        return self.cms_query_module.get_zone_types(login, password)
 
     # move all currently selected elems
     def move(self, delta, point_tuple):

@@ -4,10 +4,6 @@ import os
 from PyQt4 import QtGui
 
 
-ZONE_TYPES = \
-    ["dic", "tra", "con", "int", "bio", "tex", "sol", "pic", "sli", "ani",
-     "vid", "aud", "tab", "dia", "mod", "map", "rul"]
-
 DEFAULT_ZONE_TYPES = ["dic", "tra", "con"]
 
 # autozones that must be placed near the start of the page in the order given
@@ -23,8 +19,7 @@ MARGINS = ["l", "r", "lr"]
 
 
 class ZoneIconsProducer(object):
-    # TODO by now only ZONE_TYPES can be passed
-    def __init__(self, zones=ZONE_TYPES):
+    def __init__(self, zones):
         self.zone_types = zones
         self.mock_icon = QtGui.QImage("buttons/Icons/missing.png")
         self.zone_icons = {}
@@ -33,6 +28,7 @@ class ZoneIconsProducer(object):
             icon_file = "buttons/Icons/icon_%s.png" % zone_type
             self.zone_icons[zone_type] = QtGui.QImage(icon_file) \
                 if os.path.isfile(icon_file) else self.mock_icon
+        print self.zone_icons
 
     # TODO later this will be changed as strict validation appears
     def get(self, key):

@@ -119,7 +119,7 @@ class DocumentProcessor(object):
         out_paragraphs = {}
         def _process_settings(param, text):
             if param in ['start-autozones', 'margins', 'all-autozones',
-                            'end-autozones', 'passthrough-zones']:
+                         'end-autozones', 'passthrough-zones', 'zonetypes']:
                 return text.split(',') if text else []
             try:
                 return int(text)
@@ -183,7 +183,7 @@ class DocumentProcessor(object):
     def gen_native_xml(self, paragraphs, settings, progress):
         PAGES = E("ebook-pages", src=self.filename)
         ICON_SET = E("ebook-icon-set")
-        all_zones = settings.get("all-zones", DEFAULT_ZONE_TYPES)
+        all_zones = settings.get("zonetypes", DEFAULT_ZONE_TYPES)
         # TODO perhaps should pass precisely icons used in markup, not all?
         for icon_type in all_zones:
             icon = E("ebook-icon", rubric=icon_type, src="%s.png" % icon_type)
