@@ -120,7 +120,6 @@ class BookController(object):
             self.toc_controller.reload_course(
                 self.toc_raw, self.start_autozones, self.end_autozones)
 
-        print changed
         if not create_if_none:
             self.adapt_to_new_settings(old_settings, changed)
 
@@ -139,13 +138,11 @@ class BookController(object):
         # autozones once more
         if not any(key in new for key in \
                    ["start-autozones", "end-autozones", "passthrough-zones"]):
-            print "no autozones change"
             return
         delete_types = set()
         for key in ["start-autozones", "end-autozones", "passthrough-zones"]:
             if key in new:
                 delete_types.update(new[key])
-        print delete_types
         zone_parent = None
         for auto_type in delete_types:
             for cas_id in self.paragraph_marks:
@@ -433,7 +430,6 @@ class BookController(object):
         # convert from QString
         filename = str(filename)
         paragraphs, settings = self.dp.load_native_xml(filename)
-        print settings
         self.settings_changed(settings)
         # generate start\end marks from paragraphs' data
         for i, (cas_id, data) in enumerate(paragraphs.items()):

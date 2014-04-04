@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'layout.ui'
 #
-# Created: Tue Apr  1 15:49:49 2014
+# Created: Fri Apr  4 02:40:43 2014
 #      by: PyQt4 UI code generator 4.10
 #
 # WARNING! All changes made in this file will be lost!
@@ -47,6 +47,8 @@ class Ui_MainWindow(object):
         self.verticalLayout = QtGui.QVBoxLayout(self.tab)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.listView = QtGui.QListView(self.tab)
+        self.listView.setDragEnabled(True)
+        self.listView.setDragDropMode(QtGui.QAbstractItemView.DragOnly)
         self.listView.setObjectName(_fromUtf8("listView"))
         self.verticalLayout.addWidget(self.listView)
         self.consoleLayout = QtGui.QHBoxLayout()
@@ -58,6 +60,10 @@ class Ui_MainWindow(object):
         self.horizontalLayout = QtGui.QHBoxLayout(self.tab_2)
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         self.treeView = QtGui.QTreeView(self.tab_2)
+        self.treeView.setDragEnabled(True)
+        self.treeView.setDragDropMode(QtGui.QAbstractItemView.DragOnly)
+        self.treeView.setVerticalScrollMode(QtGui.QAbstractItemView.ScrollPerItem)
+        self.treeView.setHorizontalScrollMode(QtGui.QAbstractItemView.ScrollPerItem)
         self.treeView.setObjectName(_fromUtf8("treeView"))
         self.horizontalLayout.addWidget(self.treeView)
         self.tabWidget.addTab(self.tab_2, _fromUtf8(""))

@@ -28,11 +28,28 @@ class QImageLabel(QtGui.QLabel):
         super(QImageLabel, self).__init__(parent)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setStyleSheet(self.STYLESHEET)
+        self.setAcceptDrops(True)
 
     @property
     def coordinates_as_tuple(self):
         if self.coordinates:
             return (self.coordinates.x(), self.coordinates.y())
+
+    def dragEnterEvent(self, event):
+        print "drag enter"
+        event.accept()
+
+    def dragLeaveEvent(self, event):
+        print "drag leave"
+
+    def dropEvent(self, event):
+        print "drop"
+        # deselected everything selected earlier on page
+        self.controller.deselect_all()
+        self.controller._create_mark_on_click(
+            (event.pos().x(), event.pos().y()), self)
+        self.last_selected = None
+        self.update()
 
     def wheelEvent(self, event):
         modifiers = QtGui.QApplication.keyboardModifiers()
@@ -144,12 +161,6 @@ class QImageLabel(QtGui.QLabel):
                     mark.bind_to_ruler(selected)
                 else:
                     process_selected(selected)
-            else:
-                # deselected everything selected earlier on page
-                self.controller.deselect_all()
-                self.controller._create_mark_on_click(
-                    self.coordinates_as_tuple, self)
-                self.last_selected = None
         self.update()
 
     def mouseMoveEvent(self, event):

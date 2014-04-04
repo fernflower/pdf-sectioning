@@ -89,6 +89,12 @@ class TocController(object):
         self.sections_view = sections_view
         self.markup_view = markup_view
 
+    def _select_toc(self, new, prev):
+        self.current_toc_elem = self.toc_elems[new.row()]
+
+    def _select_mtoc(self, new, prev):
+        self.current_toc_elem = self.markup_view.model().itemFromIndex(new)
+
     # FIXME dammit, try to avoid this. Have to pass current page somehow
     # synchronized with BookViewer, could not think of a better way
     def set_pagenum_func(self, func):
@@ -253,6 +259,19 @@ class TocController(object):
         for mtoc in self.markup_toc_elems:
             self.markup_view.setRowHidden(mtoc.index().row(),
                                           mtoc.index().parent(), True)
+        self._add_handlers(mode)
+
+    def _add_handlers(self, mode):
+        if mode == self.MODE_SECTIONS:
+            self.sections_view.selectionModel().connect(
+                self.sections_view.selectionModel(),
+                QtCore.SIGNAL("currentChanged(const QModelIndex&, const QModelIndex&)"),
+                self._select_toc)
+        else:
+            self.markup_view.selectionModel().connect(
+                self.markup_view.selectionModel(),
+                QtCore.SIGNAL("currentChanged(const QModelIndex&, const QModelIndex&)"),
+                self._select_mtoc)
 
     def process_selected(self, mode):
         view = self.get_view_widget(mode)
