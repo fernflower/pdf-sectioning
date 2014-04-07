@@ -26,9 +26,10 @@ class Settings(QtGui.QDialog):
         self.ui.searchResults_combo.connect(self.ui.searchResults_combo,
                                             QtCore.SIGNAL("highlighted(int)"),
                                             self._on_course_browsed)
-        self.ui.searchResults_combo.connect(self.ui.searchResults_combo,
-                                            QtCore.SIGNAL("currentIndexChanged(int)"),
-                                            self._on_course_chosen)
+        self.ui.searchResults_combo.connect(
+            self.ui.searchResults_combo,
+            QtCore.SIGNAL("currentIndexChanged(int)"),
+            self._on_course_chosen)
         self.ui.first_page_group.connect(self.ui.leftPage_radio,
                                          QtCore.SIGNAL("toggled(bool)"),
                                          self._enable_apply)
@@ -42,7 +43,7 @@ class Settings(QtGui.QDialog):
         self.autozone_relations = {
             self.ui.addStart_button: self.ui.startZones_edit,
             self.ui.addEnd_button: self.ui.endZones_edit,
-            self.ui.addPassthrough_button: self.ui.passthroughZones_edit }
+            self.ui.addPassthrough_button: self.ui.passthroughZones_edit}
 
     @property
     def apply_button(self):
@@ -89,7 +90,7 @@ class Settings(QtGui.QDialog):
             # made
             QtGui.QApplication.setOverrideCursor(
                 QtGui.QCursor(QtCore.Qt.BusyCursor))
-            self.controller.load_course(self.chosen_course_id)
+            self.controller.load_course(self.chosen_course_id, self.display_name)
             self.all_autozones = self.controller.all_autozones
             QtGui.QApplication.restoreOverrideCursor()
             self._let_modify_zonetypes(True)
@@ -170,8 +171,12 @@ class Settings(QtGui.QDialog):
         self._let_modify_zonetypes(self.course_loaded)
         self.all_autozones = self.controller.all_autozones or []
         self.new_settings = {}
-        result = self.exec_()
+        self.exec_()
         return self.new_settings
+
+    @property
+    def display_name(self):
+        return unicode(self.ui.cmsCourse_edit.text())
 
     def _apply(self, button):
         # close dialog when anything but apply is pressed
@@ -186,7 +191,6 @@ class Settings(QtGui.QDialog):
                 self.ui.incorrectData_label.hide()
                 self.ui.bookData_tab.setEnabled(True)
             # when apply pressed and userdata valid -> collect all info
-            new_course = self.ui.cmsCourse_edit.text()
             new_first = ""
             if self.ui.leftPage_radio.isChecked():
                 new_first = "l"
@@ -197,10 +201,12 @@ class Settings(QtGui.QDialog):
                 new_margins = [new_first]
             else:
                 new_margins = ["l", "r"]
-            display_name = unicode(self.ui.cmsCourse_edit.text())
-            new_start = self._get_zones(str(self.ui.startZones_edit.text()))
-            new_end = self._get_zones(str(self.ui.endZones_edit.text()))
-            new_pass = self._get_zones(str(self.ui.passthroughZones_edit.text()))
+            new_start = self._get_zones(
+                str(self.ui.startZones_edit.text()))
+            new_end = self._get_zones(
+                str(self.ui.endZones_edit.text()))
+            new_pass = self._get_zones(
+                str(self.ui.passthroughZones_edit.text()))
             self.new_settings = {"first-page": new_first,
                                  "margins": new_margins,
                                  "start-autozones": new_start,
@@ -208,13 +214,13 @@ class Settings(QtGui.QDialog):
                                  "passthrough-zones": new_pass,
                                  "login": self.login,
                                  "password": self.password,
-                                 "display-name": display_name,
+                                 "display-name": self.display_name,
                                  "cms-course": self.chosen_course_id or "",
                                  "all-autozones": self.all_autozones}
         else:
             # if apply and userdata invalid -> save just login
             self.ui.bookData_tab.setEnabled(False)
-            self.new_settings = {"login": login}
+            self.new_settings = {"login": self.login}
             self.ui.incorrectData_label.show()
 
     @property
@@ -228,16 +234,17 @@ class Settings(QtGui.QDialog):
             self.autozone_relations[self.sender()].text())
         # zones that should not appear in list of choices
         except_zones = [] if self.sender() not in non_intersecting else \
-                self._get_zones(non_intersecting[self.sender()].text())
+            self._get_zones(non_intersecting[self.sender()].text())
         dialog = ManageZonesDialog(self.all_autozones, old_data, except_zones)
         new_data = dialog.exec_()
-        self.apply_button.setEnabled(self.apply_button.isEnabled() or \
+        self.apply_button.setEnabled(self.apply_button.isEnabled() or
                                      new_data != old_data)
         self.autozone_relations[self.sender()].setText(
             self._get_zones_text(new_data))
 
 
 class ManageZonesDialog(QtGui.QDialog):
+
     ALL_ZONES_MODE = "all"
     CHOSEN_ZONES_MODE = "chosen"
 
@@ -247,6 +254,7 @@ class ManageZonesDialog(QtGui.QDialog):
         self.ui.setupUi(self)
         self.views = {self.ALL_ZONES_MODE: self.ui.allZones_listview,
                       self.CHOSEN_ZONES_MODE: self.ui.chosenZones_listview}
+
         def _fill_view(view, data):
             model = QtGui.QStandardItemModel()
             for item in data:
@@ -257,8 +265,8 @@ class ManageZonesDialog(QtGui.QDialog):
                 view.selectionModel(),
                 QtCore.SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
                 self.update)
-        all_zones_data = [zt for zt in all_zones if zt not in chosen_zones \
-                            and zt not in except_zones]
+        all_zones_data = [zt for zt in all_zones if zt not in chosen_zones
+                          and zt not in except_zones]
         _fill_view(self.ui.allZones_listview, all_zones_data)
         _fill_view(self.ui.chosenZones_listview, chosen_zones)
         # select first elem if any

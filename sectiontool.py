@@ -1,8 +1,9 @@
 import pycurl
 import urllib
 import sys
+import os
 import json
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui
 from json import dumps, loads
 from httplib2 import Http
 from StringIO import StringIO
@@ -15,11 +16,13 @@ from zonetypes import DEFAULT_ZONE_TYPES, PASS_THROUGH_ZONES, START_AUTOZONES, \
     END_AUTOZONES, MARGINS
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
-E = ElementMaker(namespace=XHTML_NAMESPACE,
-                 nsmap={'is' : XHTML_NAMESPACE})
+NSMAP = {'is': XHTML_NAMESPACE}
+E = ElementMaker(namespace=XHTML_NAMESPACE, nsmap=NSMAP)
+
 
 class CmsQueryError(Exception):
     pass
+
 
 class CmsQueryModule(object):
     DEFAULT_CONFIG = "config"
@@ -36,19 +39,19 @@ class CmsQueryModule(object):
     def parse_config(self, config_filename):
         with open(config_filename) as f:
             self.config_data = {
-                line.split('=', 2)[0].strip(' \"\'') : \
-                line.split('=', 2)[1].strip('\"\' \n') \
-                for line in f.readlines() if not \
+                line.split('=', 2)[0].strip(' \"\''):
+                    line.split('=', 2)[1].strip('\"\' \n')
+                for line in f.readlines() if not
                 (line.strip().startswith('#') or line.strip() == "")
             }
         if any(map(lambda param: param not in self.config_data.keys(),
-                    ['url', 'resolve-url', 'ping-url', 'search-url'])):
+                   ['url', 'resolve-url', 'ping-url', 'search-url'])):
             raise CmsQueryError(
                 "Some vital urls are missing in default config!!!")
 
         def _check_against(key, against):
-            return  [e.strip() for e in self.config_data[key].split(',')
-                     if e.strip() in against]
+            return [e.strip() for e in self.config_data[key].split(',')
+                    if e.strip() in against]
 
         def _set_given_or_dfl(key, value):
             if value != []:
@@ -77,7 +80,9 @@ class CmsQueryModule(object):
                 'margins': ['l, r'],
                 'margin-width': 50,
                 'zone-width': 20,
-                'first-page': 'l'}
+                'first-page': 'l',
+                'login': u'',
+                'password': u''}
 
     def _fetch_data(self, url, login, password):
         # for some alternatively talented people who have russian
@@ -125,8 +130,8 @@ class CmsQueryModule(object):
         all_zones = []
         if data:
             TYPE_XPATH = "/is:object/is:text/is:rubric-def/@oid-suffix"
-            all_zones = etree.fromstring(data).xpath(TYPE_XPATH,
-                                                namespaces = {"is": XHTML_NAMESPACE})
+            all_zones = etree.fromstring(data).\
+                xpath(TYPE_XPATH, namespaces=NSMAP)
         if not data or all_zones == []:
             return self._defaults["zonetypes"]
         else:
@@ -137,20 +142,19 @@ class CmsQueryModule(object):
         if not self.any_course_data and not course_id:
             return []
         course_id = course_id or self.config_data['cms-course']
-        course_url = self.config_data['url'].rstrip('/') + '/' + course_id.encode('utf-8')
+        course_url = os.path.join(self.config_data['url'],
+                                  course_id.encode('utf-8'))
         code, data = self._fetch_data(course_url, login, password)
         if data:
             TOC_XPATH = "/is:course/is:lessons/is:lesson/@name"
             tree = etree.fromstring(data)
             self.display_name = tree.xpath(
-                "/is:course/@display-name",
-                namespaces = {"is" : XHTML_NAMESPACE})[0]
-            lesson_ids = tree.xpath(TOC_XPATH,
-                                    namespaces = {"is" : XHTML_NAMESPACE})
+                "/is:course/@display-name", namespaces=NSMAP)[0]
+            lesson_ids = tree.xpath(TOC_XPATH, namespaces=NSMAP)
             # resolve names
-            ids_to_resolve = ["lesson:" + lesson_id \
-                                 for lesson_id in lesson_ids]
-            headers = {"Content-type" : "application/json; charset=UTF-8"}
+            ids_to_resolve = ["lesson:" + lesson_id
+                              for lesson_id in lesson_ids]
+            headers = {"Content-type": "application/json; charset=UTF-8"}
             body = dumps(ids_to_resolve)
             http_obj = Http()
             http_obj.add_credentials(self.config_data['login'],
@@ -163,7 +167,8 @@ class CmsQueryModule(object):
                 raise CmsQueryError("Could not resolve lesson names!")
             resolved = loads(content)
             toc = [{"name": resolved[lesson_id], "cas-id": lesson_id,
-                    "objects": self._get_lesson_objects(lesson_id, login, password)} \
+                    "objects": self._get_lesson_objects(
+                        lesson_id, login, password)}
                    for lesson_id in ids_to_resolve]
             auto_types = self._get_autozone_types(toc)
             return (toc, auto_types)
@@ -172,6 +177,7 @@ class CmsQueryModule(object):
 
     def _get_autozone_types(self, toc):
         result = set()
+
         def _get_autozone_type(oid):
             parts = oid.split('-')
             zone_type = parts[4] if len(parts) > 4 else None
@@ -186,23 +192,21 @@ class CmsQueryModule(object):
         return list(result)
 
     def _get_lesson_objects(self, lesson_id, login, password):
-        lesson_url = self.config_data['url'].rstrip('/') + '/' + lesson_id
+        lesson_url = os.path.join(self.config_data['url'], lesson_id)
         code, data = self._fetch_data(lesson_url, login, password)
         if data:
             PARAGRAPHS_XPATH = "/is:lesson/is:content/is:paragraph | /is:lesson/is:content/is:test"
             tree = etree.fromstring(data)
-            paragraphs = tree.xpath(PARAGRAPHS_XPATH,
-                                    namespaces = {"is" : XHTML_NAMESPACE})
+            paragraphs = tree.xpath(PARAGRAPHS_XPATH, namespaces=NSMAP)
             objects = [{"oid": p.get("objectid"),
                         "block-id": p.get("id"),
                         "rubric": p.get("erubric"),
-                        "name": p.xpath("is:name/text()",
-                                        namespaces = {"is" : XHTML_NAMESPACE})[0]
+                        "name": p.xpath("is:name/text()", namespaces=NSMAP)[0]
                         } for p in paragraphs]
             return objects
         else:
-            raise CmsQueryError("Could not get lesson's {} object list!".\
-                                   format(lesson_id))
+            raise CmsQueryError("Could not get lesson's {} object list!".
+                                format(lesson_id))
 
 
 def main():

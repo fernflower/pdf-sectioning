@@ -15,8 +15,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     # TODO modes must match those in bookcontroller!
     SECTION_MODE = "section_mode"
     MARKUP_MODE = "markup_mode"
-    TAB_MODE = { 0: SECTION_MODE,
-                 1: MARKUP_MODE }
+    TAB_MODE = {0: SECTION_MODE,
+                1: MARKUP_MODE}
 
     def __init__(self, controller, toc_controller):
         super(BookViewerWidget, self).__init__()
@@ -38,7 +38,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.unsaved_changes_dialog = None
         self.cant_save_dialog = None
         self.cant_open_dialog = None
-        self.save_as_dialog = None
         self.file_exists_dialog = None
         self.wipe_all_dialog = None
         self.settings_dialog = None
@@ -117,8 +116,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                 QToolButton:hover { border: none;
                                                     color: gray } """)
         added_tool_button = \
-            next((b for b in [self.nextPage_button, self.prevPage_button] \
-                                    if b.defaultAction() == action), None)
+            next((b for b in [self.nextPage_button, self.prevPage_button]
+                        if b.defaultAction() == action), None)
         if added_tool_button:
             added_tool_button.setStyleSheet(
                 """
@@ -265,7 +264,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self._set_appearance()
         # make window occupy all screen
         screen = QtGui.QDesktopWidget().screenGeometry()
-        #self.setGeometry(0, 0, screen.width() * 0.9, screen.height() * 0.9)
+        self.setGeometry(0, 0, screen.width(), screen.height())
         # setup settings dialog
         self.settings_dialog = Settings(self.controller, self)
 
@@ -278,22 +277,22 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def show_progress_bar(self, text):
         QtGui.QApplication.setOverrideCursor(
             QtGui.QCursor(QtCore.Qt.BusyCursor))
-        #self.progress_bar.show()
-        #self.progress_text.show()
-        #self.progress_text.setText(text)
+        # self.progress_bar.show()
+        # self.progress_text.show()
+        # self.progress_text.setText(text)
 
     def hide_progress_bar(self):
         self.progress_bar.hide()
-        #self.progress_text.setText(u"")
+        # self.progress_text.setText(u"")
         self.progress_text.hide()
         QtGui.QApplication.restoreOverrideCursor()
 
     # all work on colors and buttons' styles done here
     def _set_appearance(self):
         # here come toolbuttons created in designer
-        appearance = { self.toolbarpart.zoomIn_button: 'buttons/Plus',
-                       self.toolbarpart.zoomOut_button: 'buttons/Minus',
-                       self.settings_button: 'buttons/Settings'}
+        appearance = {self.toolbarpart.zoomIn_button: 'buttons/Plus',
+                      self.toolbarpart.zoomOut_button: 'buttons/Minus',
+                      self.settings_button: 'buttons/Settings'}
         menubuttons = {
             self.actionLoad_pdf: 'buttons/Load_file',
             self.actionLoad_markup: 'buttons/Load_markup',
@@ -341,7 +340,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
 
     def autozones(self):
         self.show_progress_bar(u"Автоматическое размещение зон ...")
-        num = self.controller.autozones(self.imageLabel)
+        self.controller.autozones(self.imageLabel)
         self.hide_progress_bar()
 
     def change_settings(self):
@@ -400,7 +399,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # calc delta, set widgets data and call zoom
         current = self.zoom_comboBox.currentIndex()
         delta = (current - self.last_zoom_index) * (self.controller.ZOOM_DELTA)
-        if delta != 0 :
+        if delta != 0:
             self.last_zoom_index = current
             self.zoom_comboBox.setCurrentIndex(self.last_zoom_index)
             self.controller.zoom(delta, step_by_step=False)
@@ -437,8 +436,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 not self.show_unsaved_data_dialog():
             return
         filename = QtGui.QFileDialog.getOpenFileName(
-            self, QtCore.QString.fromUtf8(u'Загрузить учебник'), '.',
-                                          'Pdf files (*.pdf)')
+            self, QtCore.QString.fromUtf8(u'Загрузить учебник'),
+            '.', 'Pdf files (*.pdf)')
         if not filename:
             return
         self._fill_views()
@@ -458,11 +457,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if self.controller.any_unsaved_changes and \
                 not self.show_unsaved_data_dialog():
             return
-        filename = QtGui.QFileDialog.\
-            getOpenFileName(self,
-                            QtCore.QString.fromUtf8(u'Загрузить разметку'),
-                            '.',
-                            "Xml files (*.xml *.unfinished)")
+        filename = QtGui.QFileDialog.getOpenFileName(
+            self, QtCore.QString.fromUtf8(u'Загрузить разметку'),
+            '.', QtCore.QString.fromUtf8("Файлы незавершенной разметки (*.unfinished);;Файлы готовой разметки (*.xml)"))
         if not filename:
             return
         self.last_open_doc_name = unicode(filename)
@@ -518,7 +515,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.prevPage_button.setEnabled(not self.pageNum == 1)
             self.update()
         # set total pages label text
-        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT % \
+        self.totalPagesLabel.setText(BookViewerWidget.TOTAL_PAGES_TEXT %
                                      (self.pageNum, total_pages))
         marks = self.controller.get_page_marks(pagenum, self.mode)
         if marks != []:
@@ -527,8 +524,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def navigate_to_first_error(self):
         error = self.controller.get_first_error_mark(self.mode)
         if error:
-            error_page = self.toc_controller.\
-                process_navigate_to_error(error, self.mode)
+            self.toc_controller.process_navigate_to_error(error, self.mode)
             self.go_to_page(error.page)
 
     def zoom_in(self):
@@ -580,7 +576,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
     def update_console_data(self):
         msg = self.toc_controller.get_first_error_msg(self.mode)
         self.console.set_first_error_data(
-                self.toc_controller.get_total_error_count(self.mode), msg)
+            self.toc_controller.get_total_error_count(self.mode), msg)
 
     # only to be called from child
     def call_wheelEvent(self, event):
@@ -620,7 +616,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 act.setEnabled(self.controller.any_changes)
             self.actionSave.setEnabled(self.last_open_doc_name is not None)
 
-    ## all possible dialogs go here
+    # ## all possible dialogs go here
     # general politics: returns True if can proceed with anything after
     # the func call, False if should return from any function
     def show_unsaved_data_dialog(self):
@@ -647,8 +643,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.cant_save_dialog = QtGui.QMessageBox(self)
             self.cant_save_dialog.setText(u"Невозможно сохранить изменения.")
             self.cant_save_dialog.setInformativeText(
-                u"Не у всех размеченных параграфов есть метки начала и " + \
-                u"конца в правильном порядке.")
+                u"Не у всех размеченных параграфов есть метки " +
+                u"начала и конца в правильном порядке.")
             self.cant_save_dialog.setStandardButtons(QtGui.QMessageBox.Cancel)
         self.cant_save_dialog.exec_()
 
@@ -669,7 +665,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 format(u" " if not auto else u" автоматически ")
             self.wipe_all_dialog.setText(text)
             self.wipe_all_dialog.setInformativeText(
-            u"Вы уверены, что хотите продолжить? Это действие нельзя отменить.")
+                u"Вы уверены, что хотите" +
+                " продолжить? Это действие нельзя отменить.")
             self.wipe_all_dialog.setStandardButtons(QtGui.QMessageBox.Yes |
                                                     QtGui.QMessageBox.No)
         result = self.wipe_all_dialog.exec_()
@@ -678,20 +675,19 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         return False
 
     def show_save_as_dialog(self):
-        if not self.save_as_dialog:
-            self.save_as_dialog = QtGui.QFileDialog(self)
-            self.save_as_dialog.setConfirmOverwrite(True)
-            self.save_as_dialog.setWindowTitle(
-                QtCore.QString.fromUtf8(u"Сохранить разметку"))
-        extension = "xml" if self.controller.markup_finished else "unfinished"
-        self.save_as_dialog.setDefaultSuffix(extension)
-        self.save_as_dialog.setNameFilter("*." + extension)
-        self.save_as_dialog.exec_()
-        filename = self.save_as_dialog.selectedFiles()[0] \
-            if self.save_as_dialog.selectedFiles() else None
-        if not filename:
+        choice, filt = QtGui.QFileDialog.getSaveFileNameAndFilter(
+            self, QtCore.QString.fromUtf8(u"Сохранить разметку"),
+            directory=".", filter="*.xml *.unfinished")
+        choice = unicode(choice)
+        if not self.controller.markup_finished:
+            # check that filename has ".unfinished" extension
+            if ".unfinished" not in os.path.basename(choice):
+                choice = choice + ".unfinished"
+        print choice
+        print filt
+        if os.path.isdir(choice):
+            print "A BUG! Can't overwrite existing dir!!!!"
             return None
-        filename = unicode(filename)
         # check if overwriting existing file
         if not self.file_exists_dialog:
             self.file_exists_dialog = QtGui.QMessageBox(self)
@@ -700,9 +696,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                 u"Вы хотите перезаписать существующий файл?")
             self.file_exists_dialog.setStandardButtons(QtGui.QMessageBox.Yes |
                                                        QtGui.QMessageBox.No)
-        if os.path.isfile(filename):
+        if os.path.isfile(choice):
             result = self.file_exists_dialog.exec_()
-            if result == QtGui.QMessageBox.Yes:
-                return filename
-            return None
-        return filename
+            if result == QtGui.QMessageBox.No:
+                return None
+        return choice

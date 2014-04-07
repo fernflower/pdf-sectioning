@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from collections import OrderedDict
-from documentprocessor import DocumentProcessor, LoaderError
+from documentprocessor import DocumentProcessor
 from paragraphmark import MarkCreator, QRulerMark
 from zonetypes import ZoneIconsProducer
 
@@ -55,7 +55,7 @@ class BookController(object):
             self.login = ""
         # TODO FIXME should be present in final version but for debugging
         # purposes pass password that we have in config
-        #self.password = ""
+        # self.password = ""
         self.cms_query_module = cqm
         # delete funcs to be passed on different marks' construction
         self.delete_funcs = {"start_end": self.delete_mark,
@@ -64,7 +64,7 @@ class BookController(object):
         self._icons_producer = None
         self._zonetypes = None
 
-    ### properties section
+    # ## properties section
 
     @property
     def icons_producer(self):
@@ -106,21 +106,21 @@ class BookController(object):
         old_settings = {}
         if not create_if_none:
             old_settings = self.book_settings
-        # This data is vital for course' reloading and has to be retrieved
-        # first
+
         def _process_param(key):
             attr = key.replace('-', '_')
             if create_if_none:
-                setattr(self, attr, new_settings.get(key) or \
+                setattr(self, attr, new_settings.get(key) or
                         getattr(self, attr, None))
             elif key in new_settings and \
-                new_settings[key] != getattr(self, attr, None):
-                    setattr(self, attr, new_settings[key])
-                    changed[key] = new_settings[key]
-
+                    new_settings[key] != getattr(self, attr, None):
+                        setattr(self, attr, new_settings[key])
+                        changed[key] = new_settings[key]
+        # This data is vital for course' reloading and has to be retrieved
+        # first
         for key in ["start-autozones", "end-autozones", "passthrough-zones",
-                    "all-autozones","display-name",
-                    "margins", "margin-width", "zone-width",
+                    "all-autozones", "display-name", "margins",
+                    "margin-width", "zone-width",
                     "first-page", "login", "password"]:
             _process_param(key)
         # now deal with cms course and reload it if necessary
@@ -153,7 +153,7 @@ class BookController(object):
         # adapt to autozone type change
         # if any auto zone has changed its type -> remove it and place
         # autozones once more
-        if not any(key in new for key in \
+        if not any(key in new for key in
                    ["start-autozones", "end-autozones", "passthrough-zones"]):
             return
         delete_types = set()
@@ -168,7 +168,7 @@ class BookController(object):
                     zone_parent = self.paragraph_marks[cas_id]["zones"][0].parent
                 self.delete_marks(
                     forced=True,
-                    marks=[z for z in self.paragraph_marks[cas_id]["zones"] \
+                    marks=[z for z in self.paragraph_marks[cas_id]["zones"]
                            if z.auto])
         self.toc_controller.reload_course(self.toc_raw, self.start_autozones,
                                           self.end_autozones, zones_only=True)
@@ -325,8 +325,9 @@ class BookController(object):
             return self.dp.totalPages
         return 0
 
-    def load_course(self, course_id):
-        return self.settings_changed({"cms-course": course_id})
+    def load_course(self, course_id, display_name):
+        return self.settings_changed({"cms-course": course_id,
+                                      "display-name": display_name})
 
     def get_image(self):
         if not self.dp:
