@@ -35,12 +35,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # in order to implement navigation on toc-elem click. Store last mark
         # navigated to here
         # dialogs
+        self.progress_dialog = QtGui.QProgressDialog(
+            u"Выполнение операции", u"Отмена", 0, 100)
         self.unsaved_changes_dialog = None
         self.cant_save_dialog = None
         self.cant_open_dialog = None
         self.file_exists_dialog = None
         self.wipe_all_dialog = None
         self.settings_dialog = None
+        # this dialog will appear after user loads pdf
+        self.load_markup_wizard = None
         self.init_actions()
         self.init_widgets()
         self.init_menubar()
@@ -129,6 +133,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionLoad_pdf.setShortcut('Ctrl+O')
         self.actionLoad_markup.triggered.connect(self.load_markup)
         self.actionLoad_markup.setShortcut('Ctrl+M')
+        self.actionCreate_new_markup = QtGui.QAction(
+            QtCore.QString.fromUtf8(u"Создать новую разметку"), self)
+        self.actionCreate_new_markup.triggered.connect(self.create_new_markup)
         self.actionSave = QtGui.QAction(QtCore.QString.fromUtf8(u'Сохранить'),
                                         self)
         self.actionSave.triggered.connect(self.save)
@@ -175,7 +182,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.actionClose.triggered.connect(self.close)
         # disable all actions on start
         for act in [self.actionDelete_all, self.actionDelete_all_autozones,
-                    self.actionDelete_all_zones, self.actionLoad_markup,
+                    self.actionDelete_all_zones, self.actionCreate_new_markup,
+                    self.actionLoad_markup,
                     self.actionSave, self.actionDelete_selection,
                     self.actionForced_delete_selection]:
             act.setEnabled(False)
@@ -185,6 +193,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # fill file/edit/view menus
         self.menuFile.addAction(self.actionLoad_pdf)
         self.menuFile.addAction(self.actionLoad_markup)
+        self.menuFile.addAction(self.actionCreate_new_markup)
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSaveAs)
         self.menuFile.addAction(self.actionClose)
@@ -257,10 +266,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.toolBar.addWidget(self.toolbarpart.layoutWidget)
         # create progress bar for REALLY long operations (like saving every
         # page of heavy differently sized pdf)
-        self.progress_bar = QtGui.QProgressBar(self.imageLabel)
-        self.progress_text = QtGui.QLabel(u"", self.imageLabel)
-        self.progress_bar.hide()
-        self.progress_text.hide()
         self._set_appearance()
         # make window occupy all screen
         screen = QtGui.QDesktopWidget().screenGeometry()
@@ -274,17 +279,16 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
                                                self.controller.start_autozones,
                                                self.controller.end_autozones)
 
-    def show_progress_bar(self, text):
+    # sets up a progress dialog with given text and returns it
+    def show_progress(self, text):
+        self.progress_dialog.reset()
+        self.progress_dialog.setMinimumDuration(1)
+        self.progress_dialog.setLabelText(text)
         QtGui.QApplication.setOverrideCursor(
             QtGui.QCursor(QtCore.Qt.BusyCursor))
-        # self.progress_bar.show()
-        # self.progress_text.show()
-        # self.progress_text.setText(text)
+        return self.progress_dialog
 
-    def hide_progress_bar(self):
-        self.progress_bar.hide()
-        # self.progress_text.setText(u"")
-        self.progress_text.hide()
+    def hide_progress(self):
         QtGui.QApplication.restoreOverrideCursor()
 
     # all work on colors and buttons' styles done here
@@ -296,6 +300,7 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         menubuttons = {
             self.actionLoad_pdf: 'buttons/Load_file',
             self.actionLoad_markup: 'buttons/Load_markup',
+            self.actionCreate_new_markup: 'buttons/Load_markup',
             self.actionSmartSave: 'buttons/Save',
             self.actionSave: 'buttons/Save',
             self.actionSaveAs: 'buttons/Save',
@@ -315,8 +320,6 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         self.layout_general = QtGui.QVBoxLayout(self.my_widget)
         self.layout_general.addWidget(self.toolBar)
         self.layout_general.addWidget(self.scrollArea)
-        self.layout_general.addWidget(self.progress_bar)
-        self.layout_general.addWidget(self.progress_text)
         self.layoutmain = QtGui.QHBoxLayout(self.centralwidget)
         self.layoutmain.addWidget(self.my_widget)
         self.layoutmain.addWidget(self.tabWidget)
@@ -339,9 +342,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             return self.MARKUP_MODE
 
     def autozones(self):
-        self.show_progress_bar(u"Автоматическое размещение зон ...")
+        self.show_progress(u"Автоматическое размещение зон ...")
         self.controller.autozones(self.imageLabel)
-        self.hide_progress_bar()
+        self.hide_progress()
 
     def change_settings(self):
         any_markup = self.last_open_doc_name is not None
@@ -355,9 +358,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             for key in ["first-page", "cms-course"]:
                 if key in settings and settings[key] == "":
                     del settings[key]
-            self.show_progress_bar(u"Применение настроек...")
+            self.show_progress(u"Применение настроек...")
             self.controller.settings_changed(settings)
-            self.hide_progress_bar()
+            self.hide_progress()
 
     # mind that this is called every time a view is clicked, not only on
     # selection
@@ -453,6 +456,14 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # data fetched from cas
         self.update()
 
+    def create_new_markup(self):
+        # check for unsaved changes
+        if self.controller.any_unsaved_changes and \
+                not self.show_unsaved_data_dialog():
+            return
+        self.controller.delete_all()
+        self.last_open_doc_name = None
+
     def load_markup(self):
         if self.controller.any_unsaved_changes and \
                 not self.show_unsaved_data_dialog():
@@ -466,14 +477,18 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         # clear listView and fill again with appropriate for given course-id
         # data fetched from cas
         self._fill_views()
-        self.show_progress_bar(u"Загрузка разметки ...")
-        self.controller.load_markup(self.last_open_doc_name, self.imageLabel)
-        # if markup no finished -> make sure that filename has unfinished
+        progress_dialog = self.show_progress(u"Загрузка разметки ...")
+        progress_dialog.open()
+        result = self.controller.load_markup(
+            self.last_open_doc_name, self.imageLabel, progress_dialog)
+        if not result:
+            self.last_open_doc_name = None
+        elif not self.controller.markup_finished:
+        # if markup not finished -> make sure that filename has unfinished
         # extension
-        if not self.controller.markup_finished:
             name, ext = os.path.splitext(self.last_open_doc_name)
             self.last_open_doc_name = name + ".unfinished"
-        self.hide_progress_bar()
+        self.hide_progress()
 
     def save(self):
         if not self.last_open_doc_name:
@@ -481,9 +496,9 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         if not self.controller.verify_mark_pairs():
             self.show_cant_save_dialog()
             return False
-        self.show_progress_bar(u"Сохранение разметки ... ")
+        self.show_progress(u"Сохранение разметки ... ")
         self.controller.save(self.last_open_doc_name)
-        self.hide_progress_bar()
+        self.hide_progress()
 
     def save_as(self):
         # check that all marked paragraphs have both marks
@@ -491,11 +506,11 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             self.show_cant_save_dialog()
             return False
         filename = self.show_save_as_dialog()
-        if not filename:
+        if not filename or filename == u"":
             return
-        self.show_progress_bar(u"Сохранение разметки ... ")
+        self.show_progress(u"Сохранение разметки ... ")
         self.last_open_doc_name = self.controller.save(filename)
-        self.hide_progress_bar()
+        self.hide_progress()
         return True
 
     # depending on last_open_doc executes either save or save as
@@ -701,3 +716,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
             if result == QtGui.QMessageBox.No:
                 return None
         return choice
+
+    def show_load_markup_wizard(self):
+        # TODO a mold for wizard
+        if not self.load_markup_wizard:
+            pass

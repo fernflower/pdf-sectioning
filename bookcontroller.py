@@ -4,6 +4,7 @@ from collections import OrderedDict
 from documentprocessor import DocumentProcessor
 from paragraphmark import MarkCreator, QRulerMark
 from zonetypes import ZoneIconsProducer
+from cmsquerymodule import CmsQueryCanceledByUser
 
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
@@ -101,7 +102,8 @@ class BookController(object):
                       next(x for x in ["l", "r"] if x != self.first_page)]
         return page_order[(pagenum + 1) % 2]
 
-    def settings_changed(self, new_settings, create_if_none=False):
+    def settings_changed(self, new_settings, create_if_none=False,
+                         progress=None):
         changed = {}
         old_settings = {}
         if not create_if_none:
@@ -130,12 +132,17 @@ class BookController(object):
                 self.cms_course != new_settings["cms-course"]:
             if self.cms_course:
                 self.delete_all()
-            self.toc_raw, self.all_autozones = \
-                self.cms_query_module.get_cms_course_toc(
-                    self.login, self.password, new_settings["cms-course"])
-            self.cms_course = new_settings["cms-course"]
-            self.toc_controller.reload_course(
-                self.toc_raw, self.start_autozones, self.end_autozones)
+            try:
+                self.toc_raw, self.all_autozones = \
+                    self.cms_query_module.get_cms_course_toc(
+                        self.login, self.password, new_settings["cms-course"],
+                        progress=progress)
+                self.cms_course = new_settings["cms-course"]
+                self.toc_controller.reload_course(
+                    self.toc_raw, self.start_autozones, self.end_autozones)
+            except CmsQueryCanceledByUser:
+                self._restore_settings(old_settings)
+                return False
 
         if not create_if_none:
             self.adapt_to_new_settings(old_settings, changed)
@@ -147,9 +154,9 @@ class BookController(object):
             for cas_id in self.paragraph_marks:
                 for z in self.paragraph_marks[cas_id]["zones"]:
                     z.margin = new["margins"][0] if change_margin else z.margin
-                    z.change_corrections(self._get_corrections(new["margins"][0],
-                                                               z.rubric),
-                                         self.pagenum)
+                    z.change_corrections(
+                        self._get_corrections(new["margins"][0], z.rubric),
+                        self.pagenum)
         # adapt to autozone type change
         # if any auto zone has changed its type -> remove it and place
         # autozones once more
@@ -165,7 +172,8 @@ class BookController(object):
             for cas_id in self.paragraph_marks:
                 if not zone_parent and \
                         len(self.paragraph_marks[cas_id]["zones"]) > 0:
-                    zone_parent = self.paragraph_marks[cas_id]["zones"][0].parent
+                    zone_parent = \
+                        self.paragraph_marks[cas_id]["zones"][0].parent
                 self.delete_marks(
                     forced=True,
                     marks=[z for z in self.paragraph_marks[cas_id]["zones"]
@@ -181,11 +189,12 @@ class BookController(object):
 
     @property
     def book_settings(self):
-        return {key: getattr(self, key.replace('-', '_')) \
-                    for key in ["cms-course", "margins", "margin-width",
-                                "first-page", "passthrough-zones",
-                                "start-autozones", "end-autozones",
-                                "all-autozones","display-name", "zonetypes"]}
+        return {key: getattr(self, key.replace('-', '_'))
+                for key in ["cms-course", "margins", "margin-width",
+                            "first-page", "passthrough-zones",
+                            "start-autozones", "end-autozones",
+                            "all-autozones", "display-name", "zonetypes"]}
+
     @property
     def autozone_types(self):
         return self.toc_controller.autozone_types
@@ -200,7 +209,7 @@ class BookController(object):
 
     @property
     def markup_finished(self):
-        finished = [e for e in \
+        finished = [e for e in
                     self.toc_controller.current_toc_elems(self.MODE_MARKER)
                     if e.is_finished()]
         return len(finished) == \
@@ -218,7 +227,7 @@ class BookController(object):
     def selected_marks_and_rulers(self):
         return self.selected_marks + self.selected_rulers
 
-    ### setters section
+    # ## setters section
     def set_horizontal_ruler_mode(self):
         self.mark_mode = self.MODE_RULER_HOR
 
@@ -242,7 +251,7 @@ class BookController(object):
         # show hidden zones
         self.show_page_marks(self.pagenum)
 
-    ### predicates section
+    # ## predicates section
     def is_userdata_valid(self, login, password):
         return self.cms_query_module.validate_user_data(login, password)
 
@@ -325,9 +334,10 @@ class BookController(object):
             return self.dp.totalPages
         return 0
 
-    def load_course(self, course_id, display_name):
+    def load_course(self, course_id, display_name, progress):
         return self.settings_changed({"cms-course": course_id,
-                                      "display-name": display_name})
+                                      "display-name": display_name},
+                                     progress=progress)
 
     def get_image(self):
         if not self.dp:
@@ -370,9 +380,9 @@ class BookController(object):
     def _get_zone(self, cas_id, zone_id):
         try:
             return next(
-                 (z for z in self.paragraph_marks[cas_id]["zones"] \
-                  if z.zone_id == zone_id),
-                 None)
+                (z for z in self.paragraph_marks[cas_id]["zones"]
+                 if z.zone_id == zone_id),
+                None)
         except KeyError:
             return None
 
@@ -404,10 +414,10 @@ class BookController(object):
 
     # had to do this cumbersome trick as python range doesn't accept floats
     def get_all_zoom_values(self):
-        return [ str(zoom * 100 / 2) + "%" for zoom in \
+        return [str(zoom * 100 / 2) + "%" for zoom in
                 range(self.MIN_SCALE * 2,
                       self.MAX_SCALE * 2,
-                      int(self.ZOOM_DELTA * 2)) ]
+                      int(self.ZOOM_DELTA * 2))]
 
     def get_first_error_mark(self, mode):
         error_toc = self.toc_controller.get_first_error_elem(mode)
@@ -429,7 +439,7 @@ class BookController(object):
         except KeyError:
             return both
 
-    ### different operations
+    # ## different operations
     def open_file(self, filename, progress=None):
         self.delete_all()
         # deselect all in toc list
@@ -442,14 +452,31 @@ class BookController(object):
             # TODO eliminate catch them all
             return False
 
+    def _restore_settings(self, settings):
+        # simply substitute current attrs with attrs from settings, no course
+        # reloading or other heavy stuff
+        print "old settings: %s" % self.book_settings
+        for key in settings:
+            if key != "zonetypes":
+                setattr(self, key.replace('-', '_'), settings[key])
+        print "restored settings: %s" % self.book_settings
+
     # here marks_parent is a parent widget to set at marks' creation
     def load_markup(self, filename, marks_parent, progress=None):
         self.delete_all()
-        # convert from QString
-        filename = str(filename)
+        # old_settings = self.book_settings
         paragraphs, settings = self.dp.load_native_xml(filename)
-        self.settings_changed(settings)
+        #try:
+        if not self.settings_changed(settings, progress=progress):
+            return False
+        #except CmsQueryCanceledByUser:
+            # restore old_settings
+         #   self._restore_settings(old_settings)
+         #   self.delete_all()
+         #   return False
         # generate start\end marks from paragraphs' data
+        if progress:
+            progress.setRange(0, len(paragraphs.items()))
         for i, (cas_id, data) in enumerate(paragraphs.items()):
             marks = data["marks"]
             zones = data["zones"]
@@ -462,7 +489,7 @@ class BookController(object):
                              "page": page,
                              "delete_func": self.delete_funcs["start_end"],
                              "type": m["type"],
-                             "corrections":self._get_corrections()}
+                             "corrections": self._get_corrections()}
                 mark = self.add_mark(mark_data)
                 mark.adjust(self.scale)
                 if mark.page != self.pagenum:
@@ -473,33 +500,33 @@ class BookController(object):
                 pages = {}
                 for z1 in z["placements"]:
                     pages[int(z1["page"])] = float(z1["y"])
-                zone_data = { "parent": marks_parent,
-                              "pos": (0, float(z["y"])),
-                              "cas_id": cas_id,
-                              "zone_id": z["zone-id"],
-                              "page": page,
-                              "pages": pages,
-                              "delete_func": self.delete_funcs["zone"],
-                              "number": z["number"],
-                              "rubric": z["rubric"],
-                              "objects": z["objects"],
-                              "margin": z["at"],
-                              "pass_through": z["passthrough"],
-                              "icon": self.icons_producer.get(z["rubric"]),
-                              "auto": z["number"] == "00",
-                              "corrections": self._get_corrections(
-                                  z["at"], z["rubric"]),
-                              "recalc_corrections": self._recalc_corrections
-                             }
+                zone_data = {"parent": marks_parent,
+                             "pos": (0, float(z["y"])),
+                             "cas_id": cas_id,
+                             "zone_id": z["zone-id"],
+                             "page": page,
+                             "pages": pages,
+                             "delete_func": self.delete_funcs["zone"],
+                             "number": z["number"],
+                             "rubric": z["rubric"],
+                             "objects": z["objects"],
+                             "margin": z["at"],
+                             "pass_through": z["passthrough"],
+                             "icon": self.icons_producer.get(z["rubric"]),
+                             "auto": z["number"] == "00",
+                             "corrections": self._get_corrections(
+                                 z["at"], z["rubric"]),
+                             "recalc_corrections": self._recalc_corrections}
                 zone = self.add_zone(zone_data)
                 if self.is_markup_mode and zone.should_show(self.pagenum):
                     zone.show()
                 else:
                     zone.hide()
+        return True
 
     def _get_page_margin(self, page):
         for margin in ["l", "r"]:
-            if all(map(lambda z: z.margin==margin,
+            if all(map(lambda z: z.margin == margin,
                        self.paragraphs[page]["zones"])):
                 return margin
         return "lr"
@@ -514,11 +541,11 @@ class BookController(object):
         # correct page order
         for pagenum in sorted(self.paragraphs.keys()):
             for m in sorted(self.paragraphs[pagenum]["marks"],
-                            key=lambda m:m.y()):
+                            key=lambda m: m.y()):
                 para_key = m.cas_id
                 y = self.transform_to_pdf_coords(m.y())
-                mark = {"page" : m.page,
-                        "name" : m.name,
+                mark = {"page": m.page,
+                        "name": m.name,
                         "y": y}
                 try:
                     pdf_paragraphs[para_key]["marks"].append(mark)
@@ -539,7 +566,8 @@ class BookController(object):
                 else ["r", "l"][pagenum % 2]
         self.any_unsaved_changes = False
         # if not all paragraphs have been marked -> add unfinished_ to filename
-        return self.dp.save_all(path_to_file, pdf_paragraphs, self.book_settings)
+        return self.dp.save_all(path_to_file, pdf_paragraphs,
+                                self.book_settings)
 
     # add zone to zones on page zone.page AND to paragraph's zones
     # There might be no marks on pages, so have to check on pagenum's presence
@@ -566,8 +594,8 @@ class BookController(object):
         return zone
 
     # if step_by_step is True then scale will be either increased or decreased
-    # by 1. Otherwise - scale will be taken from delta: delta + old if delta in [MIN,
-    # MAX], or not taken if out of bounds
+    # by 1. Otherwise - scale will be taken from delta: delta + old if delta
+    # in [MIN, MAX], or not taken if out of bounds
     def zoom(self, delta, step_by_step=True):
         new_scale = old_scale = self.scale
         if step_by_step:
@@ -575,7 +603,8 @@ class BookController(object):
                 new_scale = self.scale + self.ZOOM_DELTA
             elif delta < 0:
                 new_scale = self.scale - self.ZOOM_DELTA
-        else: new_scale = delta + self.scale
+        else:
+            new_scale = delta + self.scale
         if new_scale >= self.MIN_SCALE and new_scale <= self.MAX_SCALE:
             self.scale = new_scale
             coeff = new_scale / old_scale
@@ -594,8 +623,8 @@ class BookController(object):
         # auto place ALL autozones in ALL paragraphs that have start\end marks
         count = 0
         for i, cas_id in enumerate(self.paragraph_marks.keys()):
-            autozones = self.toc_controller.get_autoplaced_zones(cas_id,
-                                                                 self.icons_producer)
+            autozones = self.toc_controller.get_autoplaced_zones(
+                cas_id, self.icons_producer)
             (start, end) = self.paragraph_marks[cas_id]["marks"]
             for az in autozones:
                 # no autoplacement if zone already placed
@@ -624,22 +653,22 @@ class BookController(object):
                     if end.y() > pos_y:
                         pages.append(end.page)
                     pages = dict(zip(pages, [pos_y]*len(pages)))
-                zone_data = { "pos": pos,
-                              "parent": zone_parent,
-                              "cas_id": cas_id,
-                              "zone_id": az["zone-id"],
-                              "page": page,
-                              "delete_func": self.delete_funcs["zone"],
-                              "objects": az["objects"],
-                              "rubric": az["rubric"],
-                              "margin": margin,
-                              "corrections":self._get_corrections(margin,
-                                                                  az["rubric"]),
-                              "auto": True,
-                              "icon": self.icons_producer.get(az["rubric"]),
-                              "pass_through": pass_through,
-                              "recalc_corrections": self._recalc_corrections,
-                              "pages": pages }
+                zone_data = {"pos": pos,
+                             "parent": zone_parent,
+                             "cas_id": cas_id,
+                             "zone_id": az["zone-id"],
+                             "page": page,
+                             "delete_func": self.delete_funcs["zone"],
+                             "objects": az["objects"],
+                             "rubric": az["rubric"],
+                             "margin": margin,
+                             "corrections": self._get_corrections(
+                                 margin, az["rubric"]),
+                             "auto": True,
+                             "icon": self.icons_producer.get(az["rubric"]),
+                             "pass_through": pass_through,
+                             "recalc_corrections": self._recalc_corrections,
+                             "pages": pages}
                 zone = self.add_zone(zone_data)
                 count = count + 1
                 if zone.should_show(self.pagenum):
@@ -650,7 +679,7 @@ class BookController(object):
 
     # deselect all elems on page (both marks and rulers) if not in
     # keep_selections list
-    def deselect_all(self, keep_selections = []):
+    def deselect_all(self, keep_selections=[]):
         map(lambda x: x.set_selected(False),
             filter(lambda x: x not in keep_selections,
                    self.selected_marks_and_rulers))

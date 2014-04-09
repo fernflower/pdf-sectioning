@@ -6,10 +6,13 @@ from addzonesdialog import Ui_addZones
 
 
 class Settings(QtGui.QDialog):
-    def __init__(self, controller, parent):
+    def __init__(self, controller, parent, progress=None):
         super(Settings, self).__init__()
         self.controller = controller
         self.parent = parent
+        self.progress = progress or QtGui.QProgressDialog(
+            u"Применение настроек...", u"Отмена", 0, 100, parent=self)
+        self.progress.setMinimumDuration(1)
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self.setWindowTitle(QtCore.QString.fromUtf8(u"Настройки"))
@@ -90,7 +93,12 @@ class Settings(QtGui.QDialog):
             # made
             QtGui.QApplication.setOverrideCursor(
                 QtGui.QCursor(QtCore.Qt.BusyCursor))
-            self.controller.load_course(self.chosen_course_id, self.display_name)
+            self.progress.reset()
+            self.progress.open()
+            self.controller.load_course(
+                self.chosen_course_id, self.display_name, self.progress)
+            # TODO figure out why it won't close itself
+            self.progress.close()
             self.all_autozones = self.controller.all_autozones
             QtGui.QApplication.restoreOverrideCursor()
             self._let_modify_zonetypes(True)
