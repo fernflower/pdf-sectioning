@@ -16,6 +16,7 @@ class Settings(QtGui.QDialog):
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self.setWindowTitle(QtCore.QString.fromUtf8(u"Настройки"))
+        self.errors_in_course_dialog = None
         self.wrong_userdata_dialog = None
         self.new_settings = {}
         self.search_result = []
@@ -80,6 +81,17 @@ class Settings(QtGui.QDialog):
             self.chosen_course_id = self.search_result[index - 1][1]
             self.ui.cmsCourse_edit.setText(self.search_result[index - 1][0])
 
+    def _show_errors_in_course_dialog(self):
+        if not self.errors_in_course_dialog:
+            self.errors_in_course_dialog = QtGui.QMessageBox(self)
+            self.errors_in_course_dialog.setText(u"Невозможно загрузить курс.")
+            self.errors_in_course_dialog.setInformativeText(
+                u"В xml-структуре курса есть ошибки. Подробная информация " +
+                u"в файле errors.log в корневой директории программы.")
+            self.errors_in_course_dialog.setStandardButtons(
+                QtGui.QMessageBox.Cancel)
+        self.errors_in_course_dialog.exec_()
+
     def _on_course_chosen(self, index):
         # reload course only if no marks have been placed
         # index = 0 means that nothing has been chosen
@@ -95,10 +107,14 @@ class Settings(QtGui.QDialog):
                 QtGui.QCursor(QtCore.Qt.BusyCursor))
             self.progress.reset()
             self.progress.open()
-            self.controller.load_course(
+            course_loaded = self.controller.load_course(
                 self.chosen_course_id, self.display_name, self.progress)
-            # TODO figure out why it won't close itself
+            # TODO figure out why won't it close by itself
             self.progress.close()
+            if not course_loaded:
+                self._show_errors_in_course_dialog()
+                QtGui.QApplication.restoreOverrideCursor()
+                return
             self.all_autozones = self.controller.all_autozones
             QtGui.QApplication.restoreOverrideCursor()
             self._let_modify_zonetypes(True)

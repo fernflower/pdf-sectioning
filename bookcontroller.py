@@ -4,7 +4,7 @@ from collections import OrderedDict
 from documentprocessor import DocumentProcessor
 from paragraphmark import MarkCreator, QRulerMark
 from zonetypes import ZoneIconsProducer
-from cmsquerymodule import CmsQueryCanceledByUser
+from cmsquerymodule import CmsQueryCanceledByUser, CourseParseError
 
 
 # here main logic is stored. Passed to all views (BookViewerWidget,
@@ -142,6 +142,10 @@ class BookController(object):
                     self.toc_raw, self.start_autozones, self.end_autozones)
             except CmsQueryCanceledByUser:
                 self._restore_settings(old_settings)
+                return False
+            except CourseParseError as e:
+                self._restore_settings(old_settings)
+                self.dp.save_error_log(e.errors, new_settings["cms-course"], new_settings["display-name"])
                 return False
 
         if not create_if_none:

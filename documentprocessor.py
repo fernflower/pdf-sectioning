@@ -5,16 +5,17 @@ from popplerqt4 import Poppler
 from lxml import etree
 from lxml.builder import ElementMaker
 from zonetypes import DEFAULT_ZONE_TYPES
+from cmsquerymodule import NSMAP
 
 XHTML_NAMESPACE = "http://internet-school.ru/abc"
 
-E = ElementMaker(namespace=XHTML_NAMESPACE,
-                 nsmap={'is' : XHTML_NAMESPACE})
+E = ElementMaker(namespace=XHTML_NAMESPACE, nsmap=NSMAP)
 
 
 class LoaderError(Exception):
     def __str__(self):
         return self.message.encode("utf-8")
+
 
 class DocumentProcessor(object):
     resolution = 72.0
@@ -27,6 +28,9 @@ class DocumentProcessor(object):
         self.rendered_pages = {}
         print u"filename is %s" % filename
         # check that file exists (in case app is run from console)
+        # if error log exists -> remove it
+        if os.path.isfile("errors.log"):
+            os.remove("errors.log")
         if os.path.isfile(filename):
             self.doc = Poppler.Document.load(filename)
             self.doc.setRenderHint(Poppler.Document.TextAntialiasing)
@@ -58,29 +62,29 @@ class DocumentProcessor(object):
     def render_page(self, num, scale):
         page = self.doc.page(num)
         qimage = page.renderToImage(self.resolution * scale,
-                                  self.resolution * scale,
-                                  0,
-                                  0,
-                                  page.pageSize().width() * scale,
-                                  page.pageSize().height() * scale,
-                                  0)
+                                    self.resolution * scale,
+                                    0,
+                                    0,
+                                    page.pageSize().width() * scale,
+                                    page.pageSize().height() * scale,
+                                    0)
         return qimage
 
     def next_page(self):
         self.curr_page_num = self.curr_page_num + 1 \
-                             if self.curr_page_num < self.doc.numPages() - 1 \
-                             else self.doc.numPages() - 1
+            if self.curr_page_num < self.doc.numPages() - 1 \
+            else self.doc.numPages() - 1
         return self.curr_page()
 
     def prev_page(self):
-        self.curr_page_num = self.curr_page_num - 1 if self.curr_page_num > 0 \
-                                                    else 0
+        self.curr_page_num = self.curr_page_num - 1 \
+            if self.curr_page_num > 0 else 0
         return self.curr_page()
 
     # here 1st page is passed as page 0
     def go_to_page(self, pagenum):
-        self.curr_page_num = pagenum if pagenum in range(0, self.totalPages) \
-                                     else self.curr_page_num
+        self.curr_page_num = pagenum \
+            if pagenum in range(0, self.totalPages) else self.curr_page_num
         return self.curr_page() if self.curr_page_num == pagenum else None
 
     def curr_page(self, scale=1):
@@ -93,7 +97,7 @@ class DocumentProcessor(object):
                     self.render_page(self.curr_page_num, scale)
         else:
             rendered = self.render_page(self.curr_page_num, scale)
-            self.rendered_pages[self.curr_page_num] = { scale : rendered }
+            self.rendered_pages[self.curr_page_num] = {scale: rendered}
         return self.rendered_pages[self.curr_page_num][scale]
 
     # selection is a QRect
@@ -108,15 +112,13 @@ class DocumentProcessor(object):
     def load_native_xml(self, filename):
         tree = etree.parse(filename)
         SETTINGS_XPATH = "/is:object/is:text/is:ebook-pages/is:settings"
-        PAGES_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-page"
         PARAGRAPHS_XPATH = "/is:object/is:text/is:ebook-pages/is:ebook-para"
-        settings = tree.xpath(SETTINGS_XPATH,
-                              namespaces = { "is" : XHTML_NAMESPACE})
+        settings = tree.xpath(SETTINGS_XPATH, namespaces=NSMAP)
         if len(settings) > 0:
             settings = settings[0]
-        paragraphs = tree.xpath(PARAGRAPHS_XPATH,
-                           namespaces = { "is" : XHTML_NAMESPACE})
+        paragraphs = tree.xpath(PARAGRAPHS_XPATH, namespaces=NSMAP)
         out_paragraphs = {}
+
         def _process_settings(param, text):
             if param in ['start-autozones', 'margins', 'all-autozones',
                          'end-autozones', 'passthrough-zones', 'zonetypes']:
@@ -125,7 +127,7 @@ class DocumentProcessor(object):
                 return int(text)
             except ValueError:
                 return text
-        book_settings = {e.xpath('local-name()'): \
+        book_settings = {e.xpath('local-name()'):
                          _process_settings(e.xpath('local-name()'), e.text)
                          for e in settings.getchildren()} \
             if len(settings) > 0 else {}
@@ -137,29 +139,28 @@ class DocumentProcessor(object):
             end_y = paragraph.get("end-y")
             end_page = paragraph.get("end-page")
             start = {"cas-id": cas_id,
-                     "name" : name,
+                     "name": name,
                      "y": start_y,
                      "page": start_page,
                      "type": "start"}
             end = {"cas-id": cas_id,
-                   "name" : name,
+                   "name": name,
                    "y": end_y,
                    "page": end_page,
                    "type": "end"}
             zones = []
-            for zone in paragraph.xpath("is:ebook-zone",
-                                        namespaces = { "is" : XHTML_NAMESPACE}):
+            for zone in paragraph.xpath("is:ebook-zone", namespaces=NSMAP):
                 objects = [{"oid": o.get("oid"),
                             "block-id": o.get("block-id")}
                            for o in zone.xpath("is:ebook-object",
-                                               namespaces = { "is" : XHTML_NAMESPACE})]
+                                               namespaces=NSMAP)]
                 placements = [{"page": pl.get("page"),
                                "y": pl.get("y")}
                               for pl in zone.xpath("is:ebook-placement",
-                                                   namespaces = { "is" : XHTML_NAMESPACE})
-                             ]
-                page = zone.get("page") or next((z["page"] for z in placements),
-                                                None)
+                                                   namespaces=NSMAP)]
+                page = zone.get("page") or \
+                    next((z["page"] for z in placements), None)
+
                 def _get_zone_id():
                     return zone.get("rubric") if zone.get("n") in ["00", None] \
                         else zone.get("n") + zone.get("rubric")
@@ -175,8 +176,7 @@ class DocumentProcessor(object):
                             "objects": objects,
                             "passthrough": zone.get("type") == u"repeat"}
                 zones.append(new_zone)
-            out_paragraphs[cas_id] = { "marks": [start, end],
-                                       "zones": zones }
+            out_paragraphs[cas_id] = {"marks": [start, end], "zones": zones}
         return (out_paragraphs, book_settings)
 
     # Paragraphs - a dict {cas-id : dict with all paragraph data}
@@ -208,11 +208,11 @@ class DocumentProcessor(object):
             assert len(marks) == 2, \
                 "Some paragraphs don't have end marks, can't save that way!"
             PARA = E("ebook-para", id=str(cas_id),
-                     **{ "start-page": str(marks[0]["page"]),
-                         "start-y": str(marks[0]["y"]),
-                         "name": marks[0]["name"],
-                         "end-page": str(marks[1]["page"]),
-                         "end-y": str(marks[1]["y"]) })
+                     **{"start-page": str(marks[0]["page"]),
+                        "start-y": str(marks[0]["y"]),
+                        "name": marks[0]["name"],
+                        "end-page": str(marks[1]["page"]),
+                        "end-y": str(marks[1]["y"])})
             for zone in zones:
                 # passthrough zones come first
                 if zone["type"] == "repeat":
@@ -226,15 +226,15 @@ class DocumentProcessor(object):
                                        "y": str(pl["y"])}))
                 else:
                     ZONE = E("ebook-zone", type=zone["type"],
-                            **{ "n": str(zone["n"]),
+                             **{"n": str(zone["n"]),
                                 "page": str(zone["page"]),
                                 "y": str(zone["y"]),
                                 "rubric": zone["rubric"],
                                 "at": zone["at"]})
                 for obj in zone["objects"]:
                     ZONE.append(E("ebook-object",
-                                  **{ "oid": obj["oid"],
-                                     "block-id": obj["block-id"] }))
+                                  **{"oid": obj["oid"],
+                                     "block-id": obj["block-id"]}))
                 PARA.append(ZONE)
             PAGES.append(PARA)
 
@@ -243,23 +243,24 @@ class DocumentProcessor(object):
         if progress:
             progress.setRange(1, self.totalPages)
         for page in range(1, self.totalPages):
-            margin = paragraphs["pages"][page]
+
             def _get_page_preview_str(page):
                 return "page-" + "0"*(3-len(str(page))) + str(page) + ".png"
+
             def _get_fold(first_page, pagenum):
                 page_order = [first_page,
                               next(x for x in ["l", "r"] if x != first_page)]
-                return page_order[(pagenum + 1) % 2 ]
+                return page_order[(pagenum + 1) % 2]
             fold = _get_fold(settings["first-page"], page)
             PAGE = E("ebook-page",
-                     **{ "preview": _get_page_preview_str(page),
-                         "n": str(page),
-                         "width": str(self.width()),
-                         "height": str(self.height()),
-                         "hide": "false",
+                     **{"preview": _get_page_preview_str(page),
+                        "n": str(page),
+                        "width": str(self.width()),
+                        "height": str(self.height()),
+                        "hide": "false",
                         # FIXME
-                         "zone-margins": fold,
-                         "fold": fold })
+                        "zone-margins": fold,
+                        "fold": fold})
             PAGES.append(PAGE)
             if progress:
                 progress.setValue(page)
@@ -287,7 +288,6 @@ class DocumentProcessor(object):
                 i = i + 1
             return previous_page
 
-
         toc = self.doc.toc()
         if not toc:
             return
@@ -296,12 +296,21 @@ class DocumentProcessor(object):
     # generates and saves previes, returns a list of generated filenames
     def gen_previews(self, path):
         filenames = []
-        save_path = path[:-1] if path[-1]=='/' else path
         for i, png in enumerate(self._render_all_to_png(), start=1):
-            name = os.path.join(save_path, self.png_prefix + str(i))
+            name = os.path.join(path, self.png_prefix + str(i))
             filenames.append(name)
             png.save(name, "png")
         return filenames
+
+    def save_error_log(self, errors, course_id, course_name):
+        with open("errors.log", "a+") as f:
+            # first write the name of the course
+            f.write("###########################\n")
+            f.write(course_name.encode('utf-8'))
+            f.write("(%s)\n" % course_id)
+            for error in errors:
+                f.write(error.message.encode('utf-8'))
+                f.write("\n")
 
     def save_all(self, path_to_file, paragraphs, settings, progress=None):
         with open(path_to_file, 'w') as fname:
@@ -326,12 +335,12 @@ class DocumentProcessor(object):
     def _processTextBlocks(self):
         result = dict()
         for i in range(0, self.doc.numPages()):
-            result[i] = [ ( ( t.boundingBox().left(),
-                              t.boundingBox().top(),
-                              t.boundingBox().width(),
-                              t.boundingBox().height() ),
-                             unicode(t.text()) )
-                          for t in self.doc.page(i).textList()]
+            result[i] = [((t.boundingBox().left(),
+                           t.boundingBox().top(),
+                           t.boundingBox().width(),
+                           t.boundingBox().height()),
+                          unicode(t.text()))
+                         for t in self.doc.page(i).textList()]
         return result
 
     def _render_one_to_png(self, num):
