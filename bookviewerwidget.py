@@ -481,6 +481,8 @@ class BookViewerWidget(QtGui.QMainWindow, Ui_MainWindow):
         progress_dialog.open()
         result = self.controller.load_markup(
             self.last_open_doc_name, self.imageLabel, progress_dialog)
+        # TODO why won't it close by itself?
+        progress_dialog.close()
         if not result:
             self.last_open_doc_name = None
         elif not self.controller.markup_finished:

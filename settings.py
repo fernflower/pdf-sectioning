@@ -107,18 +107,18 @@ class Settings(QtGui.QDialog):
                 QtGui.QCursor(QtCore.Qt.BusyCursor))
             self.progress.reset()
             self.progress.open()
-            course_loaded = self.controller.load_course(
+            (course_loaded, any_errors) = self.controller.load_course(
                 self.chosen_course_id, self.display_name, self.progress)
             # TODO figure out why won't it close by itself
             self.progress.close()
-            if not course_loaded:
-                self._show_errors_in_course_dialog()
-                QtGui.QApplication.restoreOverrideCursor()
-                return
-            self.all_autozones = self.controller.all_autozones
             QtGui.QApplication.restoreOverrideCursor()
-            self._let_modify_zonetypes(True)
-            self._set_correct_zones_text()
+            if any_errors:
+                self._show_errors_in_course_dialog()
+                return
+            if course_loaded:
+                self.all_autozones = self.controller.all_autozones
+                self._let_modify_zonetypes(True)
+                self._set_correct_zones_text()
 
     # if any of the default values are not present in zoneslist, then remove
     # these values from lineedit text

@@ -102,6 +102,7 @@ class BookController(object):
                       next(x for x in ["l", "r"] if x != self.first_page)]
         return page_order[(pagenum + 1) % 2]
 
+    # return value means (course_loaded, any_errors)
     def settings_changed(self, new_settings, create_if_none=False,
                          progress=None):
         changed = {}
@@ -142,14 +143,16 @@ class BookController(object):
                     self.toc_raw, self.start_autozones, self.end_autozones)
             except CmsQueryCanceledByUser:
                 self._restore_settings(old_settings)
-                return False
+                return (False, False)
             except CourseParseError as e:
                 self._restore_settings(old_settings)
-                self.dp.save_error_log(e.errors, new_settings["cms-course"], new_settings["display-name"])
-                return False
+                self.dp.save_error_log(e.errors, new_settings["cms-course"],
+                                       new_settings["display-name"])
+                return (False, True)
 
         if not create_if_none:
             self.adapt_to_new_settings(old_settings, changed)
+        return (True, False)
 
     def adapt_to_new_settings(self, old, new):
         # adapt to margin type change
@@ -468,19 +471,14 @@ class BookController(object):
     # here marks_parent is a parent widget to set at marks' creation
     def load_markup(self, filename, marks_parent, progress=None):
         self.delete_all()
-        # old_settings = self.book_settings
         paragraphs, settings = self.dp.load_native_xml(filename)
-        #try:
-        if not self.settings_changed(settings, progress=progress):
+        course_loaded, any_errors = self.settings_changed(settings,
+                                                          progress=progress)
+        if not course_loaded:
             return False
-        #except CmsQueryCanceledByUser:
-            # restore old_settings
-         #   self._restore_settings(old_settings)
-         #   self.delete_all()
-         #   return False
         # generate start\end marks from paragraphs' data
         if progress:
-            progress.setRange(0, len(paragraphs.items()))
+            progress.setRange(0, len(paragraphs.items()) - 1)
         for i, (cas_id, data) in enumerate(paragraphs.items()):
             marks = data["marks"]
             zones = data["zones"]
