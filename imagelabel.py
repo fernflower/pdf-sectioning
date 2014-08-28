@@ -8,10 +8,10 @@ from PyQt4 import QtGui, QtCore
 # cas-id
 class QImageLabel(QtGui.QLabel):
     STYLESHEET = "QImageLabel { background-color: rgb(58, 56, 56); }"
-    MOVE_KEYS_DELTA = { QtCore.Qt.Key_Up: QtCore.QPoint(0, -2),
-                        QtCore.Qt.Key_Down: QtCore.QPoint(0, 2),
-                        QtCore.Qt.Key_Left: QtCore.QPoint(-2, 0),
-                        QtCore.Qt.Key_Right: QtCore.QPoint(2, 0) }
+    MOVE_KEYS_DELTA = {QtCore.Qt.Key_Up: QtCore.QPoint(0, -2),
+                       QtCore.Qt.Key_Down: QtCore.QPoint(0, 2),
+                       QtCore.Qt.Key_Left: QtCore.QPoint(-2, 0),
+                       QtCore.Qt.Key_Right: QtCore.QPoint(2, 0)}
 
     def __init__(self, parent, controller, toc_controller):
         self.controller = controller
@@ -36,14 +36,9 @@ class QImageLabel(QtGui.QLabel):
             return (self.coordinates.x(), self.coordinates.y())
 
     def dragEnterEvent(self, event):
-        print "drag enter"
         event.accept()
 
-    def dragLeaveEvent(self, event):
-        print "drag leave"
-
     def dropEvent(self, event):
-        print "drop"
         # deselected everything selected earlier on page
         self.controller.deselect_all()
         self.controller._create_mark_on_click(

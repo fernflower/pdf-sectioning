@@ -73,7 +73,6 @@ class Settings(QtGui.QDialog):
             str(zoneslist[0] if len(zoneslist) > 0 else "")
 
     def _on_course_browsed(self, index):
-        print "browsed"
         if index == 0:
             self.chosen_course_id = None
             self.ui.cmsCourse_edit.setText(u"")

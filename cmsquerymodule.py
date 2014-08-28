@@ -5,7 +5,6 @@ import urllib
 import os
 import json
 from json import dumps, loads
-from httplib2 import Http
 from StringIO import StringIO
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -149,6 +148,54 @@ class CmsQueryModule(object):
         else:
             return all_zones
 
+    def _resolve_names(self, lesson_ids, progress, login, password):
+        ids_to_resolve = ["lesson:" + lesson_id
+                          for lesson_id in lesson_ids]
+        body = dumps(ids_to_resolve)
+        storage = StringIO()
+        c = pycurl.Curl()
+        c.setopt(pycurl.URL, self.config_data["resolve-url"])
+        c.setopt(pycurl.HTTPHEADER,
+                 ['Content-Type : application/json; charset=UTF-8'])
+        c.setopt(c.WRITEFUNCTION, storage.write)
+        c.setopt(pycurl.POST, 1)
+        c.setopt(pycurl.POSTFIELDS, body)
+        c.setopt(pycurl.USERPWD, "{}:{}".format(login, password))
+        c.perform()
+        resp = c.getinfo(pycurl.HTTP_CODE)
+        c.close()
+        content = None
+        if resp == 200:
+            content = storage.getvalue()
+        if resp.status != 200:
+            raise CmsQueryError("Could not resolve lesson names!")
+        resolved = loads(content)
+        toc = []
+        errors = []
+        if progress:
+            progress.setRange(0, len(ids_to_resolve))
+        any_errors = False
+        for i, lesson_id in enumerate(ids_to_resolve):
+            if progress:
+                progress.setValue(i)
+                if progress.wasCanceled():
+                    progress.close()
+                    raise CmsQueryCanceledByUser()
+            objects, lesson_errors = self._get_lesson_objects(
+                lesson_id, login, password,
+                self.get_zone_types(login, password))
+            if lesson_errors != []:
+                any_errors = True
+                errors.extend(lesson_errors)
+            toc.append(
+                {"name": resolved[lesson_id],
+                 "cas-id": lesson_id,
+                 "objects": objects})
+        if any_errors:
+            raise CourseParseError("Check course contents for errors!",
+                                   errors=errors)
+        return toc
+
     # returns a list of {name, cas-id} in order of appearance in TOC
     def get_cms_course_toc(self, login, password, course_id=None,
                            progress=None):
@@ -158,9 +205,7 @@ class CmsQueryModule(object):
         course_url = os.path.join(self.config_data['url'],
                                   course_id.encode('utf-8'))
         code, data = self._fetch_data(course_url, login, password)
-        any_errors = False
         if data:
-            available_zone_types = self.get_zone_types(login, password)
             if progress:
                 progress.setLabelText(u"Загрузка курса из cms...")
             TOC_XPATH = "/is:course/is:lessons/is:lesson/@name"
@@ -168,42 +213,7 @@ class CmsQueryModule(object):
             self.display_name = tree.xpath(
                 "/is:course/@display-name", namespaces=NSMAP)[0]
             lesson_ids = tree.xpath(TOC_XPATH, namespaces=NSMAP)
-            # resolve names
-            ids_to_resolve = ["lesson:" + lesson_id
-                              for lesson_id in lesson_ids]
-            headers = {"Content-type": "application/json; charset=UTF-8"}
-            body = dumps(ids_to_resolve)
-            http_obj = Http()
-            http_obj.add_credentials(self.config_data['login'],
-                                     self.config_data['password'])
-            resp, content = http_obj.request(
-                uri=self.config_data["resolve-url"], method='POST',
-                headers=headers,
-                body=body)
-            if resp.status != 200:
-                raise CmsQueryError("Could not resolve lesson names!")
-            resolved = loads(content)
-            toc = []
-            errors = []
-            if progress:
-                progress.setRange(0, len(ids_to_resolve))
-            for i, lesson_id in enumerate(ids_to_resolve):
-                if progress:
-                    progress.setValue(i)
-                    if progress.wasCanceled():
-                        progress.close()
-                        raise CmsQueryCanceledByUser()
-                objects, lesson_errors = self._get_lesson_objects(
-                    lesson_id, login, password, available_zone_types)
-                if lesson_errors != []:
-                    any_errors = True
-                    errors.extend(lesson_errors)
-                toc.append(
-                    {"name": resolved[lesson_id],
-                     "cas-id": lesson_id,
-                     "objects": objects})
-            if any_errors:
-                raise CourseParseError("Check course contents for errors!", errors=errors)
+            toc = self._resolve_names(lesson_ids, progress, login, password)
             auto_types = self._get_autozone_types(toc)
             return (toc, auto_types)
         else:
@@ -230,7 +240,8 @@ class CmsQueryModule(object):
         code, data = self._fetch_data(lesson_url, login, password)
         errors = []
         if data:
-            PARAGRAPHS_XPATH = "/is:lesson/is:content/is:paragraph | /is:lesson/is:content/is:test"
+            PARAGRAPHS_XPATH = \
+                "/is:lesson/is:content/is:paragraph | /is:lesson/is:content/is:test"
             tree = etree.fromstring(data)
             paragraphs = tree.xpath(PARAGRAPHS_XPATH, namespaces=NSMAP)
             objects = [{"oid": p.get("objectid"),
