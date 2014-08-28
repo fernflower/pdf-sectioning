@@ -4,7 +4,7 @@ from PyQt4 import QtGui
 from bookviewerwidget import BookViewerWidget
 from bookcontroller import BookController
 from toccontroller import TocController
-from cmsquerymodule import CmsQueryModule
+from offlinecmsquerymodule import OfflineCmsQueryModule
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
         return filename
 
     filename = parse_args()
-    cqm = CmsQueryModule()
+    cqm = OfflineCmsQueryModule()
 
     # show window
     app = QtGui.QApplication(sys.argv)

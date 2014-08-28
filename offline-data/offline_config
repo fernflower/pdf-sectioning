@@ -1,0 +1,7 @@
+url = ""
+ping-url = ""
+resolve-url = ""
+search-url = ""
+login = user
+# must be kept somewhere else, but for prototype will do
+password = password
