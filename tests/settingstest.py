@@ -3,7 +3,7 @@ import unittest
 from tempfile import NamedTemporaryFile
 from bookcontroller import BookController
 from toccontrollertest import MockTocController
-from sectiontool import CmsQueryModule, CmsQueryError
+from cmsquerymodule import CmsQueryModule, CmsQueryError
 
 
 class SettingsTest(unittest.TestCase):

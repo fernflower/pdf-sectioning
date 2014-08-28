@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
-from documentprocessor import DocumentProcessor
 from bookcontroller import BookController
-from bookviewerwidget import BookViewerWidget
-from sectiontool import CmsQueryModule
+from cmsquerymodule import CmsQueryModule
 from toccontrollertest import MockTocController
 
 

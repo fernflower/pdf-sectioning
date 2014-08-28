@@ -3,7 +3,7 @@ import unittest
 import json
 from PyQt4 import QtGui
 from tocelem import QObjectElem, QZone, QTocElem, QMarkerTocElem
-from sectiontool import CmsQueryModule
+from cmsquerymodule import CmsQueryModule
 
 
 class MockTocElem(object):

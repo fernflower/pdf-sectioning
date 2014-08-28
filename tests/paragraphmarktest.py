@@ -12,6 +12,7 @@ class ParagraphMarkTest(unittest.TestCase):
     # binding to ruler has to be tested here as well as ruler deletion when
     # moved outside vieport
     def test_create_and_move(self):
+        mock_icon = QtGui.QImage("buttons/Icons/missing.png")
         app = QtGui.QApplication([])
         mock_parent = QtGui.QLabel()
         # start\end can be moved only by y
@@ -41,7 +42,7 @@ class ParagraphMarkTest(unittest.TestCase):
                               delete_func=lambda x: x,
                               cas_id="lesson:123", zone_id="dic03",
                               page=11, objects=[], rubric="dic",
-                              margin="l")
+                              margin="l", icon=mock_icon)
         self.assertEqual(zone.pos_as_tuple(), (0, 119))
         zone.move((14, 14))
         self.assertEqual(zone.pos_as_tuple(), (0, 133))
@@ -50,7 +51,8 @@ class ParagraphMarkTest(unittest.TestCase):
                                    delete_func=lambda x: x,
                                    cas_id="lesson:123", zone_id="dic03",
                                    page=11, objects=[], rubric="dic",
-                                   margin="l", auto=True, pass_through=True)
+                                   margin="l", auto=True, pass_through=True,
+                                   icon=mock_icon)
         self.assertTrue(isinstance(pass_zone, QPassThroughZoneMark))
         self.assertEqual(pass_zone.pos_as_tuple(), (0, 119))
         pass_zone.move((14, 14))
@@ -60,7 +62,8 @@ class ParagraphMarkTest(unittest.TestCase):
                                     delete_func=lambda x: x,
                                     cas_id="lesson:123", zone_id="dic03",
                                     page=11, objects=[], rubric="dic",
-                                    margin="l", inner=True, pass_through=True)
+                                    margin="l", inner=True,
+                                    pass_through=True, icon=mock_icon)
         self.assertTrue(isinstance(inner_zone, QInnerZoneMark))
         self.assertTrue(inner_zone.should_show(11))
         self.assertEqual(inner_zone.pos_as_tuple(), (85, 119))
