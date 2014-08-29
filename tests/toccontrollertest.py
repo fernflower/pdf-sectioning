@@ -45,7 +45,7 @@ class MockTocController(object):
     def process_zone_added(self, zone):
         print "%s has been added" % zone.name
 
-    def get_autoplaced_zones(self, cas_id):
+    def get_autoplaced_zones(self, cas_id, icons_producer=None):
         return [{"type": "repeat",
                  "rel-start": 0,
                  "rel-end": None,
@@ -70,8 +70,9 @@ class MockTocController(object):
     def select(self, cas_id, zone_id=None, objects=None, **kwargs):
         self.active_elem = MockTocElem(cas_id, zone_id, objects, **kwargs)
 
+    def reload_course(self, course_id, start, end):
+        print("Course {} reloaded").format(course_id)
 
-@unittest.skip("FIXME")
 class TocControllerTest(unittest.TestCase):
     def setUp(self):
         super(TocControllerTest, self).setUp()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 from bookcontroller import BookController
-from cmsquerymodule import CmsQueryModule
+from offlinecmsquerymodule import OfflineCmsQueryModule
 from toccontrollertest import MockTocController
 
 
@@ -101,14 +101,12 @@ class MockMark(object):
 
     def intersects(self, rect_tuple):
         x1, y1, x2, y2 = rect_tuple
-        width = x2 - x1
-        height = y2 - y1
         x_range, y_range = self.geometry()
         x_topleft, y_topleft = x_range[0], y_range[0]
         x_bottomleft, y_bottomleft = x_range[0], y_range[1]
         x_topright, y_topright = x_range[1], y_range[0]
         x_bottomright, y_bottomright = x_range[1], y_range[1]
-        return not(x2 < x_topleft or x1 > x_topright or \
+        return not(x2 < x_topleft or x1 > x_topright or
                    y2 < y_topleft or y1 > y_bottomright)
 
 
@@ -169,7 +167,7 @@ class BookControllerTest(unittest.TestCase):
                      "zone_id": "01int",
                      "page": 14,
                      "delete_func": self.controller.delete_funcs["zone"],
-                     "objects":[ {"oid": "195-12-01-01-int",
+                     "objects": [{"oid": "195-12-01-01-int",
                                   "block-id": "some block id"}],
                      "number": "01",
                      "rubric": "int",
@@ -185,7 +183,7 @@ class BookControllerTest(unittest.TestCase):
         self.markup_file = "tests/native-test.xml"
         self.display_name = "Chemistry-8 course"
         self.pdf_file = "tests/chemistry8.pdf"
-        self.cqm = CmsQueryModule(u"tests/config-test")
+        self.cqm = OfflineCmsQueryModule(u"tests/config-test")
         self.mc = MockMarkCreator()
         self.toc_controller = MockTocController()
         self.controller = BookController(toc_controller=self.toc_controller,
@@ -196,7 +194,7 @@ class BookControllerTest(unittest.TestCase):
     def test_load_markup(self):
         self.controller.load_markup(self.markup_file, "MockParent")
         # 16 paragraphs with data and 2 dataless ones in the beginning
-        self.assertEqual(len(self.controller.paragraph_marks.keys()), 18)
+        self.assertEqual(len(self.controller.paragraph_marks.keys()), 53)
 
     def test_add_marks(self):
         # zone addition: test that proper keys appear in
@@ -258,15 +256,16 @@ class BookControllerTest(unittest.TestCase):
         # here come autozones tests
         placed = self.controller.autozones("MockParent")
         # get auto added zones, passthrough and plain ones
-        ptz = next((z for z in self.\
-                    controller.paragraph_marks["lesson:bla-bla-bla"]["zones"] \
+        ptz = next((z for z in self.
+                    controller.paragraph_marks["lesson:bla-bla-bla"]["zones"]
                     if z.pass_through), None)
-        auto_con = next((z for z in self.\
-                    controller.paragraph_marks["lesson:bla-bla-bla"]["zones"] \
-                    if z.zone_id=="con"), None)
+        auto_con = next(
+            (z for z in
+             self.controller.paragraph_marks["lesson:bla-bla-bla"]["zones"]
+             if z.zone_id == "con"), None)
         self.assertEquals(placed, 2)
-        self.assertFalse(ptz==None)
-        self.assertFalse(auto_con==None)
+        self.assertFalse(ptz is None)
+        self.assertFalse(auto_con is None)
         # have to be as close to start\end as possible
         self.assertEqual(ptz.page, 5)
         self.assertEqual(auto_con.page, 25)
@@ -290,7 +289,7 @@ class BookControllerTest(unittest.TestCase):
                      "zone_id": "01int",
                      "page": 14,
                      "delete_func": lambda x: x,
-                     "objects":[ {"oid": "195-12-01-01-int",
+                     "objects": [{"oid": "195-12-01-01-int",
                                   "block-id": "some block id"}],
                      "number": "01",
                      "rubric": "int",
@@ -408,11 +407,11 @@ class BookControllerTest(unittest.TestCase):
         # check both start\end
         self.assertTrue(self.controller.verify_mark_pairs())
         # at the moment have start and end in normal order, let's delete one
-        self.controller.delete_marks(marks = [start])
+        self.controller.delete_marks(marks=[start])
         self.assertFalse(self.controller.verify_mark_pairs())
         # when both ends are deleted should get no error (not erroneous, but
         # default, markless state)
-        self.controller.delete_marks(marks = [end])
+        self.controller.delete_marks(marks=[end])
         self.assertTrue(self.controller.verify_mark_pairs())
         # brackets error (appears when start of some paragraph is in-between
         # some other paragraph whereas end lays outside that other paragraph)
@@ -449,8 +448,8 @@ class BookControllerTest(unittest.TestCase):
                    "delete_func": self.controller.delete_funcs["start_end"],
                    "name": "lesson blablabla. Paragraph 2",
                    "type": "start"}
-        bad_s = self.controller.add_mark(bad_start)
-        bad_e = self.controller.add_mark(bad_end)
+        self.controller.add_mark(bad_start)
+        self.controller.add_mark(bad_end)
         # TODO perhaps it's not correct to return end of wrongly placed
         # paragraph, but will leave it as is at least now
         self.assertTupleEqual(self.controller.verify_brackets(),
@@ -533,7 +532,7 @@ class BookControllerTest(unittest.TestCase):
         self.assertTrue(end.is_end())
         # try to create start\end again, should be unable to do this
         nomark = self.controller._create_mark_on_click((34, 80), "MockParent")
-        self.assertTrue(nomark == None)
+        self.assertTrue(nomark is None)
         # create ruler
         self.controller.set_vertical_ruler_mode()
         ruler = self.controller._create_mark_on_click((50, 40), "MockParent")
@@ -547,13 +546,13 @@ class BookControllerTest(unittest.TestCase):
         self.assertTrue(zone in self.controller.paragraphs[zone.page]["zones"])
         # now try to place the same zone again, shoul fail
         zone = self.controller._create_mark_on_click((0, 45), "MockParent")
-        self.assertTrue(zone == None)
+        self.assertTrue(zone is None)
         # inner zone
         self.toc_controller.select(
             "lesson:bla-bla-bla", "09pic", ["obj1"], pdf_rubric="pic",
             inner=True)
-        inner_zone = self.controller._create_mark_on_click((46, 51),
-                                                          "MockParent")
+        inner_zone = self.controller.\
+            _create_mark_on_click((46, 51), "MockParent")
         self.assertTrue(inner_zone is not None)
         self.assertTrue(inner_zone.is_inner())
 

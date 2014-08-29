@@ -49,6 +49,7 @@ class BookController(object):
         self.mark_mode = self.MODE_MARK
         # only for start\end marks, not rulers
         self.any_unsaved_changes = False
+        self.cms_query_module = cqm
         self.settings_changed(cqm.config_data, True)
         # password data has no defaults, have to be created here
         # here login\password is only stored to load in settings dialog.
@@ -57,7 +58,6 @@ class BookController(object):
         # TODO FIXME should be present in final version but for debugging
         # purposes pass password that we have in config
         # self.password = ""
-        self.cms_query_module = cqm
         # delete funcs to be passed on different marks' construction
         self.delete_funcs = {"start_end": self.delete_mark,
                              "zone": self.delete_zone,
